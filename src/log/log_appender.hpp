@@ -1,7 +1,7 @@
 #ifndef ZED_SRC_LOG_LOGAPPENDER_HPP_
 #define ZED_SRC_LOG_LOGAPPENDER_HPP_
 
-#include "FixedBuffer.hpp"
+#include "log/log_buffer.hpp"
 #include "log/log_file.hpp"
 #include "noncopyable.hpp"
 
@@ -37,7 +37,7 @@ private:
     void loopFunc();
 
 private:
-    using Buffer = util::FixedBuffer<4000 * 1024>;
+    using Buffer = detail::LogBuffer<4000 * 1024>;
     using BufferPtr = std::unique_ptr<Buffer>;
 
     detail::LogFile         m_file;

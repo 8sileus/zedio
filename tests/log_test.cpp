@@ -48,5 +48,5 @@ int main(int argc, char** argv) {
     rlimit rl = {2 * kOneGB, 2 * kOneGB};
     setrlimit(RLIMIT_AS, &rl);
 
-    util::SpendTime(test, 1, argc > 1);
+    util::SpendTime(test, 4, argc > 1);
 }

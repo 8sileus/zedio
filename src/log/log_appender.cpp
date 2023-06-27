@@ -66,7 +66,7 @@ void FileLogAppender::loopFunc() {
         }
 
         for (auto& buffer : m_full_buffers) {
-            m_file.append(buffer->data(), buffer->size());
+            m_file.append(buffer->data(), buffer->writtenBytes());
             buffer->reset();
         }
         
@@ -82,7 +82,7 @@ void FileLogAppender::loopFunc() {
         m_full_buffers.push_back(std::move(m_current_buffer));
     }
     for (auto& buffer : m_full_buffers) {
-        m_file.append(buffer->data(), buffer->size());
+        m_file.append(buffer->data(), buffer->writtenBytes());
     }
 }
 

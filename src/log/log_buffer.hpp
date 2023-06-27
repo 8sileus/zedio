@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ZED_SRC_LOG_LOGBUFFER_HPP_
+#define ZED_SRC_LOG_LOGBUFFER_HPP_
 
 #include "noncopyable.hpp"
 
@@ -6,12 +7,12 @@
 #include <cstring>
 #include <string>
 
-namespace zed::util {
+namespace zed::log::detail {
 
 template <std::size_t SIZE>
-class FixedBuffer : util::Noncopyable {
+class LogBuffer : util::Noncopyable {
 public:
-    FixedBuffer() noexcept : m_cur(m_data) {}
+    LogBuffer() noexcept : m_cur(m_data) {}
 
     // NOTE：在外部使用availableCapacity判断剩余空间是否可以容纳;
     void write(const std::string& str) noexcept {
@@ -22,9 +23,9 @@ public:
 
     [[nodiscard]] std::size_t writableBytes() const noexcept { return m_data + sizeof(m_data) - m_cur; }
 
-    [[nodiscard]] const char* data() const noexcept { return m_data; }
+    [[nodiscard]] std::size_t writtenBytes() const noexcept { return m_cur - m_data; }
 
-    [[nodiscard]] std::size_t size() const noexcept { return m_cur - m_data; }
+    [[nodiscard]] const char* data() const noexcept { return m_data; }
 
     [[nodiscard]] constexpr std::size_t capacity() noexcept { return SIZE; }
 
@@ -32,11 +33,11 @@ public:
 
     void reset() noexcept { m_cur = m_data; }
 
-    void bzero() noexcept { std::memset(m_data, 0, sizeof(m_data)); }
-
 private:
     char  m_data[SIZE]{};
     char* m_cur{nullptr};
 };
 
-}  // namespace zed::util
+}  // namespace zed::log::detail
+
+#endif  // ZED_SRC_LOG_LOGBUFFER_HPP_
