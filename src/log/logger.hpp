@@ -22,36 +22,36 @@ public:
     LogLevel getLevel() { return m_level; }
 
     template <typename... Args>
-    void debug(const std::string_view& format_str, Args&&... args) {
-        format<LogDebug>(format_str, std::forward<Args>(args)...);
+    void debug(const std::string_view& fmt, Args&&... args) {
+        format<LogDebug>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void info(const std::string_view& format_str, Args&&... args) {
-        format<LogInfo>(format_str, std::forward<Args>(args)...);
+    void info(const std::string_view& fmt, Args&&... args) {
+        format<LogInfo>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void warn(const std::string_view& format_str, Args&&... args) {
-        format<LogWarn>(format_str, std::forward<Args>(args)...);
+    void warn(const std::string_view& fmt, Args&&... args) {
+        format<LogWarn>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void error(const std::string_view& format_str, Args&&... args) {
-        format<LogError>(format_str, std::forward<Args>(args)...);
+    void error(const std::string_view& fmt, Args&&... args) {
+        format<LogError>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void fatal(const std::string_view& format_str, Args&&... args) {
-        format<LogFatal>(format_str, std::forward<Args>(args)...);
+    void fatal(const std::string_view& fmt, Args&&... args) {
+        format<LogFatal>(fmt, std::forward<Args>(args)...);
     }
 
 private:
     template <IsLogLevel Level, typename... Args>
-    void format(const std::string_view& format_str, Args&&... args) {
+    void format(const std::string_view& fmt, Args&&... args) {
         if (m_level <= Level::level) {
             auto cb = [this](std::string&& msg) { this->log(std::move(msg)); };
-            detail::LogEvent<Level>(std::move(cb)).format(format_str, std::forward<Args>(args)...);
+            detail::LogEvent<Level>(std::move(cb)).format(fmt, std::forward<Args>(args)...);
         }
     }
 

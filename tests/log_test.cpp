@@ -9,6 +9,8 @@
 
 using namespace zed;
 
+log::Logger test_file_logger("log_test");
+
 void bench(bool longLog) {
     int         cnt = 0;
     const int   kBatch = 1000;
@@ -19,8 +21,8 @@ void bench(bool longLog) {
     for (int t = 0; t < 30; ++t) {
         auto start = std::chrono::steady_clock::now();
         for (int i = 0; i < kBatch; ++i) {
-            log::g_default_logger.info("%d Hello 0123456789 abcdefghijklmnopqrstuvwxyz" + (longLog ? longStr : empty),
-                                       cnt);
+            test_file_logger.info("Hello 0123456789 abcdefghijklmnopqrstuvwxyz" + (longLog ? longStr : empty) + "{}",
+                                  cnt);
             ++cnt;
         }
         auto end = std::chrono::steady_clock::now();
@@ -46,7 +48,5 @@ int main(int argc, char** argv) {
     rlimit rl = {2 * kOneGB, 2 * kOneGB};
     setrlimit(RLIMIT_AS, &rl);
 
-    auto fp = std::make_unique<zed::log::FileLogAppender>("log_test");
-    util::Singleton<zed::log::Logger>::Instance().setAppender(std::move(fp));
     util::SpendTime(test, 1, argc > 1);
 }

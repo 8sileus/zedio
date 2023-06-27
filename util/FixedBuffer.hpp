@@ -8,9 +8,6 @@
 
 namespace zed::util {
 
-constexpr std::size_t kSmallBuffer{4000};
-constexpr std::size_t kLargeBuffer{4000 * 1000};
-
 template <std::size_t SIZE>
 class FixedBuffer : util::Noncopyable {
 public:
@@ -30,6 +27,8 @@ public:
     [[nodiscard]] std::size_t size() const noexcept { return m_cur - m_data; }
 
     [[nodiscard]] constexpr std::size_t capacity() noexcept { return SIZE; }
+
+    [[nodiscard]] bool empty() const noexcept { return m_cur == m_data; }
 
     void reset() noexcept { m_cur = m_data; }
 

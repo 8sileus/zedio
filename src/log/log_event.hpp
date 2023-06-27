@@ -4,7 +4,7 @@
 #include "log/log_level.hpp"
 #include "thread.hpp"
 
-#include <cstdio>
+#include <format>
 #include <functional>
 #include <sstream>
 
@@ -32,10 +32,9 @@ public:
     void append(std::string_view str) { m_ss << str; }
 
     template <typename... Args>
-    void format(const std::string_view& format_str, Args&&... args) {
-        char buf[1024];
-        sprintf(buf, format_str.data(), std::forward<Args>(args)...);
-        m_ss << buf;
+    void format(const std::string_view& fmt, Args&&... args) {
+        auto fmt_args{std::make_format_args(args...)};
+        m_ss << std::vformat(fmt, fmt_args);
     }
 
 private:
@@ -52,9 +51,9 @@ private:
             ::strftime(t_time_buffer, sizeof(t_time_buffer), format, &tm_time);
         }
         if constexpr (std::is_same_v<Level, LogDebug>) {
-            m_ss << t_time_buffer << '.' << cur_microsecond << ' ' << Level::Tostring() << ' ' << util::getTid << ' ';
+            m_ss << t_time_buffer << '.' << cur_microsecond << ' ' << Level::Tostring() << ' ' << util::getTid() << ' ';
         } else {
-            m_ss << t_time_buffer << ' ' << Level::ToString() << ' ' << util::getTid << ' ';
+            m_ss << t_time_buffer << ' ' << Level::ToString() << ' ' << util::getTid() << ' ';
         }
     }
 

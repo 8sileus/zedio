@@ -22,6 +22,10 @@ FileLogAppender::~FileLogAppender() {
 }
 
 void FileLogAppender::log(const std::string& msg) {
+    if (!m_running) [[unlikely]] {
+        return;
+    }
+
     std::lock_guard<std::mutex> lock(m_buffer_mutex);
     if (m_current_buffer->writableBytes() > msg.size()) {
         m_current_buffer->write(msg);
@@ -72,6 +76,13 @@ void FileLogAppender::loopFunc() {
 
         m_file.flush();
         m_empty_buffers.splice(m_empty_buffers.end(), m_full_buffers);
+    }
+
+    if(!m_current_buffer->empty()){
+        m_full_buffers.push_back(std::move(m_current_buffer));
+    }
+    for (auto& buffer : m_full_buffers) {
+        m_file.append(buffer->data(), buffer->size());
     }
 }
 
