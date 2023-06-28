@@ -4,6 +4,24 @@
 
 namespace zed::log::detail {
 
+[[nodiscard]]
+auto GetLogFileName(const std::string& base_name) -> std::string {
+    std::string file_name{base_name};
+    file_name.reserve(file_name.size() + 64);
+
+    time_t now_time = ::time(nullptr);
+
+    struct tm tm_time;
+    ::localtime_r(&now_time, &tm_time);
+
+    char buf[32];
+    ::strftime(buf, sizeof(buf), "%Y%m%d-%H%M%S", &tm_time);
+    file_name.push_back('-');
+    file_name.append(buf);
+    file_name.append(".log");
+    return file_name;
+}
+
 void LogFile::append(const char* data, size_t len) {
     size_t written = 0;
     while (written < len) {
@@ -23,8 +41,7 @@ void LogFile::append(const char* data, size_t len) {
             time_t current_day = now / kRollPerSeconds;
             if (current_day != m_last_day) {  // isn't same day
                 roll();
-            } else if (now - m_last_flush_time >
-                       m_flush_interval) {  // exceed flush interval
+            } else if (now - m_last_flush_time > m_flush_interval) {  // exceed flush interval
                 m_last_flush_time = now;
                 flush();
             }
@@ -43,23 +60,6 @@ void LogFile::roll() {
         m_written_bytes = 0;
         m_file = ::fopen(file_name.c_str(), "ae");
     }
-}
-
-std::string LogFile::GetLogFileName(const std::string& base_name) {
-    std::string file_name{base_name};
-    file_name.reserve(file_name.size() + 64);
-
-    time_t now_time = ::time(nullptr);
-
-    struct tm tm_time;
-    ::localtime_r(&now_time, &tm_time);
-
-    char buf[32];
-    ::strftime(buf, sizeof(buf), "%Y%m%d-%H%M%S", &tm_time);
-    file_name.push_back('-');
-    file_name.append(buf);
-    file_name.append(".log");
-    return file_name;
 }
 
 }  // namespace zed::log::detail

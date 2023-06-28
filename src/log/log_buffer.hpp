@@ -21,15 +21,30 @@ public:
         m_cur += str.size();
     };
 
-    [[nodiscard]] std::size_t writableBytes() const noexcept { return m_data + sizeof(m_data) - m_cur; }
+    [[nodiscard]]
+    auto writableBytes() const noexcept -> std::size_t {
+        return m_data + sizeof(m_data) - m_cur;
+    }
 
-    [[nodiscard]] std::size_t writtenBytes() const noexcept { return m_cur - m_data; }
+    [[nodiscard]]
+    auto writtenBytes() const noexcept -> std::size_t {
+        return m_cur - m_data;
+    }
 
-    [[nodiscard]] const char* data() const noexcept { return m_data; }
+    [[nodiscard]]
+    auto data() const noexcept -> const char* {
+        return m_data;
+    }
 
-    [[nodiscard]] constexpr std::size_t capacity() noexcept { return SIZE; }
+    [[nodiscard]]
+    auto empty() const noexcept -> bool {
+        return m_cur == m_data;
+    }
 
-    [[nodiscard]] bool empty() const noexcept { return m_cur == m_data; }
+    [[nodiscard]]
+    constexpr auto capacity() -> std::size_t {
+        return SIZE;
+    }
 
     void reset() noexcept { m_cur = m_data; }
 

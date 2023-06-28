@@ -6,7 +6,8 @@
 
 namespace zed::log {
 
-Logger g_default_logger;
+Logger g_stdout_logger{};
+// Logger g_debug_logger{"log_debug"};
 
 }  // namespace zed::log
 

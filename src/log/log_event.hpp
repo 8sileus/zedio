@@ -1,7 +1,6 @@
 #ifndef ZED_SRC_LOG_LOGEVENT_HPP_
 #define ZED_SRC_LOG_LOGEVENT_HPP_
 
-#include "log/log_level.hpp"
 #include "thread.hpp"
 
 #include <format>
@@ -12,12 +11,37 @@ namespace zed::log {
 
 class Logger;
 
+enum class LogLevel {
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+    FATAL,
+};
+
+constexpr auto LevelToString(LogLevel level) -> const char* {
+    switch (level) {
+        case LogLevel::DEBUG:
+            return "DEBUG";
+        case LogLevel::INFO:
+            return "INFO ";
+        case LogLevel::WARN:
+            return "WARN ";
+        case LogLevel::ERROR:
+            return "ERROR";
+        case LogLevel::FATAL:
+            return "FATAL";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 namespace detail {
 
 static thread_local char   t_time_buffer[64];
 static thread_local time_t t_last_second{0};
 
-template <IsLogLevel Level>
+template <LogLevel level>
 class LogEvent {
 public:
     LogEvent(std::function<void(std::string&&)> cb) : m_cb(cb) { printInfo(); }
@@ -27,7 +51,10 @@ public:
         m_cb(std::move(m_ss.str()));
     }
 
-    std::stringstream& ss() { return m_ss; }
+    [[nodiscard]]
+    auto ss() noexcept -> std::stringstream& {
+        return m_ss;
+    }
 
     void append(std::string_view str) { m_ss << str; }
 
@@ -50,16 +77,17 @@ private:
             const char* format = "%Y-%m-%d %H:%M:%S";
             ::strftime(t_time_buffer, sizeof(t_time_buffer), format, &tm_time);
         }
-        if constexpr (std::is_same_v<Level, LogDebug>) {
-            m_ss << t_time_buffer << '.' << cur_microsecond << ' ' << Level::Tostring() << ' ' << util::getTid() << ' ';
+        if constexpr (level == LogLevel::DEBUG) {
+            m_ss << t_time_buffer << '.' << cur_microsecond << ' ' << LevelToString(level) << ' ' << util::getTid()
+                 << ' ';
         } else {
-            m_ss << t_time_buffer << ' ' << Level::ToString() << ' ' << util::getTid() << ' ';
+            m_ss << t_time_buffer << ' ' << LevelToString(level) << ' ' << util::getTid() << ' ';
         }
     }
 
 private:
     std::function<void(std::string&&)> m_cb;
-    std::stringstream m_ss;
+    std::stringstream                  m_ss;
 };
 
 }  // namespace detail

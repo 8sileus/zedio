@@ -3,7 +3,9 @@ BasedOnStyle: Google
 
 AccessModifierOffset: -4
 AlignConsecutiveDeclarations: true
+AlwaysBreakTemplateDeclarations: true
 DerivePointerAlignment: false
+BreakAfterAttributes: Always 
 PointerAlignment: Left
 
 ColumnLimit: 120

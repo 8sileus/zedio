@@ -9,7 +9,7 @@
 
 using namespace zed;
 
-log::Logger test_file_logger("log_test");
+auto test_logger = log::Logger("log_test");
 
 void bench(bool longLog) {
     int         cnt = 0;
@@ -21,9 +21,7 @@ void bench(bool longLog) {
     for (int t = 0; t < 30; ++t) {
         auto start = std::chrono::steady_clock::now();
         for (int i = 0; i < kBatch; ++i) {
-            test_file_logger.info("Hello 0123456789 abcdefghijklmnopqrstuvwxyz" + (longLog ? longStr : empty) + "{}",
-                                  cnt);
-            ++cnt;
+            test_logger.info("Hello 0123456789 abcdefghijklmnopqrstuvwxyz" + (longLog ? longStr : empty) + "{}", ++cnt);
         }
         auto end = std::chrono::steady_clock::now();
         std::cout << (end - start).count() << '\n';

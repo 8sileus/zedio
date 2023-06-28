@@ -13,19 +13,19 @@
 
 namespace zed::log {
 
-class LogAppender : util::Noncopyable {
+class [[nodiscard]] LogAppender : util::Noncopyable {
 public:
     virtual ~LogAppender() = default;
 
     virtual void log(const std::string& msg) = 0;
 };
 
-class StdoutLogAppender : public LogAppender {
+class [[nodiscard]] StdoutLogAppender : public LogAppender {
 public:
     void log(const std::string& msg) override;
 };
 
-class FileLogAppender : public LogAppender {
+class [[nodiscard]] FileLogAppender : public LogAppender {
 public:
     FileLogAppender(const std::string& base_name);
 

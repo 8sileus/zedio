@@ -30,11 +30,9 @@ public:
 private:
     void roll();
 
-    static std::string GetLogFileName(const std::string& base_name);
-
 private:
     constexpr static int kRollPerSeconds{60 * 60 * 24};
-    const static int     kBufferSize{64 * 1024};
+    constexpr static int kBufferSize{64 * 1024};
 
     const std::string m_base_name;
     off_t             m_roll_size{10 * 1024 * 1024};
@@ -44,7 +42,6 @@ private:
     int               m_count{0};
     FILE*             m_file{};
     char              m_buffer[kBufferSize];
-
     time_t            m_last_day{0};
     time_t            m_last_roll_time{0};
     time_t            m_last_flush_time{0};

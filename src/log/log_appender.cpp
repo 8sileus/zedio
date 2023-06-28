@@ -1,12 +1,11 @@
 #include "log/log_appender.hpp"
 
+#include <format>
 #include <iostream>
 
 namespace zed::log {
 
-void StdoutLogAppender::log(const std::string& msg) {
-    ::printf("%s", msg.c_str());
-}
+void StdoutLogAppender::log(const std::string& msg) { std::cout << std::vformat(msg, {}); }
 
 FileLogAppender::FileLogAppender(const std::string& base_name)
     : m_file{base_name}, m_current_buffer{new Buffer}, m_thread{&FileLogAppender::loopFunc, this} {
@@ -69,7 +68,7 @@ void FileLogAppender::loopFunc() {
             m_file.append(buffer->data(), buffer->writtenBytes());
             buffer->reset();
         }
-        
+
         if (m_full_buffers.size() > 2) {
             m_full_buffers.resize(2);
         }
@@ -78,8 +77,8 @@ void FileLogAppender::loopFunc() {
         m_empty_buffers.splice(m_empty_buffers.end(), m_full_buffers);
     }
 
-    if(!m_current_buffer->empty()){
-        m_full_buffers.push_back(std::move(m_current_buffer));
+    if (!m_current_buffer->empty()) {
+        m_full_buffers.emplace_back(std::move(m_current_buffer));
     }
     for (auto& buffer : m_full_buffers) {
         m_file.append(buffer->data(), buffer->writtenBytes());
