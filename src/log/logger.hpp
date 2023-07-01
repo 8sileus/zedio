@@ -33,44 +33,36 @@ public:
 
     template <typename... Args>
     void debug(const std::string_view& fmt, Args&&... args) {
-        if (m_level <= LogLevel::DEBUG) {
-            format<LogLevel::DEBUG>(fmt, std::forward<Args>(args)...);
-        }
+        format<LogLevel::DEBUG>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void info(const std::string_view& fmt, Args&&... args) {
-        if (m_level <= LogLevel::INFO) {
-            format<LogLevel::INFO>(fmt, std::forward<Args>(args)...);
-        }
+        format<LogLevel::INFO>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void warn(const std::string_view& fmt, Args&&... args) {
-        if (m_level <= LogLevel::WARN) {
-            format<LogLevel::WARN>(fmt, std::forward<Args>(args)...);
-        }
+        format<LogLevel::WARN>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void error(const std::string_view& fmt, Args&&... args) {
-        if (m_level <= LogLevel::ERROR) {
-            format<LogLevel::ERROR>(fmt, std::forward<Args>(args)...);
-        }
+        format<LogLevel::ERROR>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void fatal(const std::string_view& fmt, Args&&... args) {
-        if (m_level <= LogLevel::FATAL) {
-            format<LogLevel::FATAL>(fmt, std::forward<Args>(args)...);
-        }
+        format<LogLevel::FATAL>(fmt, std::forward<Args>(args)...);
     }
 
 private:
     template <LogLevel level, typename... Args>
     void format(const std::string_view& fmt, Args&&... args) {
-        auto cb = [this](std::string&& msg) { this->m_appender->log(std::move(msg)); };
-        detail::LogEvent<level>(std::move(cb)).format(fmt, std::forward<Args>(args)...);
+        if (level >= m_level) {
+            auto cb = [this](std::string&& msg) { this->m_appender->log(std::move(msg)); };
+            detail::LogEvent<level>(std::move(cb)).format(fmt, std::forward<Args>(args)...);
+        }
     }
 
 private:

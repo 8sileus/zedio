@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <format>
 #include <iostream>
 #include <thread>
 
@@ -11,7 +12,7 @@ void SpendTime(F&& f, Args&&... args) {
     auto start{std::chrono::steady_clock::now()};
     f(std::forward<Args>(args)...);
     auto end{std::chrono::steady_clock::now()};
-    std::cout << "Spend:" << std::chrono::duration_cast<std::chrono::seconds>(end - start) << "\n";
+    std::cout << std::format("total spend:{}\n", std::chrono::duration_cast<std::chrono::milliseconds>(end - start));
 }
 
 }  // namespace zed::util
