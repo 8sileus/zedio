@@ -15,11 +15,11 @@ public:
         setbuffer(m_file, m_buffer, sizeof(m_buffer));
     };
 
-    ~LogFile() { fclose(m_file); }
+    ~LogFile() { ::fclose(m_file); }
 
     void append(const char* data, size_t len);
 
-    void flush() { fflush(m_file); }
+    void flush() { ::fflush(m_file); }
 
     void setFlushInterval(int interval) noexcept { m_flush_interval = interval; }
 
@@ -40,7 +40,7 @@ private:
     int               m_flush_interval{3};
     int               m_check_every_n{1024};
     int               m_count{0};
-    FILE*             m_file{};
+    FILE*             m_file{nullptr};
     char              m_buffer[kBufferSize];
     time_t            m_last_day{0};
     time_t            m_last_roll_time{0};

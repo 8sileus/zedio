@@ -1,6 +1,7 @@
 #include "log/log_file.hpp"
 
 #include <ctime>
+#include <format>
 
 namespace zed::log::detail {
 
@@ -15,10 +16,8 @@ auto GetLogFileName(const std::string& base_name) -> std::string {
     ::localtime_r(&now_time, &tm_time);
 
     char buf[32];
-    ::strftime(buf, sizeof(buf), "%Y%m%d-%H%M%S", &tm_time);
-    file_name.push_back('-');
+    ::strftime(buf, sizeof(buf), "-%Y%m%d-%H%M%S.log", &tm_time);
     file_name.append(buf);
-    file_name.append(".log");
     return file_name;
 }
 
@@ -58,6 +57,9 @@ void LogFile::roll() {
         m_last_flush_time = now;
         m_last_roll_time = now;
         m_written_bytes = 0;
+        if(m_file!=nullptr){
+            ::fclose(m_file);
+        }
         m_file = ::fopen(file_name.c_str(), "ae");
     }
 }
