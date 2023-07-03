@@ -1,5 +1,4 @@
-#ifndef ZED_SRC_LOG_LOGFILE_HPP_
-#define ZED_SRC_LOG_LOGFILE_HPP_
+#pragma once
 
 #include <cstdio>
 #include <memory>
@@ -10,7 +9,7 @@
 namespace zed::log::detail {
 class LogFile : util::Noncopyable {
 public:
-    LogFile(const std::string& base_name) : m_base_name(base_name) {
+    LogFile(const std::string_view& base_name) : m_base_name(base_name) {
         roll();
         setbuffer(m_file, m_buffer, sizeof(m_buffer));
     };
@@ -48,5 +47,3 @@ private:
 };
 
 }  // namespace zed::log::detail
-
-#endif  // ZED_SRC_LOG_LOGFILE_HPP_

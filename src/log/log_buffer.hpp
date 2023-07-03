@@ -1,5 +1,4 @@
-#ifndef ZED_SRC_LOG_LOGBUFFER_HPP_
-#define ZED_SRC_LOG_LOGBUFFER_HPP_
+#pragma once
 
 #include "noncopyable.hpp"
 
@@ -54,5 +53,3 @@ private:
 };
 
 }  // namespace zed::log::detail
-
-#endif  // ZED_SRC_LOG_LOGBUFFER_HPP_

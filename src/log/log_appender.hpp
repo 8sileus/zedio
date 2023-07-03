@@ -1,5 +1,4 @@
-#ifndef ZED_SRC_LOG_LOGAPPENDER_HPP_
-#define ZED_SRC_LOG_LOGAPPENDER_HPP_
+#pragma once
 
 #include "log/log_buffer.hpp"
 #include "log/log_file.hpp"
@@ -27,7 +26,7 @@ public:
 
 class [[nodiscard]] FileLogAppender : public LogAppender {
 public:
-    FileLogAppender(const std::string& base_name);
+    FileLogAppender(const std::string_view& base_name);
 
     ~FileLogAppender();
 
@@ -51,5 +50,3 @@ private:
 };
 
 }  // namespace zed::log
-
-#endif  // ZED_SRC_LOG_LOGAPPENDER_HPP_

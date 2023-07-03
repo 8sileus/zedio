@@ -1,5 +1,4 @@
-#ifndef ZED_SRC_LOG_LOGGER_HPP_
-#define ZED_SRC_LOG_LOGGER_HPP_
+#pragma once
 
 #include "log/log_appender.hpp"
 #include "log/log_event.hpp"
@@ -9,10 +8,13 @@ namespace zed::log {
 
 class Logger : util::Noncopyable {
 public:
-    Logger(std::unique_ptr<LogAppender> appender = std::make_unique<StdoutLogAppender>())
-        : m_appender(std::move(appender)) {}
+    Logger() {}
 
-    Logger(const std::string& name) : m_appender(new FileLogAppender(name)) {}
+    Logger(std::unique_ptr<LogAppender> appender, LogLevel level = LogLevel::DEBUG)
+        : m_appender(std::move(appender)), m_level(level) {}
+
+    Logger(const std::string_view& name, LogLevel level = LogLevel::DEBUG)
+        : m_appender(std::make_unique<FileLogAppender>(name)), m_level(level) {}
 
     Logger(Logger&& other) noexcept : m_appender(std::move(other.m_appender)), m_level(other.m_level) {}
 
@@ -66,10 +68,8 @@ private:
     }
 
 private:
-    std::unique_ptr<LogAppender> m_appender{nullptr};
+    std::unique_ptr<LogAppender> m_appender{std::make_unique<StdoutLogAppender>()};
     LogLevel                     m_level{LogLevel::DEBUG};
 };
 
 }  // namespace zed::log
-
-#endif  // ZED_SRC_LOG_LOGGER_HPP_

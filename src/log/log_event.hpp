@@ -1,5 +1,4 @@
-#ifndef ZED_SRC_LOG_LOGEVENT_HPP_
-#define ZED_SRC_LOG_LOGEVENT_HPP_
+#pragma once
 
 #include "thread.hpp"
 
@@ -78,10 +77,10 @@ private:
             ::strftime(t_time_buffer, sizeof(t_time_buffer), format, &tm_time);
         }
         if constexpr (level == LogLevel::DEBUG) {
-            m_ss << t_time_buffer << '.' << cur_microsecond << ' ' << LevelToString(level) << ' ' << util::getTid()
+            m_ss << t_time_buffer << '.' << cur_microsecond << ' ' << LevelToString(level) << ' ' << util::GetTid()
                  << ' ';
         } else {
-            m_ss << t_time_buffer << ' ' << LevelToString(level) << ' ' << util::getTid() << ' ';
+            m_ss << t_time_buffer << ' ' << LevelToString(level) << ' ' << util::GetTid() << ' ';
         }
     }
 
@@ -93,5 +92,3 @@ private:
 }  // namespace detail
 
 }  // namespace zed::log
-
-#endif  // ZED_SRC_LOG_LOGEVENT_HPP_

@@ -7,7 +7,7 @@ namespace zed::log {
 
 void StdoutLogAppender::log(const std::string& msg) { std::cout << std::vformat(msg, {}); }
 
-FileLogAppender::FileLogAppender(const std::string& base_name)
+FileLogAppender::FileLogAppender(const std::string_view& base_name)
     : m_file{base_name}, m_current_buffer{new Buffer}, m_thread{&FileLogAppender::loopFunc, this} {
     for (int i = 0; i < 2; ++i) {
         m_empty_buffers.emplace_back(new Buffer);
