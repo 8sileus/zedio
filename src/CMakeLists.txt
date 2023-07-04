@@ -1,4 +1,2 @@
-aux_source_directory(log SOURCES)
-
-
-add_library(zed_lib ${SOURCES})
+file(GLOB log_header "log/*hpp")
+file(GLOB net_header "net/*hpp")

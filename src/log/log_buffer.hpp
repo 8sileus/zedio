@@ -6,7 +6,7 @@
 #include <cstring>
 #include <string>
 
-namespace zed::log::detail {
+namespace zed::detail {
 
 template <std::size_t SIZE>
 class LogBuffer : util::Noncopyable {
@@ -25,8 +25,7 @@ public:
         return m_data + sizeof(m_data) - m_cur;
     }
 
-    [[nodiscard]]
-    auto writtenBytes() const noexcept -> std::size_t {
+    [[nodiscard]] auto size() const noexcept -> std::size_t {
         return m_cur - m_data;
     }
 
@@ -40,11 +39,6 @@ public:
         return m_cur == m_data;
     }
 
-    [[nodiscard]]
-    constexpr auto capacity() -> std::size_t {
-        return SIZE;
-    }
-
     void reset() noexcept { m_cur = m_data; }
 
 private:
@@ -52,4 +46,4 @@ private:
     char* m_cur{nullptr};
 };
 
-}  // namespace zed::log::detail
+}  // namespace zed::detail

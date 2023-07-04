@@ -6,7 +6,7 @@
 #include <functional>
 #include <sstream>
 
-namespace zed::log {
+namespace zed {
 
 class Logger;
 
@@ -91,4 +91,4 @@ private:
 
 }  // namespace detail
 
-}  // namespace zed::log
+}  // namespace zed

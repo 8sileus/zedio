@@ -8,7 +8,6 @@
 #include <vector>
 
 using namespace zed;
-using namespace zed::log;
 
 std::unique_ptr<Logger> test_logger;
 

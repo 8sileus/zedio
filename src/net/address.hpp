@@ -11,7 +11,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
-namespace zed::net {
+namespace zed {
 
 enum class IPVersion {
     IPV4,
@@ -32,7 +32,8 @@ constexpr auto IPVersionToString(IPVersion version) -> const char* {
 template <IPVersion version>
 class Address {
 private:
-    constexpr Address(const std::string_view& hostname, const std::string_view& service, int flags) {
+    constexpr Address(const std::string_view& hostname,
+                      const std::string_view& service, int flags) {
         static_assert(version == IPVersion::IPV4 || version == IPVersion::IPV6);
 
         addrinfo hints{.ai_flags{flags}};
@@ -44,12 +45,15 @@ private:
         }
 
         addrinfo* result{nullptr};
-        if (::getaddrinfo(hostname.data(), service.data(), &hints, &result)) [[unlikely]] {
-            throw std::runtime_error(std::format("getaddrinfo failed hostname:{} service:{} error {} message {}",
-                                                 hostname, service, errno, ::strerror(errno)));
+        if (::getaddrinfo(hostname.data(), service.data(), &hints, &result))
+            [[unlikely]] {
+            throw std::runtime_error(std::format(
+                "getaddrinfo failed hostname:{} service:{} error {} message {}",
+                hostname, service, errno, ::strerror(errno)));
         }
         if (result == nullptr) [[unlikely]] {
-            throw std::runtime_error(std::format("getaddrinfo returned successfully but with no results"));
+            throw std::runtime_error(std::format(
+                "getaddrinfo returned successfully but with no results"));
         }
 
         ::memcpy(&m_addr4, result->ai_addr, result->ai_addrlen);
@@ -57,10 +61,12 @@ private:
     }
 
 public:
-    constexpr Address(const std::string_view& hostname, const std::string_view& service)
+    constexpr Address(const std::string_view& hostname,
+                      const std::string_view& service)
         : Address(hostname, service, AI_ALL) {}
 
-    explicit constexpr Address(const std::string_view& ip, std::uint16_t port = 0)
+    explicit constexpr Address(const std::string_view& ip,
+                               std::uint16_t           port = 0)
         : Address(ip, std::to_string(port), AI_NUMERICHOST | AI_NUMERICSERV) {}
 
     explicit constexpr Address(const sockaddr* addr, std::size_t len) {
@@ -86,11 +92,17 @@ public:
         }
     }
 
-    auto ipPort() const -> std::pair<std::string, std::uint16_t> { return {ip(), port()}; }
+    auto ipPort() const -> std::pair<std::string, std::uint16_t> {
+        return {ip(), port()};
+    }
 
-    auto toString() const -> std::string { return ip() + ":" + std::to_string(port()); };
+    auto toString() const -> std::string {
+        return ip() + ":" + std::to_string(port());
+    };
 
-    auto addr() const -> const sockaddr* { return reinterpret_cast<const sockaddr*>(m_addr4); }
+    auto addr() const -> const sockaddr* {
+        return reinterpret_cast<const sockaddr*>(m_addr4);
+    }
 
     auto addr() -> sockaddr* { return reinterpret_cast<sockaddr*>(&m_addr4); }
 
@@ -115,4 +127,4 @@ private:
 using Address4 = Address<IPVersion::IPV4>;
 using Address6 = Address<IPVersion::IPV6>;
 
-}  // namespace zed::net
+}  // namespace zed

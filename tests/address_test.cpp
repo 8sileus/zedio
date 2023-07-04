@@ -5,7 +5,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <iostream>
 
-using namespace zed::net;
+using namespace zed;
 
 BOOST_AUTO_TEST_CASE(address_test) {
     Address4 addr4("192.168.15.33", 9999);

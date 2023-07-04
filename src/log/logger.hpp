@@ -4,7 +4,7 @@
 #include "log/log_event.hpp"
 #include "noncopyable.hpp"
 
-namespace zed::log {
+namespace zed {
 
 class Logger : util::Noncopyable {
 public:
@@ -28,10 +28,7 @@ public:
 
     void setLevel(LogLevel level) noexcept { m_level = level; }
 
-    [[nodiscard]]
-    auto getLevel() const noexcept -> LogLevel {
-        return m_level;
-    }
+    [[nodiscard]] auto getLevel() const noexcept -> LogLevel { return m_level; }
 
     template <typename... Args>
     void debug(const std::string_view& fmt, Args&&... args) {
@@ -72,4 +69,4 @@ private:
     LogLevel                     m_level{LogLevel::DEBUG};
 };
 
-}  // namespace zed::log
+}  // namespace zed

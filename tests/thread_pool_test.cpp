@@ -6,8 +6,8 @@
 
 using namespace zed::util;
 
-unsigned long long  num = 0;
-std::mutex mu;
+unsigned long long num = 0;
+std::mutex         mu;
 
 void cal(unsigned long long  l, unsigned long long  r) {
     unsigned long long sum = 0;
