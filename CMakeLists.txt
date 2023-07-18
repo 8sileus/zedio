@@ -7,8 +7,6 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-
-
 if(NOT  CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -17,10 +15,10 @@ message(STATUS "Version : " ${CMAKE_PROJECT_VERSION})
 message(STATUS "Compiler : " ${CMAKE_CXX_COMPILER_ID})
 message(STATUS "BuildType : " ${CMAKE_BUILD_TYPE})
 
+set(LIBS     
+yaml-cpp)
+
 include_directories(${PROJECT_SOURCE_DIR}/src)
-include_directories(${PROJECT_SOURCE_DIR}/util)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
-# add_subdirectory(${PROJECT_SOURCE_DIR}/apps)
-add_subdirectory(${PROJECT_SOURCE_DIR}/util)
 add_subdirectory(${PROJECT_SOURCE_DIR}/tests)

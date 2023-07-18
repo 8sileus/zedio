@@ -7,7 +7,9 @@
 
 using namespace zed;
 
-BOOST_AUTO_TEST_CASE(address_test) {
+BOOST_AUTO_TEST_SUITE(address_test)
+
+BOOST_AUTO_TEST_CASE(interface_test) {
     Address4 addr4("192.168.15.33", 9999);
     BOOST_TEST(addr4.isIpv4());
     BOOST_TEST(!addr4.isIpv6());
@@ -35,3 +37,5 @@ BOOST_AUTO_TEST_CASE(address_test) {
     BOOST_REQUIRE_EQUAL(addr.port(), 21);
     BOOST_REQUIRE_EQUAL(addr.ip(), "127.0.0.1");
 }
+
+BOOST_AUTO_TEST_SUITE_END()

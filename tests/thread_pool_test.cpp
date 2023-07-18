@@ -1,51 +1,55 @@
-#include "thread.hpp"
-#include "time_test.hpp"
+#define BOOST_TEST_MODULE thread_pool_test
 
-#include <format>
-#include <iostream>
+#include "util/thread.hpp"
+#include "util/time_test.hpp"
+
+#include <boost/test/included/unit_test.hpp>
+#include <random>
 
 using namespace zed::util;
 
-unsigned long long num = 0;
-std::mutex         mu;
+BOOST_AUTO_TEST_SUITE(thread_pool_test)
 
-void cal(unsigned long long  l, unsigned long long  r) {
+int MultipleTest(unsigned long long n) {
+    ThreadPool         pool(2);
     unsigned long long sum = 0;
-    for (unsigned long long i = l; i < r; ++i) {
-        sum += i;
-    }
-    std::lock_guard lock(mu);
-    num += sum;
-}
-
-void multiple_test(unsigned long long n) {
-    ThreadPool pool(2);
-    unsigned long long         block = n / 100;
-    unsigned long long         remain = n % 100;
+    std::mutex         mu;
+    auto               cal = [&](unsigned long long l, unsigned long long r) {
+        unsigned long long local_sum = 0;
+        for (unsigned long long i = l; i < r; ++i) {
+            local_sum += i;
+        }
+        std::lock_guard lock(mu);
+        sum += local_sum;
+    };
+    unsigned long long block = n / 100;
+    unsigned long long remain = n % 100;
     for (int i = 0; i < 100; ++i) {
-        auto f = [i, block]() { cal(i * block, (i + 1) * block); };
-        pool.push(f);
+        auto f = [cal, i, block]() { cal(i * block, (i + 1) * block); };
+        pool.submit(f);
     }
-    pool.push([block, remain]() { cal(100 * block, 100 * block + remain + 1); });
+    pool.submit([cal, block, remain]() { cal(100 * block, 100 * block + remain + 1); });
     pool.increase(3);
     pool.wait();
-    std::cout << std::format("five thread num = {}\n", num);
+    return sum;
 }
 
-void single_test(unsigned long long n) {
+int SingleTest(unsigned long long n) {
     unsigned long long sum = 0;
     for (unsigned long long i = 0; i <= n; ++i) {
         sum += i;
     }
-    std::cout << std::format("signle thread num = {}\n", sum);
+    return sum;
 }
 
-int main(int argc, char** argv) {
-    if(argc!=2){
-        std::cout << std::format("usage ./thread_pool_test num\n");
+BOOST_AUTO_TEST_CASE(cal_test) {
+    std::random_device                                rd;
+    std::mt19937                                      gen(rd());
+    std::uniform_int_distribution<unsigned long long> disturb(1ll, 10000000ll);
+    for (int i = 0; i < 100; ++i) {
+        unsigned long long num = disturb(gen);
+        BOOST_REQUIRE_EQUAL(SingleTest(num), MultipleTest(num));
     }
-    long long n = std::stoll(argv[1]);
-    SpendTime(multiple_test, n);
-    SpendTime(single_test, n);
-    return 0;
 }
+
+BOOST_AUTO_TEST_SUITE_END()

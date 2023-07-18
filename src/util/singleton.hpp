@@ -1,6 +1,6 @@
 #pragma once
 
-#include "noncopyable.hpp"
+#include "util/noncopyable.hpp"
 
 namespace zed::util {
 

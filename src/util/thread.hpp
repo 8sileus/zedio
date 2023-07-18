@@ -2,13 +2,13 @@
 
 #include "noncopyable.hpp"
 
-#include <unistd.h>
 #include <condition_variable>
 #include <functional>
 #include <future>
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <unistd.h>
 
 namespace zed::util {
 
@@ -25,17 +25,36 @@ public:
     ~ThreadPool() {
         m_running = false;
         m_not_empty.notify_all();
-        for (auto& thread : m_threads) {
+        for (auto &thread : m_threads) {
             thread.join();
         }
     }
 
-    void push(const std::function<void()>& task) {
+    template <class F, class... Args>
+    [[nodiscard]] auto submit_need_answer(F &&f, Args &&...args)
+        -> std::future<std::invoke_result_t<F, Args...>> {
+        using ResultType = std::invoke_result_t<F, Args...>;
+
+        auto task = std::make_shared<std::packaged_task<ResultType()>>(
+            [f, args...]() -> ResultType { return f(args...); });
+        auto res = task->get_future();
         {
             std::lock_guard lock(m_tasks_mutex);
-            m_tasks.push(task);
+            m_tasks.push([task = std::move(task)]() { (*task)(); });
         }
         m_not_empty.notify_one();
+        return res;
+    }
+
+    void submit(const Task &task) {
+        std::lock_guard lock(m_tasks_mutex);
+        m_tasks.push(task);
+    }
+
+    void submit(const std::initializer_list<Task> &list) {
+        for (auto &task : list) {
+            submit(task);
+        }
     }
 
     void increase(const std::size_t num = 1) {
@@ -86,7 +105,7 @@ private:
     std::condition_variable  m_not_empty{};
     std::condition_variable  m_not_activity{};
     std::atomic<std::size_t> m_activity{0};
-    std::atomic<bool> m_running{true};
+    std::atomic<bool>        m_running{true};
 };
 
-}  // namespace zed::util
+} // namespace zed::util
