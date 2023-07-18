@@ -64,7 +64,7 @@ private:
 template <typename T>
 class ConfigVariable : ConfigVariableBase {
 private:
-    explicit ConfigVariable(T &&value) : m_value{std::forward<T>(value)} {}
+    explicit ConfigVariable(const T &value) : m_value{std::make_shared<T>(value)} {}
 
     ~ConfigVariable() {
         auto ptr = m_updater.lock();
@@ -80,24 +80,24 @@ private:
     void set_value(const T &value) {
         {
             std::shared_lock lock(m_rw_mutex);
-            if (m_value == value) {
+            if (*m_value == value) {
                 return;
             }
         }
         std::lock_guard lock(m_rw_mutex);
-        m_value = value;
+        m_value = std::make_shared<T>(value);
     }
 
     void set_updater(std::weak_ptr<ConfigUpdater> updater) { m_updater = updater; }
 
-    auto value() -> const T & {
+    auto value() -> std::shared_ptr<T> {
         std::shared_lock lock(m_rw_mutex);
         return m_value;
     }
 
 public:
     std::shared_mutex            m_rw_mutex{};
-    T                            m_value;
+    std::shared_ptr<T>           m_value;
     std::weak_ptr<ConfigUpdater> m_updater;
 };
 
