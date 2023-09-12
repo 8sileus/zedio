@@ -1,16 +1,18 @@
 #pragma once
 
-#include "util/noncopyable.hpp"
-
 namespace zed::util {
 
 template <typename T>
-class Singleton : Noncopyable {
+class Singleton {
 public:
-    static T& Instance() {
+    Singleton() = delete;
+    ~Singleton() = delete;
+
+    [[nodiscard]]
+    static auto Instance() -> T & {
         static T instance;
         return instance;
     }
 };
 
-}  // namespace zed::util
+} // namespace zed::util

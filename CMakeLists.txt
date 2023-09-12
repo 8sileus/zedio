@@ -11,9 +11,10 @@ if(NOT  CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-message(STATUS "Version : " ${CMAKE_PROJECT_VERSION})
-message(STATUS "Compiler : " ${CMAKE_CXX_COMPILER_ID})
-message(STATUS "BuildType : " ${CMAKE_BUILD_TYPE})
+message(STATUS "Version: " ${CMAKE_PROJECT_VERSION})
+message(STATUS "C++ standard: " ${CMAKE_CXX_STANDARD})
+message(STATUS "Compiler: " ${CMAKE_CXX_COMPILER_ID})
+message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 set(LIBS     
 yaml-cpp)

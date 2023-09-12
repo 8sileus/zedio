@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <variant>
 
-namespace zed::coro {
+namespace zed::async {
 
 template <typename T>
 class Task;
@@ -93,7 +93,7 @@ private:
     std::exception_ptr m_exception{nullptr};
 };
 
-}  // namespace detail
+} // namespace detail
 
 template <typename T = void>
 class [[nodiscard]] Task : util::Noncopyable {
@@ -104,7 +104,8 @@ private:
     struct AwaitableBase {
         std::coroutine_handle<promise_type> m_handle;
 
-        AwaitableBase(std::coroutine_handle<promise_type> handle) noexcept : m_handle{handle} {}
+        AwaitableBase(std::coroutine_handle<promise_type> handle) noexcept
+            : m_handle{handle} {}
 
         auto await_ready() const noexcept -> bool { return !m_handle || m_handle.done(); }
 
@@ -117,7 +118,8 @@ private:
 public:
     Task() noexcept = default;
 
-    explicit Task(std::coroutine_handle<promise_type> handle) : m_handle(handle) {}
+    explicit Task(std::coroutine_handle<promise_type> handle)
+        : m_handle(handle) {}
 
     ~Task() {
         if (m_handle) {
@@ -126,7 +128,10 @@ public:
         }
     }
 
-    Task(Task &&other) noexcept : m_handle(std::move(other.handle)) { other.m_handle = nullptr; }
+    Task(Task &&other) noexcept
+        : m_handle(std::move(other.handle)) {
+        other.m_handle = nullptr;
+    }
 
     Task &&operator=(Task &&other) noexcept {
         if (std::addressof(other) != this) [[likely]] {
@@ -138,7 +143,7 @@ public:
         }
     }
 
-    auto operator co_await() const &noexcept {
+    auto operator co_await() const & noexcept {
         struct Awaitable final : public AwaitableBase {
             decltype(auto) await_resume() {
                 if (!this->m_handle) [[unlikely]] {
@@ -150,7 +155,7 @@ public:
         return Awaitable{m_handle};
     }
 
-    auto operator co_await() const &&noexcept {
+    auto operator co_await() const && noexcept {
         struct Awaitable final : public AwaitableBase {
             decltype(auto) await_resume() {
                 if (!this->m_handle) [[unlikely]] {
@@ -171,6 +176,8 @@ public:
         return res;
     }
 
+    void resume() { m_handle.resume(); }
+
 private:
     std::coroutine_handle<promise_type> m_handle{nullptr};
 };
@@ -184,4 +191,4 @@ inline auto detail::TaskPromise<void>::get_return_object() noexcept -> Task<void
     return Task<void>{std::coroutine_handle<TaskPromise>::from_promise(*this)};
 }
 
-}  // namespace zed::coro
+} // namespace zed::async
