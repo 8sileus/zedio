@@ -183,11 +183,15 @@ auto &g_configurator = util::Singleton<detail::Configurator>::Instance();
 
 namespace zed::config {
 
-void LoadConfigFromYaml(const std::string &file_name) { detail::g_configurator.load(file_name); }
+using detail::ConfigVariable;
+
+void LoadConfigFromYaml(const std::string &file_name) {
+    detail::g_configurator.load(file_name);
+}
 
 template <typename T>
-auto MakeVariable(const std::string &name, const T &default_value) -> detail::ConfigVariable<T> {
-    detail::ConfigVariable<T> var(default_value);
+auto MakeVariable(const std::string &name, const T &default_value) -> ConfigVariable<T> {
+    ConfigVariable<T> var(default_value);
     detail::g_configurator.update_variable(name, var);
     return var;
 }

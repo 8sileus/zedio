@@ -1,4 +1,4 @@
-#include "config/config.hpp"
+#include "util/config.hpp"
 
 using namespace zed;
 

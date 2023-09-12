@@ -9,7 +9,8 @@
 
 namespace zed::coro {
 
-template <typename T> class Task;
+template <typename T>
+class Task;
 
 namespace detail {
 
@@ -40,7 +41,8 @@ struct TaskPromiseBase {
     std::coroutine_handle<> m_caller{nullptr};
 };
 
-template <typename T> struct TaskPromise final : public TaskPromiseBase {
+template <typename T>
+struct TaskPromise final : public TaskPromiseBase {
     auto get_return_object() noexcept -> Task<T>;
 
     void unhandled_exception() noexcept {
@@ -69,11 +71,12 @@ template <typename T> struct TaskPromise final : public TaskPromiseBase {
         return std::move(std::get<T>(m_value));
     }
 
-  private:
+private:
     std::variant<std::monostate, T, std::exception_ptr> m_value{};
 };
 
-template <> struct TaskPromise<void> final : public TaskPromiseBase {
+template <>
+struct TaskPromise<void> final : public TaskPromiseBase {
     auto get_return_object() noexcept -> Task<void>;
 
     constexpr void return_void() const noexcept {};
@@ -86,31 +89,32 @@ template <> struct TaskPromise<void> final : public TaskPromiseBase {
         }
     }
 
-  private:
+private:
     std::exception_ptr m_exception{nullptr};
 };
 
-} // namespace detail
+}  // namespace detail
 
-template <typename T = void> class [[nodiscard]] Task : util::Noncopyable {
-  public:
+template <typename T = void>
+class [[nodiscard]] Task : util::Noncopyable {
+public:
     using promise_type = detail::TaskPromise<T>;
 
-  private:
+private:
     struct AwaitableBase {
         std::coroutine_handle<promise_type> m_handle;
+
         AwaitableBase(std::coroutine_handle<promise_type> handle) noexcept : m_handle{handle} {}
 
-        [[nodiscard]] inline bool await_ready() const noexcept {
-            return !m_handle || m_handle.done();
-        }
-        std::coroutine_handle<> await_suspend(std::coroutine_handle<> caller) {
+        auto await_ready() const noexcept -> bool { return !m_handle || m_handle.done(); }
+
+        auto await_suspend(std::coroutine_handle<> caller) -> std::coroutine_handle<> {
             m_handle.promise().m_caller = caller;
             return m_handle;
         }
     };
 
-  public:
+public:
     Task() noexcept = default;
 
     explicit Task(std::coroutine_handle<promise_type> handle) : m_handle(handle) {}
@@ -118,6 +122,7 @@ template <typename T = void> class [[nodiscard]] Task : util::Noncopyable {
     ~Task() {
         if (m_handle) {
             m_handle.destroy();
+            m_handle = nullptr;
         }
     }
 
@@ -166,11 +171,12 @@ template <typename T = void> class [[nodiscard]] Task : util::Noncopyable {
         return res;
     }
 
-  private:
+private:
     std::coroutine_handle<promise_type> m_handle{nullptr};
 };
 
-template <typename T> inline auto detail::TaskPromise<T>::get_return_object() noexcept -> Task<T> {
+template <typename T>
+inline auto detail::TaskPromise<T>::get_return_object() noexcept -> Task<T> {
     return Task<T>{std::coroutine_handle<TaskPromise>::from_promise(*this)};
 }
 
@@ -178,4 +184,4 @@ inline auto detail::TaskPromise<void>::get_return_object() noexcept -> Task<void
     return Task<void>{std::coroutine_handle<TaskPromise>::from_promise(*this)};
 }
 
-} // namespace zed::coro
+}  // namespace zed::coro
