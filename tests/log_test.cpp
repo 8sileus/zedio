@@ -1,6 +1,6 @@
-#include "log/log.hpp"
+#include "log.hpp"
 #include "util/singleton.hpp"
-#include "util/time_test.hpp"
+#include "util/time.hpp"
 
 #include <sys/resource.h>
 #include <iostream>
@@ -9,7 +9,7 @@
 
 using namespace zed;
 
-auto& test_logger = log::MakeLogger("test_log");
+auto &test_logger = log::make_logger("test_log");
 
 void bench(bool long_flag) {
     int         cnt = 0;
@@ -21,38 +21,12 @@ void bench(bool long_flag) {
         auto start = std::chrono::steady_clock::now();
         if (long_flag) {
             for (int i = 0; i < kBatch; ++i) {
-                // test_logger.trace(
-                //     "Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ",
-                //     longStr, ++cnt);
-                log::GetLogger("test_log")
+                log::get_logger("test_log")
                     .debug("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ", longStr, ++cnt);
-                // test_logger.info(
-                //     "Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ",
-                //     longStr, ++cnt);
-                // test_logger.warn(
-                //     "Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ",
-                //     longStr, ++cnt);
-                // test_logger.error(
-                //     "Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ",
-                //     longStr, ++cnt);
-                // test_logger.fatal(
-                //     "Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ",
-                //     longStr, ++cnt);
             }
         } else {
             for (int i = 0; i < kBatch; ++i) {
-                // log::Trace("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}",
-                //            ++cnt);
-                // log::Debug("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}",
-                //            ++cnt);
-                log::Info("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}",
-                          ++cnt);
-                // log::Warn("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}",
-                //           ++cnt);
-                // log::Error("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}",
-                //            ++cnt);
-                // log::Fatal("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}",
-                //            ++cnt);
+                log::console.info("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {}", ++cnt);
             }
         }
         auto end = std::chrono::steady_clock::now();
@@ -73,9 +47,9 @@ void test(int n, bool flag) {
 }
 
 int main(int argc, char** argv) {
-    log::SetLevel(log::LogLevel::TRACE);
+    log::console.setLevel(log::LogLevel::TRACE);
     size_t kOneGB = 1000 * 1024 * 1024;
     rlimit rl = {2 * kOneGB, 2 * kOneGB};
     setrlimit(RLIMIT_AS, &rl);
-    util::SpendTime(test, 3, argc > 1);
+    std::cout << util::spend_time(test, 3, argc > 1);
 }

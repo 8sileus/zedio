@@ -133,14 +133,15 @@ public:
         other.m_handle = nullptr;
     }
 
-    Task &&operator=(Task &&other) noexcept {
+    Task &operator=(Task &&other) noexcept {
         if (std::addressof(other) != this) [[likely]] {
             if (m_handle) {
                 m_handle.destroy();
             }
-            m_handle = std::move(other.handle);
+            m_handle = std::move(other.m_handle);
             other.m_handle = nullptr;
         }
+        return *this;
     }
 
     auto operator co_await() const & noexcept {
@@ -155,13 +156,17 @@ public:
         return Awaitable{m_handle};
     }
 
-    auto operator co_await() const && noexcept {
+    auto operator co_await() && noexcept {
         struct Awaitable final : public AwaitableBase {
             decltype(auto) await_resume() {
                 if (!this->m_handle) [[unlikely]] {
                     throw std::logic_error("m_handle is nullptr");
                 }
-                return std::move(this->m_handle.promise().result());
+                if constexpr (std::is_same_v<T, void>) {
+                    return this->m_handle.promise().result();
+                } else {
+                    return std::move(this->m_handle.promise().result());
+                }
             }
         };
         return Awaitable{m_handle};

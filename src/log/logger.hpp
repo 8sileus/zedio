@@ -1,10 +1,12 @@
 #pragma once
 
 #include "log/buffer.hpp"
-#include "log/event.hpp"
+#include "log/def.hpp"
 #include "log/file.hpp"
 #include "util/noncopyable.hpp"
+#include "util/thread.hpp"
 
+// C++
 #include <condition_variable>
 #include <iostream>
 #include <list>
@@ -12,6 +14,7 @@
 #include <thread>
 
 namespace zed::log::detail {
+
 
 class BaseLogger : util::Noncopyable {
 public:
@@ -21,45 +24,65 @@ public:
 
     void setLevel(LogLevel level) noexcept { m_level = level; }
 
-    [[nodiscard]] auto getLevel() const noexcept -> LogLevel { return m_level; }
+    [[nodiscard]]
+    auto getLevel() const noexcept -> LogLevel {
+        return m_level;
+    }
 
     template <typename... Args>
-    void trace(const std::string_view &fmt, Args &&...args) {
+    void trace(FmtWithSourceLocation fmt, Args &&...args) {
         format<LogLevel::TRACE>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void debug(const std::string_view &fmt, Args &&...args) {
+    void debug(FmtWithSourceLocation fmt, Args &&...args) {
         format<LogLevel::DEBUG>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void info(const std::string_view &fmt, Args &&...args) {
+    void info(FmtWithSourceLocation fmt, Args &&...args) {
         format<LogLevel::INFO>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void warn(const std::string_view &fmt, Args &&...args) {
+    void warn(FmtWithSourceLocation fmt, Args &&...args) {
         format<LogLevel::WARN>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void error(const std::string_view &fmt, Args &&...args) {
+    void error(FmtWithSourceLocation fmt, Args &&...args) {
         format<LogLevel::ERROR>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void fatal(const std::string_view &fmt, Args &&...args) {
+    void fatal(FmtWithSourceLocation fmt, Args &&...args) {
         format<LogLevel::FATAL>(fmt, std::forward<Args>(args)...);
     }
 
 private:
     template <LogLevel level, typename... Args>
-    void format(const std::string_view &fmt, Args &&...args) {
-        if (level >= m_level) {
-            auto cb = [this](std::string &&msg) { this->log(std::move(msg), LevelToColor(level)); };
-            LogEvent<level>(std::move(cb)).format(fmt, std::forward<Args>(args)...);
+    void format(const FmtWithSourceLocation &fwsl, Args &&...args) {
+        if (level < m_level) {
+            return;
         }
+
+        timeval tv_time;
+        ::gettimeofday(&tv_time, nullptr);
+        auto cur_second = tv_time.tv_sec;
+        auto cur_millisecond = tv_time.tv_usec / 1000;
+        if (cur_second != t_last_second) {
+            struct tm tm_time;
+            ::localtime_r(&cur_second, &tm_time);
+            const char *format = "%Y-%m-%d %H:%M:%S";
+            ::strftime(t_time_buffer, sizeof(t_time_buffer), format, &tm_time);
+        }
+        const auto &fmt = fwsl.format();
+        const auto &sl = fwsl.source_location();
+        this->log(
+            std::format("{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond,
+                        level_to_string(level), this_thread::get_tid(), sl.file_name(), sl.line(),
+                        std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))),
+            level_to_color(level));
     }
 
 private:
@@ -76,7 +99,9 @@ public:
 class FileLogger : public BaseLogger {
 public:
     FileLogger(const std::string_view &base_name)
-        : m_file{base_name}, m_current_buffer{new Buffer}, m_thread{&FileLogger::loopFunc, this} {
+        : m_file{base_name}
+        , m_current_buffer{new Buffer}
+        , m_thread{&FileLogger::loopFunc, this} {
         for (int i = 0; i < 2; ++i) {
             m_empty_buffers.emplace_back(new Buffer);
         }

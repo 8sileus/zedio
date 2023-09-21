@@ -1,4 +1,0 @@
-file(GLOB log_header "log/*hpp")
-file(GLOB net_header "net/*hpp")
-file(GLOB util_header "util/*hpp")
-file(GLOB coro_header "coro/*hpp")

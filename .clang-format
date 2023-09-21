@@ -15,6 +15,7 @@ BreakAfterAttributes: Always
 # DerivePointerAlignment: false
 # PointerAlignment: Left
 
+NamespaceIndentation: Inner
 
 ColumnLimit: 100
 

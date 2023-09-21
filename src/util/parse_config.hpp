@@ -47,7 +47,7 @@ public:
     }
 
     template <typename T>
-    auto get(const std::string &key, const T &default_value) const -> T {
+    auto get(const std::string &key, const T &default_value) -> T {
         std::shared_lock lock(datas_mutex_);
         if (datas_.count(key)) {
             return boost::lexical_cast<T>(datas_[key]);
@@ -76,5 +76,7 @@ private:
     std::shared_mutex                            datas_mutex_{};
     std::unordered_map<std::string, std::string> datas_{};
 };
+
+constexpr std::string ZED_CONFIG_FILE{"zed.yaml"};
 
 } // namespace zed::util

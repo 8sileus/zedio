@@ -15,7 +15,7 @@ public:
 
     // NOTE：在外部使用availableCapacity判断剩余空间是否可以容纳;
     void write(const std::string& str) noexcept {
-        assert(writableBytes() > str.size());
+        assert(writeableSize() > str.size());
         std::memcpy(m_cur, str.data(), str.size());
         m_cur += str.size();
     };

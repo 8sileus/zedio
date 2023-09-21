@@ -2,34 +2,37 @@
 
 #include "log/logger.hpp"
 
+// C++
 #include <unordered_map>
 
 namespace zed::log::detail {
 
 class LogManager : util::Noncopyable {
 public:
-    void push(const std::string &name, const std::string_view &base_name) {
-        m_loggers.emplace(name, base_name);
+    void create_logger(const std::string &name, const std::string_view &base_name) {
+        loggers_.emplace(name, base_name);
     }
 
-    void erase(const std::string &name) { m_loggers.erase(name); }
+    void delete_logger(const std::string &name) { loggers_.erase(name); }
 
-    auto get(const std::string &name) -> FileLogger & {
+    auto get_logger(const std::string &name) -> FileLogger & {
         try {
-            return m_loggers.at(name);
+            return loggers_.at(name);
         } catch (...) {
             std::cerr << std::format("[{}] isn't exist in {}\n", name, listAllName());
             std::rethrow_exception(std::current_exception());
         }
     }
 
-    auto has(const std::string &name) -> bool { return m_loggers.find(name) != m_loggers.end(); }
+    auto has_logger(const std::string &name) -> bool {
+        return loggers_.find(name) != loggers_.end();
+    }
 
 private:
     // for debug
     auto listAllName() -> std::string {
         std::string str = "[";
-        for (const auto &[name, _] : m_loggers) {
+        for (const auto &[name, _] : loggers_) {
             str += name + ",";
         }
         str.back() = ']';
@@ -37,7 +40,7 @@ private:
     }
 
 private:
-    std::unordered_map<std::string, FileLogger> m_loggers;
+    std::unordered_map<std::string, FileLogger> loggers_;
 };
 
 }  // namespace zed::log::detail
