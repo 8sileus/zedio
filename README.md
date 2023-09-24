@@ -19,7 +19,7 @@ Ubuntu 22.10
 ## 编译器
 - g++ 13.1.0 以上;
 ## 安装以及编译
-ZED是header-only的工具库，你可以直接cp zed文件夹到你的项目中。或者通过CMake安装
+ZED是header-only的工具库，你可以直接cp zed文件夹到你的项目中。或者通过CMake安装。
 1. clone zedlibs
 ```
 gitclone https://github.com/8sileus/zedlibs
@@ -39,8 +39,7 @@ ctest .
 
 # 依赖库
 boost    
-yaml-cpp:https://github.com/jbeder/yaml-cpp
-
+liburing: https://github.com/axboe/liburing
 # 项目介绍
 ## asynchronous I/O
 

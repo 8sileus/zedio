@@ -1,3 +1,4 @@
 .vscode
+./generate.sh
 /bin
 /build
