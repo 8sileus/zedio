@@ -133,7 +133,7 @@ public:
         }
     }
 
-    void setRollSize(off_t roll_size) noexcept { m_file.setRollSize(roll_size); }
+    void set_max_file_size(off_t roll_size) noexcept { m_file.set_max_file_size(roll_size); }
 
 private:
     void loopFunc() {

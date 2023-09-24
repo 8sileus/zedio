@@ -16,7 +16,7 @@ struct Sleep {
     template <typename T>
     void await_suspend(std::coroutine_handle<T> handle) const noexcept {
         auto task = [handle]() { handle.resume(); };
-        detail::t_processor->timer().set_timer(task, timeout_);
+        detail::t_processor->timer()->add_timer_event(task, timeout_);
     }
 
     constexpr void await_resume() const noexcept {};

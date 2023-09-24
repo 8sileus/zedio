@@ -9,7 +9,7 @@ void BaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
     handle_ = std::move(handle);
     auto sqe = io_uring_get_sqe(t_processor->uring());
     if (sqe == nullptr) [[unlikely]] {
-        t_processor->push(this);
+        t_processor->push_awaiter(this);
     } else {
         cb_(sqe);
         io_uring_sqe_set_data64(sqe, reinterpret_cast<unsigned long long>(this));

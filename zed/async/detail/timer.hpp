@@ -42,9 +42,6 @@ public:
     auto expired_time() const -> time_t { return expired_time_; }
 
     auto operator<=>(const TimerEvent &other) const {
-        if (this->expired_time_ == other.expired_time_) {
-            return this <=> std::addressof(other);
-        }
         return this->expired_time_ <=> other.expired_time_;
     }
 
@@ -80,13 +77,14 @@ public:
 
     ~Timer() { ::close(fd_); }
 
-    void run() {
+    void start() {
         task_ = work();
         task_.resume();
     }
 
-    auto set_timer(const std::function<void()> &cb, const std::chrono::milliseconds &delay,
-                   const std::chrono::milliseconds &period = 0ms) -> std::shared_ptr<TimerEvent> {
+    auto add_timer_event(const std::function<void()> &cb, const std::chrono::milliseconds &delay,
+                         const std::chrono::milliseconds &period = 0ms)
+        -> std::shared_ptr<TimerEvent> {
         auto event = std::make_shared<TimerEvent>(cb, delay, period);
         bool need_update = false;
         {
@@ -106,27 +104,24 @@ public:
 
 private:
     void update_expired_time() {
-        std::shared_lock lock(mutex_);
-        auto             it = events_.begin();
-        lock.unlock();
-        if (it == events_.end()) {
-            return;
+        decltype(events_.begin()) it;
+        {
+            std::lock_guard lock(mutex_);
+            it = events_.begin();
+            if (it == events_.end()) {
+                return;
+            }
         }
         auto now = util::now<util::Time::MilliSecond>();
         if ((*it)->expired_time_ < now) {
             return;
         }
-        auto     internal = (*it)->expired_time_ - now;
-        timespec ts;
-        ::memset(&ts, 0, sizeof(ts));
-        ts.tv_sec = internal / 1000;
-        ts.tv_nsec = (internal % 1000) * 1000000;
-        log::zed.debug("timer's expiration in {}.{} seconds", ts.tv_sec, ts.tv_nsec);
+        auto       internal = (*it)->expired_time_ - now;
         itimerspec new_value;
         ::memset(&new_value, 0, sizeof(new_value));
-        new_value.it_value = ts;
-        auto res = ::timerfd_settime(fd_, 0, &new_value, nullptr);
-        if (res != 0) [[unlikely]] {
+        new_value.it_value.tv_sec = internal / 1000;
+        new_value.it_value.tv_nsec = internal % 1000 * 1000000;
+        if (auto res = ::timerfd_settime(fd_, 0, &new_value, nullptr); res != 0) [[unlikely]] {
             log::zed.error("timerfd_settime failed errorno: {} msg: {}", res, strerror(res));
         }
     }
@@ -140,9 +135,9 @@ private:
                 log::zed.error("timer read {}/{} bytes ", n, sizeof(buf));
             }
             std::vector<std::shared_ptr<TimerEvent>> expired_events;
+            auto tmp = std::make_shared<TimerEvent>(nullptr, 0, 0);
             {
                 std::lock_guard lock(mutex_);
-                auto            tmp = std::make_shared<TimerEvent>(nullptr, 0, 0);
                 auto            it = events_.upper_bound(tmp);
                 expired_events.insert(expired_events.end(), events_.begin(), it);
                 events_.erase(events_.begin(), it);
@@ -166,10 +161,10 @@ private:
     }
 
 private:
-    Task<void>                            task_{};
-    std::set<std::shared_ptr<TimerEvent>> events_{};
-    std::shared_mutex                     mutex_{};
-    int                                   fd_{-1};
+    Task<void>                                 task_{};
+    std::multiset<std::shared_ptr<TimerEvent>> events_{};
+    std::mutex                                 mutex_{};
+    int                                        fd_{-1};
 };
 
 } // namespace zed::async::detail
