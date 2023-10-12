@@ -11,13 +11,13 @@ namespace zed::log::detail {
 template <std::size_t SIZE>
 class LogBuffer : util::Noncopyable {
 public:
-    LogBuffer() noexcept : m_cur{m_data} {}
+    LogBuffer() noexcept : cur_{data_} {}
 
     // NOTE：在外部使用availableCapacity判断剩余空间是否可以容纳;
-    void write(const std::string& str) noexcept {
-        assert(writeableSize() > str.size());
-        std::memcpy(m_cur, str.data(), str.size());
-        m_cur += str.size();
+    void write(const std::string &str) noexcept {
+        assert(writeable_bytes() > str.size());
+        std::memcpy(cur_, str.data(), str.size());
+        cur_ += str.size();
     };
 
     [[nodiscard]] constexpr auto capacity() const noexcept -> std::size_t {
@@ -25,24 +25,25 @@ public:
     }
 
     [[nodiscard]] auto size() const noexcept -> std::size_t {
-        return m_cur - m_data;
+        return cur_ - data_;
     }
 
-    [[nodiscard]] auto writeableSize() const noexcept -> std::size_t {
+    [[nodiscard]]
+    auto writeable_bytes() const noexcept -> std::size_t {
         return capacity() - size();
     }
 
-    [[nodiscard]] auto data() const noexcept -> const char* { return m_data; }
+    [[nodiscard]] auto data() const noexcept -> const char* { return data_; }
 
     [[nodiscard]] auto empty() const noexcept -> bool {
-        return m_cur == m_data;
+        return cur_ == data_;
     }
 
-    void reset() noexcept { m_cur = m_data; }
+    void reset() noexcept { cur_ = data_; }
 
 private:
-    char  m_data[SIZE]{};
-    char* m_cur{nullptr};
+    char  data_[SIZE]{};
+    char* cur_{nullptr};
 };
 
 }  // namespace zed::log::detail

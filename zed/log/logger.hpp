@@ -11,10 +11,27 @@
 #include <iostream>
 #include <list>
 #include <mutex>
+#include <source_location>
 #include <thread>
 
 namespace zed::log::detail {
 
+class FmtWithSourceLocation {
+public:
+    template <typename T>
+        requires std::constructible_from<std::string_view, T>
+    FmtWithSourceLocation(T &&fmt, std::source_location sl = std::source_location::current())
+        : fmt_(std::forward<T>(fmt))
+        , sl_(std::move(sl)) {}
+
+    constexpr auto fmt() const -> const std::string_view & { return fmt_; }
+
+    constexpr auto source_location() const -> const std::source_location & { return sl_; }
+
+private:
+    std::string_view     fmt_;
+    std::source_location sl_;
+};
 
 class BaseLogger : util::Noncopyable {
 public:
@@ -22,11 +39,11 @@ public:
 
     virtual void log(std::string &&msg, const std::string_view &color) = 0;
 
-    void setLevel(LogLevel level) noexcept { m_level = level; }
+    void setLevel(LogLevel level) noexcept { level_ = level; }
 
     [[nodiscard]]
     auto getLevel() const noexcept -> LogLevel {
-        return m_level;
+        return level_;
     }
 
     template <typename... Args>
@@ -62,7 +79,7 @@ public:
 private:
     template <LogLevel level, typename... Args>
     void format(const FmtWithSourceLocation &fwsl, Args &&...args) {
-        if (level < m_level) {
+        if (level < level_) {
             return;
         }
 
@@ -76,7 +93,7 @@ private:
             const char *format = "%Y-%m-%d %H:%M:%S";
             ::strftime(t_time_buffer, sizeof(t_time_buffer), format, &tm_time);
         }
-        const auto &fmt = fwsl.format();
+        const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
         this->log(
             std::format("{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond,
@@ -86,7 +103,7 @@ private:
     }
 
 private:
-    LogLevel m_level{LogLevel::DEBUG};
+    LogLevel level_{LogLevel::DEBUG};
 };
 
 class ConsoleLogger : public BaseLogger {
@@ -99,85 +116,85 @@ public:
 class FileLogger : public BaseLogger {
 public:
     FileLogger(const std::string_view &base_name)
-        : m_file{base_name}
-        , m_current_buffer{new Buffer}
-        , m_thread{&FileLogger::loopFunc, this} {
+        : file_{base_name}
+        , current_buffer_{new Buffer}
+        , thread_{&FileLogger::work, this} {
         for (int i = 0; i < 2; ++i) {
-            m_empty_buffers.emplace_back(new Buffer);
+            empty_buffers_.emplace_back(new Buffer);
         }
     }
 
     ~FileLogger() {
-        m_running = false;
-        m_cond.notify_one();
-        m_thread.join();
+        ruinning_ = false;
+        cond_.notify_one();
+        thread_.join();
     }
 
     void log(std::string &&msg, [[maybe_unused]] const std::string_view &color) override {
-        if (!m_running) [[unlikely]] {
+        if (!ruinning_) [[unlikely]] {
             return;
         }
-        std::lock_guard<std::mutex> lock(m_buffer_mutex);
-        if (m_current_buffer->writeableSize() > msg.size()) {
-            m_current_buffer->write(msg);
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (current_buffer_->writeable_bytes() > msg.size()) {
+            current_buffer_->write(msg);
         } else {
-            m_full_buffers.push_back(std::move(m_current_buffer));
-            if (!m_empty_buffers.empty()) {
-                m_current_buffer = std::move(m_empty_buffers.front());
-                m_empty_buffers.pop_front();
+            full_buffers_.push_back(std::move(current_buffer_));
+            if (!empty_buffers_.empty()) {
+                current_buffer_ = std::move(empty_buffers_.front());
+                empty_buffers_.pop_front();
             } else {
-                m_current_buffer.reset(new Buffer);
+                current_buffer_.reset(new Buffer);
             }
-            m_current_buffer->write(msg);
-            m_cond.notify_one();
+            current_buffer_->write(msg);
+            cond_.notify_one();
         }
     }
 
-    void set_max_file_size(off_t roll_size) noexcept { m_file.set_max_file_size(roll_size); }
+    void set_max_file_size(off_t roll_size) noexcept { file_.set_max_file_size(roll_size); }
 
 private:
-    void loopFunc() {
+    void work() {
         constexpr std::size_t max_buffer_list_size = 15;
 
-        while (m_running) {
+        while (ruinning_) {
             {
-                std::unique_lock<std::mutex> lock(m_buffer_mutex);
-                if (m_full_buffers.empty()) {
-                    m_cond.wait_for(lock, std::chrono::seconds(3));
+                std::unique_lock<std::mutex> lock(mutex_);
+                if (full_buffers_.empty()) {
+                    cond_.wait_for(lock, std::chrono::seconds(3));
                 }
-                m_full_buffers.push_back(std::move(m_current_buffer));
-                if (!m_empty_buffers.empty()) {
-                    m_current_buffer = std::move(m_empty_buffers.front());
-                    m_empty_buffers.pop_front();
+                full_buffers_.push_back(std::move(current_buffer_));
+                if (!empty_buffers_.empty()) {
+                    current_buffer_ = std::move(empty_buffers_.front());
+                    empty_buffers_.pop_front();
                 } else {
-                    m_current_buffer.reset(new Buffer);
+                    current_buffer_.reset(new Buffer);
                 }
             }
 
-            if (m_full_buffers.size() > max_buffer_list_size) {
+            if (full_buffers_.size() > max_buffer_list_size) {
                 char buf[256];
                 std::cerr << std::format("Dropped log messages {} larger buffers\n",
-                                         m_full_buffers.size() - 2);
-                m_full_buffers.resize(2);
+                                         full_buffers_.size() - 2);
+                full_buffers_.resize(2);
             }
 
-            for (auto &buffer : m_full_buffers) {
-                m_file.write(buffer->data(), buffer->size());
+            for (auto &buffer : full_buffers_) {
+                file_.write(buffer->data(), buffer->size());
                 buffer->reset();
             }
 
-            if (m_full_buffers.size() > 2) {
-                m_full_buffers.resize(2);
+            if (full_buffers_.size() > 2) {
+                full_buffers_.resize(2);
             }
-            m_file.flush();
-            m_empty_buffers.splice(m_empty_buffers.end(), m_full_buffers);
+            file_.flush();
+            empty_buffers_.splice(empty_buffers_.end(), full_buffers_);
         }
 
-        if (!m_current_buffer->empty()) {
-            m_full_buffers.emplace_back(std::move(m_current_buffer));
+        if (!current_buffer_->empty()) {
+            full_buffers_.emplace_back(std::move(current_buffer_));
         }
-        for (auto &buffer : m_full_buffers) {
-            m_file.write(buffer->data(), buffer->size());
+        for (auto &buffer : full_buffers_) {
+            file_.write(buffer->data(), buffer->size());
         }
     }
 
@@ -185,14 +202,14 @@ private:
     using Buffer = LogBuffer<4000 * 1024>;
     using BufferPtr = std::unique_ptr<Buffer>;
 
-    LogFile                 m_file;
-    BufferPtr               m_current_buffer{};
-    std::list<BufferPtr>    m_empty_buffers{};
-    std::list<BufferPtr>    m_full_buffers{};
-    std::mutex              m_buffer_mutex{};
-    std::condition_variable m_cond{};
-    std::thread             m_thread{};
-    std::atomic<bool>       m_running{true};
+    LogFile                 file_;
+    BufferPtr               current_buffer_{};
+    std::list<BufferPtr>    empty_buffers_{};
+    std::list<BufferPtr>    full_buffers_{};
+    std::mutex              mutex_{};
+    std::condition_variable cond_{};
+    std::thread             thread_{};
+    std::atomic<bool>       ruinning_{true};
 };
 
 } // namespace zed::log::detail
