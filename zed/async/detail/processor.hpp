@@ -56,9 +56,6 @@ public:
         if (running_) {
             stop();
         }
-        for (auto &thread : threads_) {
-            thread.join();
-        }
     }
 
     void start() {
@@ -76,6 +73,10 @@ public:
     void stop() {
         running_ = false;
         cond_.notify_all();
+
+        for (auto &thread : threads_) {
+            thread.join();
+        }
     }
 
     template <typename F, typename... Args>

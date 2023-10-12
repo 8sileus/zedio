@@ -29,6 +29,7 @@ auto w() -> Task<void> {
 int main() {
     pipe(p);
     Scheduler s;
+    s.stop(10s);
     s.push(r());
     s.push(w());
     s.start();

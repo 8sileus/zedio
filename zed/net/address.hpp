@@ -1,48 +1,24 @@
 #pragma once
 
-#include <cassert>
-#include <cstdint>
-#include <cstring>
-#include <format>
-#include <string_view>
-#include <variant>
-
+// Linux
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+// C
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+// C++
+#include <format>
+#include <memory>
+#include <string_view>
 
 namespace zed {
 
-enum class IPVersion {
-    IPV4,
-    IPV6,
-};
-
-constexpr auto IPVersionToString(IPVersion version) -> std::string_view {
-    switch (version) {
-    case IPVersion::IPV4:
-        return "IPV4";
-    case IPVersion::IPV6:
-        return "IPV6";
-    default:
-        return "Unknown ip version";
-    }
-}
-
-template <IPVersion version>
 class Address {
 private:
-    constexpr Address(const std::string_view &hostname, const std::string_view &service,
-                      int flags) {
-        static_assert(version == IPVersion::IPV4 || version == IPVersion::IPV6);
-
+    Address(const std::string_view &hostname, const std::string_view &service, int flags) {
         addrinfo hints{.ai_flags{flags}};
-
-        if constexpr (version == IPVersion::IPV4) {
-            hints.ai_family = AF_INET;
-        } else {
-            hints.ai_family = AF_INET6;
-        }
 
         addrinfo *result{nullptr};
         if (::getaddrinfo(hostname.data(), service.data(), &hints, &result)) [[unlikely]] {
@@ -55,67 +31,65 @@ private:
                 std::format("getaddrinfo returned successfully but with no results"));
         }
 
-        ::memcpy(&m_addr4, result->ai_addr, result->ai_addrlen);
+        ::memcpy(&addr_, result->ai_addr, result->ai_addrlen);
         ::freeaddrinfo(result);
     }
 
 public:
-    constexpr Address(const std::string_view &hostname, const std::string_view &service)
+    Address(const std::string_view &hostname, const std::string_view &service)
         : Address(hostname, service, AI_ALL) {}
 
-    explicit constexpr Address(const std::string_view &ip, std::uint16_t port = 0)
+    explicit Address(const std::string_view &ip, std::uint16_t port = 0)
         : Address(ip, std::to_string(port), AI_NUMERICHOST | AI_NUMERICSERV) {}
 
-    explicit constexpr Address(const sockaddr *addr, std::size_t len) {
-        static_assert(version == IPVersion::IPV4 || version == IPVersion::IPV6);
-        ::memcpy(&m_addr4, addr, len);
-    };
+    Address(const sockaddr *addr, std::size_t len) { ::memcpy(&addr_, addr, len); };
 
     auto ip() const -> std::string {
-        char buf[64]{};
-        if constexpr (version == IPVersion::IPV4) {
-            ::inet_ntop(AF_INET, &m_addr4.sin_addr, buf, sizeof(buf));
-        } else if constexpr (version == IPVersion::IPV6) {
-            ::inet_ntop(AF_INET6, &m_addr6.sin6_addr, buf, sizeof(buf));
+        char buf[64];
+        if (is_ipv4()) {
+            auto addr4 = reinterpret_cast<const sockaddr_in *>(&addr_);
+            ::inet_ntop(AF_INET, &addr4->sin_addr, buf, sizeof(buf));
+        } else {
+            auto addr6 = reinterpret_cast<const sockaddr_in6 *>(&addr_);
+            ::inet_ntop(AF_INET6, &addr6->sin6_addr, buf, sizeof(buf));
         }
         return buf;
     }
 
     auto port() const -> std::uint16_t {
-        if constexpr (version == IPVersion::IPV4) {
-            return ::ntohs(m_addr4.sin_port);
+        if (is_ipv4()) {
+            auto addr4 = reinterpret_cast<const sockaddr_in *>(&addr_);
+            return ::ntohs(addr4->sin_port);
         } else {
-            return ::ntohs(m_addr6.sin6_port);
+            auto addr6 = reinterpret_cast<const sockaddr_in6 *>(&addr_);
+            return ::ntohs(addr6->sin6_port);
         }
     }
 
-    auto ipPort() const -> std::pair<std::string, std::uint16_t> { return {ip(), port()}; }
+    auto to_string() const -> std::string { return ip() + " " + std::to_string(port()); };
 
-    auto toString() const -> std::string { return ip() + ":" + std::to_string(port()); };
+    auto get_sockaddr() const -> const sockaddr * {
+        return reinterpret_cast<const sockaddr *>(&addr_);
+    }
 
-    auto addr() const -> const sockaddr * { return reinterpret_cast<const sockaddr *>(m_addr4); }
+    auto get_sockaddr() -> sockaddr * { return reinterpret_cast<sockaddr *>(&addr_); }
 
-    auto addr() -> sockaddr * { return reinterpret_cast<sockaddr *>(&m_addr4); }
-
-    consteval auto len() const -> std::size_t {
-        if constexpr (version == IPVersion::IPV4) {
+    auto get_length() const noexcept -> std::size_t {
+        if (is_ipv4()) {
             return sizeof(sockaddr_in);
+        } else {
+            return sizeof(sockaddr_in6);
         }
-        return sizeof(sockaddr_in6);
     }
 
-    consteval auto isIpv4() const -> bool { return version == IPVersion::IPV4; }
+    auto is_ipv4() const noexcept -> bool { return addr_.ss_family == AF_INET; }
 
-    consteval auto isIpv6() const -> bool { return version == IPVersion::IPV6; }
+    auto is_ipv6() const noexcept -> bool { return addr_.ss_family == AF_INET6; }
 
 private:
-    union {
-        sockaddr_in  m_addr4;
-        sockaddr_in6 m_addr6;
-    };
+    sockaddr_storage addr_{};
 };
 
-using Address4 = Address<IPVersion::IPV4>;
-using Address6 = Address<IPVersion::IPV6>;
+using AddressRef = std::shared_ptr<Address>;
 
 } // namespace zed

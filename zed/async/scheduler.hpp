@@ -18,7 +18,10 @@ public:
         }
     }
 
-    ~Scheduler() { io_uring_queue_exit(&uring_); }
+    ~Scheduler() {
+        pool_.stop();
+        io_uring_queue_exit(&uring_);
+    }
 
     void start() {
         if (running_) [[unlikely]] {
@@ -47,7 +50,14 @@ public:
         }
     }
 
-    void stop() { running_ = false; }
+    void stop(std::chrono::milliseconds delay) {
+        auto task = [this]() { this->running_ = false; };
+        if (delay != 0ms) {
+            timer_.add_timer_event(task, delay);
+        } else {
+            task();
+        }
+    }
 
     void push(Task<void> task) {
         auto handle = task.take();
