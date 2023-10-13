@@ -1,17 +1,18 @@
 #pragma once
 
-#include "util/noncopyable.hpp"
-
+// C
 #include <cassert>
 #include <cstring>
+// C++
 #include <string>
 
 namespace zed::log::detail {
 
 template <std::size_t SIZE>
-class LogBuffer : util::Noncopyable {
+class LogBuffer {
 public:
-    LogBuffer() noexcept : cur_{data_} {}
+    LogBuffer() noexcept
+        : cur_{data_} {}
 
     // NOTE：在外部使用availableCapacity判断剩余空间是否可以容纳;
     void write(const std::string &str) noexcept {
@@ -20,11 +21,13 @@ public:
         cur_ += str.size();
     };
 
-    [[nodiscard]] constexpr auto capacity() const noexcept -> std::size_t {
+    [[nodiscard]]
+    constexpr auto capacity() const noexcept -> std::size_t {
         return SIZE;
     }
 
-    [[nodiscard]] auto size() const noexcept -> std::size_t {
+    [[nodiscard]]
+    auto size() const noexcept -> std::size_t {
         return cur_ - data_;
     }
 
@@ -33,9 +36,13 @@ public:
         return capacity() - size();
     }
 
-    [[nodiscard]] auto data() const noexcept -> const char* { return data_; }
+    [[nodiscard]]
+    auto data() const noexcept -> const char * {
+        return data_;
+    }
 
-    [[nodiscard]] auto empty() const noexcept -> bool {
+    [[nodiscard]]
+    auto empty() const noexcept -> bool {
         return cur_ == data_;
     }
 
@@ -43,7 +50,7 @@ public:
 
 private:
     char  data_[SIZE]{};
-    char* cur_{nullptr};
+    char *cur_{nullptr};
 };
 
-}  // namespace zed::log::detail
+} // namespace zed::log::detail

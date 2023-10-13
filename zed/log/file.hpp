@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/noncopyable.hpp"
+#include "common/util/noncopyable.hpp"
 // C++
 #include <format>
 #include <fstream>

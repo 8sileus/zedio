@@ -13,15 +13,6 @@
 
 namespace zed::util {
 
-/// @brief thread safe parse config
-
-enum class FileType {
-    JSON,
-    YAML,
-    INI,
-};
-
-// template<FileType F>
 class ParseConfig {
 public:
     ParseConfig(const std::string &file_name) { load_from_file(file_name); }

@@ -2,8 +2,7 @@
 
 #include "async/detail/processor.hpp"
 #include "async/detail/timer.hpp"
-// C++
-#include <future>
+#include "async/detail/waker.hpp"
 
 namespace zed::async {
 
@@ -30,6 +29,7 @@ public:
         running_ = true;
 
         pool_.submit([this]() { this->timer_.start(); });
+        pool_.submit([this]() { this->waker_.start(); });
         pool_.start();
         io_uring_cqe *cqe;
 
@@ -41,7 +41,7 @@ public:
             io_uring_wait_cqe_timeout(&uring_, &cqe, &ts);
             if (cqe) {
                 auto io_awaiter
-                    = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
+                    = reinterpret_cast<detail::LazyBaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
                 io_awaiter->res_ = cqe->res;
                 auto task = [io_awaiter]() { io_awaiter->handle_.resume(); };
                 pool_.submit(task);
@@ -51,7 +51,10 @@ public:
     }
 
     void stop(std::chrono::milliseconds delay) {
-        auto task = [this]() { this->running_ = false; };
+        auto task = [this]() {
+            this->running_ = false;
+            waker_.wake();
+        };
         if (delay != 0ms) {
             timer_.add_timer_event(task, delay);
         } else {
@@ -59,7 +62,7 @@ public:
         }
     }
 
-    void push(Task<void> task) {
+    void submit(Task<void> task) {
         auto handle = task.take();
         auto f = [handle]() { handle.resume(); };
         pool_.submit(f);
@@ -68,6 +71,7 @@ public:
 private:
     io_uring              uring_{};
     detail::Timer         timer_{};
+    detail::Waker         waker_{};
     detail::ProcessorPool pool_;
     std::atomic<bool>     running_{false}; // TODO consider delete this variable
 };

@@ -5,7 +5,7 @@
 
 namespace zed::async::detail {
 
-void BaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
+void LazyBaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
     handle_ = std::move(handle);
     auto sqe = io_uring_get_sqe(t_processor->uring());
     if (sqe == nullptr) [[unlikely]] {

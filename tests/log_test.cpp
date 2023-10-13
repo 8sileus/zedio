@@ -1,10 +1,9 @@
+#include "common/util/time.hpp"
 #include "log.hpp"
-#include "util/singleton.hpp"
-#include "util/time.hpp"
-
+// Linux
 #include <sys/resource.h>
+// C++
 #include <iostream>
-#include <thread>
 #include <vector>
 
 using namespace zed;
@@ -46,7 +45,7 @@ void test(int n, bool flag) {
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     log::console.setLevel(log::LogLevel::TRACE);
     size_t kOneGB = 1000 * 1024 * 1024;
     rlimit rl = {2 * kOneGB, 2 * kOneGB};

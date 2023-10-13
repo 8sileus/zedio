@@ -2,9 +2,10 @@
 
 #include "async/async_io.hpp"
 #include "async/task.hpp"
+#include "common/macros.hpp"
+#include "common/util/noncopyable.hpp"
+#include "common/util/time.hpp"
 #include "log.hpp"
-#include "util/noncopyable.hpp"
-#include "util/time.hpp"
 // Linux
 #include <sys/timerfd.h>
 // C
@@ -30,7 +31,7 @@ public:
         : cb_(cb)
         , delay_(delay)
         , period_(period) {
-        expired_time_ = util::now<util::Time::MilliSecond>() + delay;
+        expired_time_ = util::get_time_since_epoch<util::TimeUnit::MilliSecond>() + delay;
     }
 
     TimerEvent(const std::function<void()> &cb, const std::chrono::milliseconds &delay,
@@ -55,7 +56,9 @@ public:
     }
 
 private:
-    void update() { expired_time_ = period_ + util::now<util::Time::MilliSecond>(); }
+    void update() {
+        expired_time_ = period_ + util::get_time_since_epoch<util::TimeUnit::MilliSecond>();
+    }
 
 private:
     time_t                expired_time_{0};
@@ -112,7 +115,7 @@ private:
                 return;
             }
         }
-        auto now = util::now<util::Time::MilliSecond>();
+        auto now = util::get_time_since_epoch<util::TimeUnit::MilliSecond>();
         if ((*it)->expired_time_ < now) {
             return;
         }
@@ -121,18 +124,23 @@ private:
         ::memset(&new_value, 0, sizeof(new_value));
         new_value.it_value.tv_sec = internal / 1000;
         new_value.it_value.tv_nsec = internal % 1000 * 1000000;
-        if (auto res = ::timerfd_settime(fd_, 0, &new_value, nullptr); res != 0) [[unlikely]] {
-            log::zed.error("timerfd_settime failed errorno: {} msg: {}", res, strerror(res));
+        if (auto ret = ::timerfd_settime(fd_, 0, &new_value, nullptr); ret != 0) [[unlikely]] {
+            log::zed_logger.error(FORMAT_FUNC_ERR_MESSAGE(timerfd_settime, errno));
         }
+        log::zed_logger.debug("The next expiration of the timer in {}.{}s later",
+                              new_value.it_value.tv_sec, new_value.it_value.tv_nsec);
+#ifdef NDEBUG
+
+#endif
     }
 
 private:
     auto work() -> Task<void> {
         char buf[8];
         while (true) {
-            if (auto n = co_await async::Read<async::Exclusive>(fd_, buf, sizeof(buf), 0);
-                n != sizeof(buf)) [[unlikely]] {
-                log::zed.error("timer read {}/{} bytes ", n, sizeof(buf));
+            if (auto ret = co_await async::Read(fd_, buf, sizeof(buf), 0); ret != sizeof(buf))
+                [[unlikely]] {
+                log::zed_logger.error("read timer fd only read {}/{} bytes", ret, sizeof(buf));
             }
             std::vector<std::shared_ptr<TimerEvent>> expired_events;
             auto tmp = std::make_shared<TimerEvent>(nullptr, 0, 0);
@@ -142,6 +150,7 @@ private:
                 expired_events.insert(expired_events.end(), events_.begin(), it);
                 events_.erase(events_.begin(), it);
             }
+            log::zed_logger.debug("{} timer events expire", expired_events.size());
             std::vector<std::function<void()>> cbs;
             cbs.reserve(expired_events.size());
             for (auto &event : expired_events) {

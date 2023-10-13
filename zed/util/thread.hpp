@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/noncopyable.hpp"
+#include "common/util/noncopyable.hpp"
 // Linux
 #include <pthread.h>
 #include <unistd.h>

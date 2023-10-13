@@ -13,7 +13,7 @@
 #include <memory>
 #include <string_view>
 
-namespace zed {
+namespace zed::net {
 
 class Address {
 private:
@@ -44,6 +44,17 @@ public:
 
     Address(const sockaddr *addr, std::size_t len) { ::memcpy(&addr_, addr, len); };
 
+    Address(const Address &other)
+        : addr_(other.addr_) {}
+
+    auto operator=(const Address &other) -> Address & {
+        if (this == std::addressof(other)) {
+            return *this;
+        }
+        addr_ = other.addr_;
+    }
+
+    [[nodiscard]]
     auto ip() const -> std::string {
         char buf[64];
         if (is_ipv4()) {
@@ -56,6 +67,7 @@ public:
         return buf;
     }
 
+    [[nodiscard]]
     auto port() const -> std::uint16_t {
         if (is_ipv4()) {
             auto addr4 = reinterpret_cast<const sockaddr_in *>(&addr_);
@@ -66,14 +78,22 @@ public:
         }
     }
 
-    auto to_string() const -> std::string { return ip() + " " + std::to_string(port()); };
+    [[nodiscard]]
+    auto to_string() const -> std::string {
+        return ip() + " " + std::to_string(port());
+    };
 
+    [[nodiscard]]
     auto get_sockaddr() const -> const sockaddr * {
         return reinterpret_cast<const sockaddr *>(&addr_);
     }
 
-    auto get_sockaddr() -> sockaddr * { return reinterpret_cast<sockaddr *>(&addr_); }
+    [[nodiscard]]
+    auto get_sockaddr() -> sockaddr * {
+        return reinterpret_cast<sockaddr *>(&addr_);
+    }
 
+    [[nodiscard]]
     auto get_length() const noexcept -> std::size_t {
         if (is_ipv4()) {
             return sizeof(sockaddr_in);
@@ -82,9 +102,20 @@ public:
         }
     }
 
-    auto is_ipv4() const noexcept -> bool { return addr_.ss_family == AF_INET; }
+    [[nodiscard]]
+    auto is_ipv4() const noexcept -> bool {
+        return addr_.ss_family == AF_INET;
+    }
 
-    auto is_ipv6() const noexcept -> bool { return addr_.ss_family == AF_INET6; }
+    [[nodiscard]]
+    auto is_ipv6() const noexcept -> bool {
+        return addr_.ss_family == AF_INET6;
+    }
+
+    [[nodiscard]]
+    auto family() const -> sa_family_t {
+        return addr_.ss_family;
+    }
 
 private:
     sockaddr_storage addr_{};
@@ -92,4 +123,4 @@ private:
 
 using AddressRef = std::shared_ptr<Address>;
 
-} // namespace zed
+} // namespace zed::net

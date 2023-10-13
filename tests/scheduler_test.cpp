@@ -12,7 +12,7 @@ auto r() -> Task<void> {
         char buf[1024]{0};
         auto n = co_await zed::async::Read(p[0], buf, sizeof(buf), 0);
         zed::log::console.info("read {}", buf);
-        co_await zed::async::Sleep(1s);
+        co_await zed::async::Sleep(2s);
     }
 }
 
@@ -29,9 +29,9 @@ auto w() -> Task<void> {
 int main() {
     pipe(p);
     Scheduler s;
-    s.stop(10s);
-    s.push(r());
-    s.push(w());
+    s.stop(5s);
+    s.submit(r());
+    s.submit(w());
     s.start();
     return 0;
 }

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "common/util/noncopyable.hpp"
 #include "log/buffer.hpp"
 #include "log/def.hpp"
 #include "log/file.hpp"
-#include "util/noncopyable.hpp"
 #include "util/thread.hpp"
 
 // C++

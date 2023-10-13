@@ -34,13 +34,13 @@ public:
 
     auto timer() -> Timer * { return timer_; }
 
-    void push_awaiter(BaseIOAwaiter *awaiter) { waiting_awaiters_.push(awaiter); }
+    void push_awaiter(LazyBaseIOAwaiter *awaiter) { waiting_awaiters_.push(awaiter); }
 
 private:
     ProcessorPool              *pool_{nullptr};
     io_uring                   *uring_{nullptr};
     Timer                      *timer_{nullptr};
-    std::queue<BaseIOAwaiter *> waiting_awaiters_{};
+    std::queue<LazyBaseIOAwaiter *> waiting_awaiters_{};
 };
 
 class ProcessorPool {
@@ -103,7 +103,7 @@ private:
 
 void Processor::start() {
     std::function<void()> task{};
-    BaseIOAwaiter        *awaiter{nullptr};
+    LazyBaseIOAwaiter    *awaiter{nullptr};
     while (true) {
         {
             std::unique_lock lock(pool_->mutex_);

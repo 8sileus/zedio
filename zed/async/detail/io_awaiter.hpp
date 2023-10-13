@@ -2,18 +2,20 @@
 
 // Linux
 #include <liburing.h>
+// C
+#include <cassert>
 // C++
 #include <coroutine>
 #include <functional>
 
 namespace zed::async::detail {
 
-struct BaseIOAwaiter {
-    BaseIOAwaiter(pid_t tid, const std::function<void(io_uring_sqe *)> &cb)
+struct LazyBaseIOAwaiter {
+    LazyBaseIOAwaiter(pid_t tid, const std::function<void(io_uring_sqe *)> &cb)
         : tid_(tid)
         , cb_(cb) {}
 
-    virtual ~BaseIOAwaiter() = default;
+    virtual ~LazyBaseIOAwaiter() = default;
 
     constexpr auto await_ready() const noexcept -> bool { return false; }
 
@@ -25,6 +27,24 @@ struct BaseIOAwaiter {
     int                                 res_{0};
     std::function<void(io_uring_sqe *)> cb_;
     std::coroutine_handle<>             handle_{};
+};
+
+struct EagerBaseIOAwaiter {
+    EagerBaseIOAwaiter(int res)
+        : res_(res) {}
+
+    constexpr auto await_ready() const noexcept -> bool { return true; }
+
+    constexpr void await_suspend(std::coroutine_handle<>) const noexcept { assert(false); }
+
+    constexpr auto await_resume() const noexcept -> int {
+        if (res_ < 0) [[unlikely]] {
+            return -errno;
+        }
+        return res_;
+    }
+
+    const int res_;
 };
 
 } // namespace zed::async::detail

@@ -4,7 +4,7 @@
 
 #include <boost/test/included/unit_test.hpp>
 
-using namespace zed;
+using namespace zed::net;
 
 BOOST_AUTO_TEST_SUITE(address_test)
 

@@ -2,8 +2,8 @@
 
 #include "async/async_io.hpp"
 #include "async/task.hpp"
+#include "common/util/noncopyable.hpp"
 #include "log.hpp"
-#include "util/noncopyable.hpp"
 // Linux
 #include <sys/eventfd.h>
 // C
@@ -26,7 +26,7 @@ public:
 
     ~Waker() { ::close(fd_); }
 
-    void run() {
+    void start() {
         task_ = work();
         task_.resume();
     }
@@ -34,14 +34,8 @@ public:
     void wake() {
         char buf[8];
         if (auto n = ::write(fd_, buf, sizeof(buf)); n != sizeof(buf)) [[unlikely]] {
-            log::zed.error("write {}/{} bytes ", n, sizeof(buf));
+            log::zed_logger.error("write {}/{} bytes ", n, sizeof(buf));
         }
-    }
-
-    void push(const std::function<void()> &task) {
-        std::lock_guard lock(mutex_);
-        tasks_.push_back(task);
-        wake();
     }
 
     auto fd() const -> int { return fd_; }
@@ -52,24 +46,14 @@ private:
         while (true) {
             if (auto n = co_await async::Read<async::Exclusive>(fd_, buf, sizeof(buf), 0);
                 n != sizeof(buf)) [[unlikely]] {
-                log::zed.error("waker read {}/{} bytes ", n, sizeof(buf));
-            }
-            std::vector<std::function<void()>> tasks;
-            {
-                std::lock_guard lock(mutex_);
-                tasks.swap(tasks_);
-            }
-            for (auto &task : tasks) {
-                task();
+                log::zed_logger.error("waker read {}/{} bytes ", n, sizeof(buf));
             }
         }
     }
 
 private:
-    Task<void>                         task_{};
-    std::mutex                         mutex_{};
-    std::vector<std::function<void()>> tasks_{};
-    int                                fd_{-1};
+    Task<void> task_{};
+    int        fd_{-1};
 };
 
 } // namespace zed::async::detail

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "util/noncopyable.hpp"
-
+#include "common/util/noncopyable.hpp"
+// C
 #include <cassert>
+// C++
 #include <coroutine>
 #include <stdexcept>
 #include <variant>
@@ -14,84 +15,84 @@ class Task;
 
 namespace detail {
 
-struct TaskPromiseBase {
-    struct TaskFinalAwaiter {
-        constexpr auto await_ready() const noexcept -> bool { return false; }
+    struct TaskPromiseBase {
+        struct TaskFinalAwaiter {
+            constexpr auto await_ready() const noexcept -> bool { return false; }
 
-        template <typename T>
-        auto await_suspend(std::coroutine_handle<T> callee) const noexcept
-            -> std::coroutine_handle<> {
-            if (callee.promise().m_caller) {
-                return callee.promise().m_caller;
-            } else {
-                callee.destroy();
-                return std::noop_coroutine();
+            template <typename T>
+            auto await_suspend(std::coroutine_handle<T> callee) const noexcept
+                -> std::coroutine_handle<> {
+                if (callee.promise().m_caller) {
+                    return callee.promise().m_caller;
+                } else {
+                    callee.destroy();
+                    return std::noop_coroutine();
+                }
+            }
+
+            // this function never be called
+            constexpr void await_resume() const noexcept {}
+        };
+        virtual ~TaskPromiseBase() = default;
+
+        constexpr auto initial_suspend() const noexcept -> std::suspend_always { return {}; }
+
+        constexpr auto final_suspend() const noexcept -> TaskFinalAwaiter { return {}; }
+
+        std::coroutine_handle<> m_caller{nullptr};
+    };
+
+    template <typename T>
+    struct TaskPromise final : public TaskPromiseBase {
+        auto get_return_object() noexcept -> Task<T>;
+
+        void unhandled_exception() noexcept {
+            m_value.template emplace<std::exception_ptr>(std::current_exception());
+        }
+
+        template <typename F>
+            requires std::is_convertible_v<F &&, T> && std::is_nothrow_constructible_v<T, F &&>
+        void return_value(F &&value) {
+            m_value.template emplace<T>(std::forward<F>(value));
+        }
+
+        auto result() & -> T & {
+            if (std::holds_alternative<std::exception_ptr>(m_value)) [[unlikely]] {
+                std::rethrow_exception(std::get<std::exception_ptr>(m_value));
+            }
+            assert(std::holds_alternative<T>(m_value));
+            return std::get<T>(m_value);
+        }
+
+        auto result() && -> T && {
+            if (std::holds_alternative<std::exception_ptr>(m_value)) [[unlikely]] {
+                std::rethrow_exception(std::get<std::exception_ptr>(m_value));
+            }
+            assert(std::holds_alternative<T>(m_value));
+            return std::move(std::get<T>(m_value));
+        }
+
+    private:
+        std::variant<std::monostate, T, std::exception_ptr> m_value{};
+    };
+
+    template <>
+    struct TaskPromise<void> final : public TaskPromiseBase {
+        auto get_return_object() noexcept -> Task<void>;
+
+        constexpr void return_void() const noexcept {};
+
+        void unhandled_exception() noexcept { m_exception = std::move(std::current_exception()); }
+
+        void result() const {
+            if (m_exception != nullptr) [[unlikely]] {
+                std::rethrow_exception(m_exception);
             }
         }
 
-        // this function never be called
-        constexpr void await_resume() const noexcept {}
+    private:
+        std::exception_ptr m_exception{nullptr};
     };
-    virtual ~TaskPromiseBase() = default;
-
-    constexpr auto initial_suspend() const noexcept -> std::suspend_always { return {}; }
-
-    constexpr auto final_suspend() const noexcept -> TaskFinalAwaiter { return {}; }
-
-    std::coroutine_handle<> m_caller{nullptr};
-};
-
-template <typename T>
-struct TaskPromise final : public TaskPromiseBase {
-    auto get_return_object() noexcept -> Task<T>;
-
-    void unhandled_exception() noexcept {
-        m_value.template emplace<std::exception_ptr>(std::current_exception());
-    }
-
-    template <typename F>
-        requires std::is_convertible_v<F &&, T> && std::is_nothrow_constructible_v<T, F &&>
-    void return_value(F &&value) {
-        m_value.template emplace<T>(std::forward<F>(value));
-    }
-
-    auto result() & -> T & {
-        if (std::holds_alternative<std::exception_ptr>(m_value)) [[unlikely]] {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_value));
-        }
-        assert(std::holds_alternative<T>(m_value));
-        return std::get<T>(m_value);
-    }
-
-    auto result() && -> T && {
-        if (std::holds_alternative<std::exception_ptr>(m_value)) [[unlikely]] {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_value));
-        }
-        assert(std::holds_alternative<T>(m_value));
-        return std::move(std::get<T>(m_value));
-    }
-
-private:
-    std::variant<std::monostate, T, std::exception_ptr> m_value{};
-};
-
-template <>
-struct TaskPromise<void> final : public TaskPromiseBase {
-    auto get_return_object() noexcept -> Task<void>;
-
-    constexpr void return_void() const noexcept {};
-
-    void unhandled_exception() noexcept { m_exception = std::move(std::current_exception()); }
-
-    void result() const {
-        if (m_exception != nullptr) [[unlikely]] {
-            std::rethrow_exception(m_exception);
-        }
-    }
-
-private:
-    std::exception_ptr m_exception{nullptr};
-};
 
 } // namespace detail
 
