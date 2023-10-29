@@ -1,7 +1,6 @@
 #pragma once
 
 #include "async/detail/io_awaiter.hpp"
-#include "net/address.hpp"
 #include "util/thread.hpp"
 
 namespace zed::async {
@@ -93,12 +92,6 @@ struct SendTo : public detail::LazyBaseIOAwaiter {
            socklen_t addrlen)
         : LazyBaseIOAwaiter(T::tid(), [sockfd, buf, len, flags, addr, addrlen](io_uring_sqe *sqe) {
             io_uring_prep_sendto(sqe, sockfd, buf, len, flags, addr, addrlen);
-        }) {}
-
-    SendTo(int sockfd, const void *buf, size_t len, int flags, const net::Address &address)
-        : LazyBaseIOAwaiter(T::tid(), [sockfd, buf, len, flags, &address](io_uring_sqe *sqe) {
-            io_uring_prep_sendto(sqe, sockfd, buf, len, flags, address.get_sockaddr(),
-                                 address.get_length());
         }) {}
 };
 
