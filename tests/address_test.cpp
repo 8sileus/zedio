@@ -13,16 +13,16 @@ BOOST_AUTO_TEST_CASE(ipv4_test) {
         Address addr("192.168.15.33", 9999);
         BOOST_TEST(addr.is_ipv4());
         BOOST_TEST(!addr.is_ipv6());
-        BOOST_REQUIRE_EQUAL(addr.port(), 9999);
-        BOOST_REQUIRE_EQUAL(addr.ip(), "192.168.15.33");
+        BOOST_REQUIRE_EQUAL(addr.get_port(), 9999);
+        BOOST_REQUIRE_EQUAL(addr.get_ip(), "192.168.15.33");
         BOOST_REQUIRE_EQUAL(addr.to_string(), "192.168.15.33 9999");
         BOOST_REQUIRE_EQUAL(addr.get_length(), sizeof(sockaddr_in));
 
         Address tmp(addr.get_sockaddr(), addr.get_length());
         BOOST_TEST(tmp.is_ipv4());
         BOOST_TEST(!tmp.is_ipv6());
-        BOOST_REQUIRE_EQUAL(tmp.port(), 9999);
-        BOOST_REQUIRE_EQUAL(tmp.ip(), "192.168.15.33");
+        BOOST_REQUIRE_EQUAL(tmp.get_port(), 9999);
+        BOOST_REQUIRE_EQUAL(tmp.get_ip(), "192.168.15.33");
         BOOST_REQUIRE_EQUAL(tmp.to_string(), "192.168.15.33 9999");
         BOOST_REQUIRE_EQUAL(tmp.get_length(), sizeof(sockaddr_in));
     }
@@ -31,8 +31,8 @@ BOOST_AUTO_TEST_CASE(ipv4_test) {
         Address addr("localhost", "ftp");
         BOOST_TEST(addr.is_ipv4());
         BOOST_TEST(!addr.is_ipv6());
-        BOOST_REQUIRE_EQUAL(addr.port(), 21);
-        BOOST_REQUIRE_EQUAL(addr.ip(), "127.0.0.1");
+        BOOST_REQUIRE_EQUAL(addr.get_port(), 21);
+        BOOST_REQUIRE_EQUAL(addr.get_ip(), "127.0.0.1");
     }
 }
 
@@ -43,16 +43,16 @@ BOOST_AUTO_TEST_CASE(ipv6_test) {
     Address addr(ip, 1234);
     BOOST_TEST(!addr.is_ipv4());
     BOOST_TEST(addr.is_ipv6());
-    BOOST_REQUIRE_EQUAL(addr.port(), 1234);
-    BOOST_REQUIRE_EQUAL(addr.ip(), ip);
+    BOOST_REQUIRE_EQUAL(addr.get_port(), 1234);
+    BOOST_REQUIRE_EQUAL(addr.get_ip(), ip);
     BOOST_REQUIRE_EQUAL(addr.to_string(), ip + " 1234");
     BOOST_REQUIRE_EQUAL(addr.get_length(), sizeof(sockaddr_in6));
 
     Address tmp(addr.get_sockaddr(), addr.get_length());
     BOOST_TEST(!tmp.is_ipv4());
     BOOST_TEST(tmp.is_ipv6());
-    BOOST_REQUIRE_EQUAL(tmp.port(), 1234);
-    BOOST_REQUIRE_EQUAL(tmp.ip(), ip);
+    BOOST_REQUIRE_EQUAL(tmp.get_port(), 1234);
+    BOOST_REQUIRE_EQUAL(tmp.get_ip(), ip);
     BOOST_REQUIRE_EQUAL(tmp.to_string(), ip + " 1234");
     BOOST_REQUIRE_EQUAL(tmp.get_length(), sizeof(sockaddr_in6));
 }

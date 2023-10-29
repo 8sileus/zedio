@@ -44,18 +44,17 @@ public:
 
     Address(const sockaddr *addr, std::size_t len) { ::memcpy(&addr_, addr, len); };
 
-    Address(const Address &other)
-        : addr_(other.addr_) {}
+    Address(const Address &other) { ::memcpy(&addr_, &other.addr_, sizeof(addr_)); }
 
     auto operator=(const Address &other) -> Address & {
         if (this == std::addressof(other)) {
             return *this;
         }
-        addr_ = other.addr_;
+        ::memcpy(&addr_, &other.addr_, sizeof(addr_));
     }
 
     [[nodiscard]]
-    auto ip() const -> std::string {
+    auto get_ip() const -> std::string {
         char buf[64];
         if (is_ipv4()) {
             auto addr4 = reinterpret_cast<const sockaddr_in *>(&addr_);
@@ -68,7 +67,7 @@ public:
     }
 
     [[nodiscard]]
-    auto port() const -> std::uint16_t {
+    auto get_port() const -> std::uint16_t {
         if (is_ipv4()) {
             auto addr4 = reinterpret_cast<const sockaddr_in *>(&addr_);
             return ::ntohs(addr4->sin_port);
@@ -80,7 +79,7 @@ public:
 
     [[nodiscard]]
     auto to_string() const -> std::string {
-        return ip() + " " + std::to_string(port());
+        return this->get_ip() + " " + std::to_string(this->get_port());
     };
 
     [[nodiscard]]
@@ -95,11 +94,18 @@ public:
 
     [[nodiscard]]
     auto get_length() const noexcept -> std::size_t {
-        if (is_ipv4()) {
+        if (this->is_ipv4()) {
             return sizeof(sockaddr_in);
-        } else {
+        } else if (this->is_ipv6()) {
             return sizeof(sockaddr_in6);
+        } else {
+            return 0;
         }
+    }
+
+    [[nodiscard]]
+    auto get_family() const -> sa_family_t {
+        return addr_.ss_family;
     }
 
     [[nodiscard]]
@@ -110,11 +116,6 @@ public:
     [[nodiscard]]
     auto is_ipv6() const noexcept -> bool {
         return addr_.ss_family == AF_INET6;
-    }
-
-    [[nodiscard]]
-    auto family() const -> sa_family_t {
-        return addr_.ss_family;
     }
 
 private:

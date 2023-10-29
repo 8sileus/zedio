@@ -1,6 +1,7 @@
 #pragma once
 
 #include "async/detail/io_awaiter.hpp"
+#include "net/address.hpp"
 #include "util/thread.hpp"
 
 namespace zed::async {
@@ -18,7 +19,7 @@ concept HasTid = requires(T) { T::tid(); };
 
 template <HasTid T = Dispatch>
 struct Accept : public detail::LazyBaseIOAwaiter {
-    Accept(int fd, sockaddr *addr, socklen_t *addrlen, int flags)
+    Accept(int fd, sockaddr *addr, socklen_t *addrlen, int flags = 0)
         : LazyBaseIOAwaiter(T::tid(), [fd, addr, addrlen, flags](io_uring_sqe *sqe) {
             io_uring_prep_accept(sqe, fd, addr, addrlen, flags);
         }) {}
@@ -71,10 +72,41 @@ struct Recv : public detail::LazyBaseIOAwaiter {
 };
 
 template <HasTid T = Dispatch>
+struct RecvMsg : public detail::LazyBaseIOAwaiter {
+    RecvMsg(int fd, msghdr *msg, unsigned flags)
+        : LazyBaseIOAwaiter(T::tid(), [fd, msg, flags](io_uring_sqe *sqe) {
+            io_uring_prep_recvmsg(sqe, fd, msg, flags);
+        }) {}
+};
+
+template <HasTid T = Dispatch>
 struct Send : public detail::LazyBaseIOAwaiter {
     Send(int sockfd, const void *buf, std::size_t len, int flags)
         : LazyBaseIOAwaiter(T::tid(), [sockfd, buf, len, flags](io_uring_sqe *sqe) {
             io_uring_prep_send(sqe, sockfd, buf, len, flags);
+        }) {}
+};
+
+template <HasTid T = Dispatch>
+struct SendTo : public detail::LazyBaseIOAwaiter {
+    SendTo(int sockfd, const void *buf, size_t len, int flags, const sockaddr *addr,
+           socklen_t addrlen)
+        : LazyBaseIOAwaiter(T::tid(), [sockfd, buf, len, flags, addr, addrlen](io_uring_sqe *sqe) {
+            io_uring_prep_sendto(sqe, sockfd, buf, len, flags, addr, addrlen);
+        }) {}
+
+    SendTo(int sockfd, const void *buf, size_t len, int flags, const net::Address &address)
+        : LazyBaseIOAwaiter(T::tid(), [sockfd, buf, len, flags, &address](io_uring_sqe *sqe) {
+            io_uring_prep_sendto(sqe, sockfd, buf, len, flags, address.get_sockaddr(),
+                                 address.get_length());
+        }) {}
+};
+
+template <HasTid T = Dispatch>
+struct SendMsg : public detail::LazyBaseIOAwaiter {
+    SendMsg(int fd, const msghdr *msg, unsigned flags)
+        : LazyBaseIOAwaiter(T::tid(), [fd, msg, flags](io_uring_sqe *sqe) {
+            io_uring_prep_sendmsg(sqe, fd, msg, flags);
         }) {}
 };
 
@@ -115,16 +147,6 @@ struct Writev2 : public detail::LazyBaseIOAwaiter {
         : LazyBaseIOAwaiter(T::tid(), [fd, iovecs, nr_vecs, offset, flags](io_uring_sqe *sqe) {
             io_uring_prep_writev2(sqe, fd, iovecs, nr_vecs, offset, flags);
         }) {}
-};
-
-struct Bind : public detail::EagerBaseIOAwaiter {
-    Bind(int fd, const sockaddr *addr, socklen_t len)
-        : EagerBaseIOAwaiter(::bind(fd, addr, len)) {}
-};
-
-struct Listen : public detail::EagerBaseIOAwaiter {
-    Listen(int fd, int n)
-        : EagerBaseIOAwaiter(::listen(fd, n)) {}
 };
 
 } // namespace zed::async

@@ -115,7 +115,11 @@ void Processor::start() {
             task = std::move(pool_->tasks_.front());
             pool_->tasks_.pop();
         }
-        task();
+        try{
+            task();
+        } catch (std::exception &ex) {
+            LOG_ERROR("Catch a exception: {}", ex.what());
+        }
         while (!waiting_awaiters_.empty()) {
             auto sqe = io_uring_get_sqe(uring_);
             if (sqe == nullptr) [[unlikely]] {

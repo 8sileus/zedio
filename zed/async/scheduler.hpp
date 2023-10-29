@@ -50,7 +50,7 @@ public:
         }
     }
 
-    void stop(std::chrono::milliseconds delay) {
+    void stop(std::chrono::milliseconds delay = 0ms) {
         auto task = [this]() {
             this->running_ = false;
             waker_.wake();

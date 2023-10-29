@@ -11,8 +11,8 @@ namespace zed::log::detail {
 
 class LogFile : util::Noncopyable {
 public:
-    LogFile(const std::string_view &base_name)
-        : base_name_{base_name} {
+    LogFile(const std::string_view &file_base_name)
+        : file_base_name_{file_base_name} {
         this->roll();
         ofs_.rdbuf()->pubsetbuf(buffer_, sizeof(buffer_));
     }
@@ -43,9 +43,9 @@ private:
             cur_file_size_ = 0;
             ofs_.close();
 
-            std::string file_name{base_name_};
-            file_name.reserve(file_name.size() + 64);
-            char buf[32];
+            std::string file_name{file_base_name_};
+            file_name.reserve(file_name.size());
+            char buf[64];
             ::strftime(buf, sizeof(buf), "-%Y%m%d-%H%M%S.log", &tm_time);
             file_name.append(buf);
             ofs_.open(file_name, std::ios::out);
@@ -61,7 +61,7 @@ private:
 
 private:
     std::ofstream     ofs_{};
-    const std::string base_name_;
+    const std::string file_base_name_;
     off_t             max_file_size_{10 * 1024 * 1024};
     off_t             cur_file_size_{0};
     char              buffer_[BUFFER_SIZE];

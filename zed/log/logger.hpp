@@ -115,8 +115,8 @@ public:
 
 class FileLogger : public BaseLogger {
 public:
-    FileLogger(const std::string_view &base_name)
-        : file_{base_name}
+    FileLogger(const std::string_view &file_base_name)
+        : file_{file_base_name}
         , current_buffer_{new Buffer}
         , thread_{&FileLogger::work, this} {
         for (int i = 0; i < 2; ++i) {

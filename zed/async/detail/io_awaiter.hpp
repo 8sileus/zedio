@@ -29,22 +29,4 @@ struct LazyBaseIOAwaiter {
     std::coroutine_handle<>             handle_{};
 };
 
-struct EagerBaseIOAwaiter {
-    EagerBaseIOAwaiter(int res)
-        : res_(res) {}
-
-    constexpr auto await_ready() const noexcept -> bool { return true; }
-
-    constexpr void await_suspend(std::coroutine_handle<>) const noexcept { assert(false); }
-
-    constexpr auto await_resume() const noexcept -> int {
-        if (res_ < 0) [[unlikely]] {
-            return -errno;
-        }
-        return res_;
-    }
-
-    const int res_;
-};
-
 } // namespace zed::async::detail

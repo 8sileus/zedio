@@ -51,7 +51,8 @@ namespace detail {
         }
 
         template <typename F>
-            requires std::is_convertible_v<F &&, T> && std::is_nothrow_constructible_v<T, F &&>
+            requires std::is_convertible_v<F &&, T> && std::is_constructible_v<T, F &&>
+        //&& std::is_nothrow_constructible_v<T, F &&>
         void return_value(F &&value) {
             m_value.template emplace<T>(std::forward<F>(value));
         }
