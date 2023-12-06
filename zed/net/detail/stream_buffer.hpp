@@ -1,6 +1,6 @@
 #pragma once
 
-#include "net/detail/config.hpp"
+#include "common/config.hpp"
 
 // C
 #include <cassert>
@@ -12,9 +12,9 @@
 
 namespace zed::net::detail {
 
-class TcpBuffer {
+class StreamBuffer {
 public:
-    explicit TcpBuffer(std::size_t initial_size = detail::TCP_BUFFER_INITIAL_SIZE)
+    explicit StreamBuffer(std::size_t initial_size = config::STREAM_BUFFER_DEFAULT_SIZE)
         : buffer_(initial_size) {}
 
     [[nodiscard]]
@@ -48,7 +48,7 @@ public:
         return buffer_.data() + read_index_;
     }
 
-    void has_written(std::size_t len) {
+    void increase_write_index(std::size_t len) {
         assert(len <= writeable_bytes());
         write_index_ += len;
     }
@@ -58,18 +58,18 @@ public:
             expand(len);
         }
         ::memcpy(begin_write(), data, len);
-        has_written(len);
+        increase_read_index(len);
     }
 
-    void retrieve(std::size_t len) {
+    void increase_read_index(std::size_t len) {
         if (len < readable_bytes()) {
             read_index_ += len;
         } else {
-            retrieve_all();
+            reset();
         }
     }
 
-    void retrieve_all() { read_index_ = write_index_ = 0; }
+    void reset() { read_index_ = write_index_ = 0; }
 
     auto as_string_view() const -> std::string_view {
         return std::string_view(buffer_.data() + read_index_, readable_bytes());

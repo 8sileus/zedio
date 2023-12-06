@@ -12,9 +12,9 @@ namespace zed::async::detail {
 
 struct LazyBaseIOAwaiter {
     LazyBaseIOAwaiter(const std::function<void(io_uring_sqe *)> &cb)
-        : cb_(cb) {}
+        : cb_{cb} {}
 
-    virtual ~LazyBaseIOAwaiter() = default;
+    ~LazyBaseIOAwaiter() = default;
 
     constexpr auto await_ready() const noexcept -> bool { return false; }
 

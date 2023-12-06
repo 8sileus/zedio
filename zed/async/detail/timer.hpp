@@ -28,9 +28,9 @@ class TimerEvent : util::Noncopyable {
 
 public:
     TimerEvent(const std::function<void()> &cb, time_t delay, time_t period)
-        : cb_(cb)
-        , delay_(delay)
-        , period_(period) {
+        : cb_{cb}
+        , delay_{delay}
+        , period_{period} {
         expired_time_ = util::get_time_since_epoch<util::TimeUnit::MilliSecond>() + delay;
     }
 
@@ -71,7 +71,7 @@ private:
 class Timer : util::Noncopyable {
 public:
     Timer()
-        : fd_(::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)) {
+        : fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)} {
         if (fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format(
                 "call timer_create failed, errorno: {} message: {}", fd_, strerror(errno)));
@@ -91,7 +91,7 @@ public:
         auto event = std::make_shared<TimerEvent>(cb, delay, period);
         bool need_update = false;
         {
-            std::lock_guard lock(mutex_);
+            // std::lock_guard lock(mutex_);
             if (events_.empty() || (*events_.begin())->expired_time_ > event->expired_time_) {
                 need_update = true;
             };
@@ -107,19 +107,23 @@ public:
 
 private:
     void update_expired_time() {
-        decltype(events_.begin()) it;
-        {
-            std::lock_guard lock(mutex_);
-            it = events_.begin();
-            if (it == events_.end()) {
-                return;
-            }
-        }
-        auto now = util::get_time_since_epoch<util::TimeUnit::MilliSecond>();
-        if ((*it)->expired_time_ < now) {
+        // decltype(events_.begin()) it;
+        // {
+        //     std::lock_guard lock(mutex_);
+        //     it = events_.begin();
+        //     if (it == events_.end()) {
+        //         return;
+        //     }
+        // }
+        if (events_.empty()) {
             return;
         }
-        auto       internal = (*it)->expired_time_ - now;
+        auto first_event = *events_.begin();
+        auto now = util::get_time_since_epoch<util::TimeUnit::MilliSecond>();
+        if (first_event->expired_time_ < now) {
+            return;
+        }
+        auto       internal = first_event->expired_time_ - now;
         itimerspec new_value;
         ::memset(&new_value, 0, sizeof(new_value));
         new_value.it_value.tv_sec = internal / 1000;
@@ -127,7 +131,7 @@ private:
         if (::timerfd_settime(fd_, 0, &new_value, nullptr) != 0) [[unlikely]] {
             LOG_SYSERR(timerfd_settime, errno);
         }
-        LOG_DEBUG("The next expiration of the timer in {}.{}s later", new_value.it_value.tv_sec,
+        LOG_TRACE("The next expiration of the timer in {}.{}s later", new_value.it_value.tv_sec,
                   new_value.it_value.tv_nsec);
     }
 
@@ -137,17 +141,17 @@ private:
         while (true) {
             if (auto ret = co_await async::Read(fd_, buf, sizeof(buf), 0); ret != sizeof(buf))
                 [[unlikely]] {
-                log::zed_logger.error("read timer fd only read {}/{} bytes", ret, sizeof(buf));
+                LOG_ERROR("Timer read failed, error: {}.", strerror(-ret));
             }
             std::vector<std::shared_ptr<TimerEvent>> expired_events;
             auto tmp = std::make_shared<TimerEvent>(nullptr, 0, 0);
             {
-                std::lock_guard lock(mutex_);
+                // std::lock_guard lock(mutex_);
                 auto            it = events_.upper_bound(tmp);
                 expired_events.insert(expired_events.end(), events_.begin(), it);
                 events_.erase(events_.begin(), it);
             }
-            log::zed_logger.debug("{} timer events expire", expired_events.size());
+            LOG_TRACE("{} timer events expire", expired_events.size());
             std::vector<std::function<void()>> cbs;
             cbs.reserve(expired_events.size());
             for (auto &event : expired_events) {
@@ -169,8 +173,8 @@ private:
 private:
     Task<void>                                 task_{};
     std::multiset<std::shared_ptr<TimerEvent>> events_{};
-    std::mutex                                 mutex_{};
-    int                                        fd_{-1};
+    // std::mutex                                 mutex_{};
+    int fd_;
 };
 
 } // namespace zed::async::detail

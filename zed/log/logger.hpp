@@ -1,10 +1,10 @@
 #pragma once
 
 #include "common/util/noncopyable.hpp"
+#include "common/util/thread.hpp"
 #include "log/buffer.hpp"
 #include "log/def.hpp"
 #include "log/file.hpp"
-#include "util/thread.hpp"
 
 // C++
 #include <condition_variable>
@@ -95,11 +95,11 @@ private:
         }
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
-        this->log(
-            std::format("{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond,
-                        level_to_string(level), this_thread::get_tid(), sl.file_name(), sl.line(),
-                        std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))),
-            level_to_color(level));
+        this->log(std::format(
+                      "{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond,
+                      level_to_string(level), current_thread::get_tid(), sl.file_name(), sl.line(),
+                      std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))),
+                  level_to_color(level));
     }
 
 private:

@@ -11,13 +11,13 @@
 #include <thread>
 #include <vector>
 
-namespace zed::this_thread {
+namespace zed::current_thread {
 
 auto get_tid() noexcept -> pid_t {
     static thread_local pid_t t_tid = ::gettid();
     return t_tid;
 }
-} // namespace zed::this_thread
+} // namespace zed::current_thread
 
 namespace zed::util {
 class SpinMutex : Noncopyable {

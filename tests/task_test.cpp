@@ -10,12 +10,21 @@ zed::async::Task<int> f2() { co_return 2; }
 
 zed::async::Task<void> f1() { n = co_await f2(); }
 
-zed::async::Task<void> throw_ex() { throw std::runtime_error("test"); }
+zed::async::Task<void> throw_ex() {
+    std::cout << "1" << std::endl;
+    co_await std::suspend_always{};
+    std::cout << "4" << std::endl;
+    throw std::runtime_error("test");
+}
+
+zed::async::Task<void> throw_ex2() {
+    throw std::runtime_error("test");
+}
 
 void call_throw_ex(std::coroutine_handle<> handle) {
-    auto task = [handle]() { handle.resume(); };
+    std::cout << "3" << std::endl;
     try {
-        task();
+        handle.resume();
     } catch (std ::exception &ex) {
         throw ex;
     }
@@ -30,10 +39,22 @@ BOOST_AUTO_TEST_CASE(task_normal_test) {
 }
 
 BOOST_AUTO_TEST_CASE(task_exception_test) {
+    auto handle = throw_ex().take();
+    handle.resume();
+    std::cout << "2" << std::endl;
     try {
-        auto task = throw_ex();
-        call_throw_ex(task.take());
+        call_throw_ex(handle);
     } catch (std::exception &ex) {
+        std::cout << "1: " << ex.what() << std::endl;
+        BOOST_CHECK_EQUAL(ex.what(), "test");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(task_exception2_test) {
+    try {
+        throw_ex2().take().resume();
+    } catch (std::exception &ex) {
+        std::cout << "2: " << ex.what() << std::endl;
         BOOST_CHECK_EQUAL(ex.what(), "test");
     }
 }

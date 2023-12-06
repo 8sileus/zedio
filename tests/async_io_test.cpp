@@ -7,35 +7,40 @@
 // C
 #include <assert.h>
 // C++
+#include <barrier>
 #include <format>
-#include <future>
 
 using namespace zed::net;
 using namespace zed::log;
 using namespace zed::async;
 
-auto client(std::promise<void> &p, Address host_addr) -> Task<void> {
-    p.get_future().get();
+std::barrier finish{3};
+
+auto client(std::barrier<std::__empty_completion> &b, Address host_addr) -> Task<void> {
+    b.arrive_and_wait();
     auto t = co_await TcpStream::connect(host_addr);
     assert(t);
-    auto              stream = std::move(t.value());
-    char              buf[64];
+    auto stream = std::move(t.value());
+    char buf[64];
     co_await stream.write("hi", sizeof("hi"));
     co_await stream.read(buf, sizeof(buf));
     std::cout << "client: " << buf << "\n";
     char s[] = "8silues";
     co_await stream.write(s, sizeof(s));
+    finish.arrive_and_drop();
 }
 
-auto server(std::promise<void> &p, Address local_addr) -> Task<void> {
-    auto t = TcpListener::bind(local_addr);
-    assert(t);
-    auto listener = std::move(t.value());
-    listener.set_reuse_address(true);
-    p.set_value();
-    auto fd = co_await listener.accept();
-    assert(fd >= 0);
-    auto              stream = TcpStream{fd};
+auto server(std::barrier<std::__empty_completion> &b, Address local_addr) -> Task<void> {
+    TcpListener listener;
+    if (auto err = listener.bind(local_addr); err) {
+        zed::LOG_ERROR("{}", err.message());
+    }
+    if (auto err = listener.set_reuse_address(true); err) {
+        zed::LOG_ERROR("{}", err.message());
+    }
+    b.arrive_and_drop();
+    auto stream = (co_await listener.accept()).value();
+    assert(stream.get_fd() >= 0);
     zed::LOG_DEBUG("peer_addr:{}", stream.get_peer_address().to_string());
     char buf[64]{};
     co_await stream.read(buf, sizeof(buf));
@@ -43,15 +48,15 @@ auto server(std::promise<void> &p, Address local_addr) -> Task<void> {
     co_await stream.write("hi", sizeof("hi"));
     co_await stream.read(buf, sizeof(buf));
     std::cout << "server: " << buf << "\n";
+    finish.arrive_and_drop();
 }
 
 int main() {
-    Scheduler          s;
-    std::promise<void> p;
-    s.stop(1s);
-    Address addr("localhost", "9191");
-    s.submit(server(p, addr));
-    s.submit(client(p, addr));
-    s.start();
+    zed::async::detail::Dispatcher dis;
+    std::barrier                   b(2);
+    Address                        addr("localhost", "9191");
+    dis.dispatch(server(b, addr));
+    dis.dispatch(client(b, addr));
+    finish.arrive_and_wait();
     return 0;
 }

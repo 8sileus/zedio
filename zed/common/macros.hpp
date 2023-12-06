@@ -7,16 +7,6 @@
 
 namespace zed {
 
-#define FORMAT_FUNC_ERR_MESSAGE(func_name, err) \
-    (std::format("Call {} failed. errno: {}, message: {}", #func_name, err, strerror(err)))
-
-#define LOG_SYSERR(func_name, err) \
-    log::zed_logger.error("Call {} failed. [{}]: {}", #func_name, err, ::strerror(err));
-
-#define LOG_FD_SYSERR(fd, func_name, err)                                                    \
-    log::zed_logger.error("Call {} failed. FD: {}, ERRNO: {}, MSG: {}", #func_name, fd, err, \
-                          ::strerror(err));
-
 // #ifdef ZED_LOG
 #define LOG_TRACE(...) log::zed_logger.trace(__VA_ARGS__)
 #define LOG_INFO(...) log::zed_logger.info(__VA_ARGS__)
@@ -32,5 +22,16 @@ namespace zed {
 // #define LOG_ERROR(...)
 // #define LOG_FATAL(...)
 // #endif
+
+#define FORMAT_FUNC_ERR_MESSAGE(func_name, err) \
+    (std::format("Call {} failed. errno: {}, message: {}", #func_name, err, strerror(err)))
+
+#define LOG_SYSERR(func_name, errno) \
+    LOG_ERROR("Call {} failed. error : {}", #func_name, ::strerror(errno));
+
+#define LOG_FD_SYSERR(fd, func_name, err) \
+    LOG_ERROR("Call {} failed. error : {}", #func_name, fd, ::strerror(err));
+
+
 
 } // namespace zed

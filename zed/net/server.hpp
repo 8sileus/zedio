@@ -1,10 +1,10 @@
 #pragma once
 
 #include "async.hpp"
-#include "common/macros.hpp"
+#include "common/error.hpp"
 #include "log.hpp"
 #include "net/address.hpp"
-#include "net/detail/tcp_buffer.hpp"
+#include "net/detail/stream_buffer.hpp"
 #include "net/tcp_listener.hpp"
 #include "net/tcp_stream.hpp"
 
@@ -16,75 +16,71 @@
 namespace zed::net {
 
 class Server : util::Noncopyable {
-private:
-    Server(TcpListener &&listener, std::size_t worker_num)
-        : scheduler_{std::make_unique<async::Scheduler>(worker_num)} {
-        scheduler_->submit(accept_stream(std::move(listener)));
-    }
-
 public:
-    ~Server() { scheduler_->stop(); }
+    Server(std::size_t worker_num = std::thread::hardware_concurrency())
+        : dispatcher_{worker_num} {}
 
-    Server(Server &&other)
-        : scheduler_{std::move(other.scheduler_)}
-        , cb_{std::move(other.cb_)} {}
-
-    void start() { scheduler_->start(); }
-
-public:
-    [[nodiscard]]
-    static auto bind(Address &address, std::size_t worker_num = std::thread::hardware_concurrency())
-        -> std::optional<Server> {
-        if (auto listener = TcpListener::bind(address); listener) {
-            return Server{std::move(listener.value()), worker_num};
-        }
-        return std::nullopt;
-    }
+    void start() { this->accept_processor_.start(); }
 
     [[nodiscard]]
-    static auto bind(const std::vector<Address> &addresses,
-                     std::size_t                 worker_num = std::thread::hardware_concurrency())
-        -> std::optional<Server> {
-        if (auto listener = TcpListener::bind(addresses); listener) {
-            return Server{std::move(listener.value()), worker_num};
+    auto bind(const Address &address) -> std::error_code {
+        TcpListener listener;
+        if (auto err = listener.bind(address); err) {
+            return err;
         }
-        return std::nullopt;
+        this->accept_processor_.post(accept_stream(std::move(listener)));
+        return std::error_code{};
     }
 
 private:
+    [[nodiscard]]
     auto accept_stream(TcpListener &&listener) -> async::Task<void> {
+        std::optional<TcpStream> stream;
         while (true) {
-            if (auto fd = co_await listener.accept(); fd >= 0) {
-                auto stream = TcpStream{fd};
-                LOG_DEBUG("Accept a connection from [{}]", stream.get_peer_address().to_string());
-                scheduler_->submit(handle_stream(std::move(stream)));
+            if (stream = co_await listener.accept(); stream) {
+                LOG_DEBUG("Accept a connection from {}",
+                          stream.value().get_peer_address().to_string());
+                this->accept_processor_.post(handle_stream(std::move(stream.value())));
             }
         }
     }
 
     auto handle_stream(TcpStream &&stream) -> async::Task<void> {
-        detail::TcpBuffer input_buffer;
-        detail::TcpBuffer output_buffer;
-        if (auto n
-            = co_await stream.read(input_buffer.begin_write(), input_buffer.writeable_bytes());
-            n <= 0) [[unlikely]] {
-            // LOG_ERROR
-        } else {
-            input_buffer.has_written(n);
-        }
+        detail::StreamBuffer input_buffer;
+        detail::StreamBuffer output_buffer;
+        int                  n;
+        char                 extra_buf[config::EXTRA_BUFFER_SUZE];
+        struct iovec         iovecs[2];
+        constexpr int        nr_vecs = 2;
+        while (true) {
+            iovecs[0].iov_base = input_buffer.begin_write();
+            iovecs[0].iov_len = input_buffer.writeable_bytes();
+            iovecs[1].iov_base = extra_buf;
+            iovecs[1].iov_len = sizeof(extra_buf);
+            n = co_await stream.readv(iovecs, nr_vecs);
+            if (n <= 0) [[unlikely]] {
+                if (n != 0) {
+                    LOG_ERROR("Socket read failed on fd {}, error: {}", stream.get_fd(),
+                              strerror(-n));
+                }
+                break;
+            } else {
+                input_buffer.increase_write_index(n);
+            }
 
-        if (auto n
-            = co_await stream.write(output_buffer.begin_read(), output_buffer.readable_bytes());
-            n <= 0) [[unlikely]] {
-            // LOG_ERROR
-        } else {
-            input_buffer.retrieve(n);
+            n = co_await stream.write(output_buffer.begin_read(), output_buffer.readable_bytes());
+            if (n <= 0) [[unlikely]] {
+                LOG_ERROR("Socket write failed on fd {}, error: {}", stream.get_fd(), strerror(-n));
+            } else {
+                input_buffer.increase_read_index(n);
+            }
         }
     }
 
 private:
-    std::unique_ptr<async::Scheduler>             scheduler_;
-    std::function<async::Task<void>(TcpStream &)> cb_;
+    std::function<async::Task<void>(TcpStream &)> cb_{};
+    async::detail::Processor                      accept_processor_{};
+    async::detail::Dispatcher                     dispatcher_;
 };
 
 } // namespace zed::net

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "async/detail/io_awaiter.hpp"
-#include "util/thread.hpp"
 
 namespace zed::async {
-
 
 struct Accept : public detail::LazyBaseIOAwaiter {
     Accept(int fd, sockaddr *addr, socklen_t *addrlen, int flags = 0)
@@ -12,7 +10,6 @@ struct Accept : public detail::LazyBaseIOAwaiter {
             io_uring_prep_accept(sqe, fd, addr, addrlen, flags);
         }) {}
 };
-
 
 struct Close : public detail::LazyBaseIOAwaiter {
     Close(int fd)
@@ -56,9 +53,8 @@ struct Recv : public detail::LazyBaseIOAwaiter {
 
 struct RecvMsg : public detail::LazyBaseIOAwaiter {
     RecvMsg(int fd, msghdr *msg, unsigned flags)
-        : LazyBaseIOAwaiter( [fd, msg, flags](io_uring_sqe *sqe) {
-            io_uring_prep_recvmsg(sqe, fd, msg, flags);
-        }) {}
+        : LazyBaseIOAwaiter(
+            [fd, msg, flags](io_uring_sqe *sqe) { io_uring_prep_recvmsg(sqe, fd, msg, flags); }) {}
 };
 
 struct Send : public detail::LazyBaseIOAwaiter {
@@ -78,9 +74,8 @@ struct SendTo : public detail::LazyBaseIOAwaiter {
 
 struct SendMsg : public detail::LazyBaseIOAwaiter {
     SendMsg(int fd, const msghdr *msg, unsigned flags)
-        : LazyBaseIOAwaiter([fd, msg, flags](io_uring_sqe *sqe) {
-            io_uring_prep_sendmsg(sqe, fd, msg, flags);
-        }) {}
+        : LazyBaseIOAwaiter(
+            [fd, msg, flags](io_uring_sqe *sqe) { io_uring_prep_sendmsg(sqe, fd, msg, flags); }) {}
 };
 
 struct Shutdown : public detail::LazyBaseIOAwaiter {
@@ -91,14 +86,14 @@ struct Shutdown : public detail::LazyBaseIOAwaiter {
 
 struct Socket : public detail::LazyBaseIOAwaiter {
     Socket(int domain, int type, int protocol, int flags = 0)
-        : LazyBaseIOAwaiter( [domain, type, protocol, flags](io_uring_sqe *sqe) {
+        : LazyBaseIOAwaiter([domain, type, protocol, flags](io_uring_sqe *sqe) {
             io_uring_prep_socket(sqe, domain, type, protocol, flags);
         }) {}
 };
 
 struct Write : public detail::LazyBaseIOAwaiter {
     Write(int fd, const void *buf, unsigned nbytes, uint64_t offset = -1)
-        : LazyBaseIOAwaiter( [fd, buf, nbytes, offset](io_uring_sqe *sqe) {
+        : LazyBaseIOAwaiter([fd, buf, nbytes, offset](io_uring_sqe *sqe) {
             io_uring_prep_write(sqe, fd, buf, nbytes, offset);
         }) {}
 };

@@ -11,49 +11,64 @@
 // C++
 #include <format>
 #include <functional>
+#include <mutex>
+#include <vector>
 
 namespace zed::async::detail {
 
 class Waker : util::Noncopyable {
 public:
     Waker()
-        : fd_(::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {
-        if (fd_ < 0) [[unlikely]] {
-            throw std::runtime_error(
-                std::format("call eventfd failed, errorno: {} message: {}", fd_, strerror(errno)));
+        : fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
+        if (this->fd_ < 0) [[unlikely]] {
+            throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
+                                                 this->fd_, strerror(errno)));
         }
     }
 
-    ~Waker() { ::close(fd_); }
+    ~Waker() { ::close(this->fd_); }
 
     void start() {
-        task_ = work();
-        task_.resume();
+        this->handle_ = work();
+        this->handle_.resume();
+    }
+
+    void post(std::function<void()> &&task) {
+        std::lock_guard lock(tasks_mutex_);
+        tasks_.push_back(std::move(task));
     }
 
     void wake() {
         char buf[8];
-        if (auto n = ::write(fd_, buf, sizeof(buf)); n != sizeof(buf)) [[unlikely]] {
-            log::zed_logger.error("write {}/{} bytes ", n, sizeof(buf));
+        if (auto ret = ::write(this->fd_, buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
+            LOG_ERROR("Waker write failed, error: {}.", strerror(ret));
         }
     }
-
-    auto fd() const -> int { return fd_; }
 
 private:
     auto work() -> Task<void> {
         char buf[8];
         while (true) {
-            if (auto n = co_await async::Read(fd_, buf, sizeof(buf), 0); n != sizeof(buf))
+            if (auto ret = co_await async::Read(this->fd_, buf, sizeof(buf), 0); ret != sizeof(buf))
                 [[unlikely]] {
-                log::zed_logger.error("waker read {}/{} bytes ", n, sizeof(buf));
+                LOG_ERROR("Waker read failed, error: {}.", strerror(-ret));
+            }
+            std::vector<std::function<void()>> tasks;
+            {
+                std::lock_guard lock(this->tasks_mutex_);
+                this->tasks_.swap(tasks);
+            }
+            for (auto &task : tasks) {
+                task();
             }
         }
     }
 
 private:
-    Task<void> task_{};
-    int        fd_{-1};
+    Task<void>                         handle_{};
+    std::mutex                         tasks_mutex_;
+    std::vector<std::function<void()>> tasks_;
+    int                                fd_;
 };
 
 } // namespace zed::async::detail

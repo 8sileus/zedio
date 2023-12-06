@@ -8,29 +8,38 @@
 #include <cstring>
 // C++
 #include <optional>
+#include <variant>
 #include <vector>
 
 namespace zed::net {
 
-class TcpListener :  util::Noncopyable {
-private:
-    TcpListener(int fd, const Address &address)
-        : fd_{fd}
-        , address_{address} {
-        LOG_DEBUG("Build a listener [ LOCAL_ADDR: {}, FD:{} ]", address_.to_string(), fd);
-    }
+namespace detail {
+    struct AcceptStream : public async::Accept {
+        AcceptStream(int fd, sockaddr *addr, socklen_t *addrlen, int flags = 0)
+            : Accept{fd, addr, addrlen, flags} {}
 
-public:
-    ~TcpListener(){
-        if (fd_ >= 0) [[likely]] {
-            ::close(fd_);
+        auto await_resume() const noexcept -> std::optional<TcpStream> {
+            if (LazyBaseIOAwaiter::res_ >= 0) [[likely]] {
+                return TcpStream(res_);
+            }
+            return std::nullopt;
         }
-        fd_ = -1;
+    };
+} // namespace detail
+
+class TcpListener : util::Noncopyable {
+public:
+    TcpListener() = default;
+
+    ~TcpListener() {
+        if (this->fd_ >= 0) [[likely]] {
+            ::close(this->fd_);
+        }
+        this->fd_ = -1;
     }
 
     TcpListener(TcpListener &&other)
-        : fd_(other.fd_)
-        , address_(other.address_) {
+        : fd_(other.fd_) {
         other.fd_ = -1;
     }
 
@@ -38,70 +47,59 @@ public:
         if (this == std::addressof(other)) [[unlikely]] {
             return *this;
         }
-        if (fd_ >= 0) {
-            ::close(fd_);
+        if (this->fd_ >= 0) {
+            ::close(this->fd_);
         }
-        fd_ = other.fd_;
+        this->fd_ = other.fd_;
         other.fd_ = -1;
-        address_ = other.address_;
         return *this;
     }
 
     [[nodiscard]]
-    auto accept() -> async::Accept {
-        return async::Accept{fd_, nullptr, nullptr};
-    }
-
-    void set_reuse_address(bool reuse_address) {
-        int optval = static_cast<int>(reuse_address);
-        if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
-            [[unlikely]] {
-            LOG_FD_SYSERR(fd_, setsockopt, errno);
-        }
-    }
-
-    [[nodiscard]]
-    auto address() const -> const Address & {
-        return address_;
-    }
-
-    [[nodiscard]]
-    auto fd() const -> int {
-        return fd_;
-    }
-
-public:
-    [[nodiscard]]
-    static auto bind(const Address &address) -> std::optional<TcpListener> {
+    auto bind(const Address &address) -> std::error_code {
         auto fd = ::socket(address.get_family(), SOCK_STREAM, 0);
         if (fd == -1) [[unlikely]] {
-            LOG_SYSERR(socket, errno);
-            return std::nullopt;
+            return std::error_code{errno, std::system_category()};
         }
         if (::bind(fd, address.get_sockaddr(), address.get_length()) != 0) [[unlikely]] {
-            LOG_FD_SYSERR(fd, bind, errno);
-            return std::nullopt;
+            ::close(fd);
+            return std::error_code{errno, std::system_category()};
         }
         if (::listen(fd, SOMAXCONN) != 0) [[unlikely]] {
-            LOG_FD_SYSERR(fd, listen, errno);
-            return std::nullopt;
+            ::close(fd);
+            return std::error_code{errno, std::system_category()};
         }
-        return TcpListener{fd, address};
+        this->fd_ = fd;
+        return std::error_code{};
     }
 
     [[nodiscard]]
-    static auto bind(const std::vector<Address> &addresses) -> std::optional<TcpListener> {
-        for (const auto &address : addresses) {
-            if (auto tcp_listener = TcpListener::bind(address); tcp_listener.has_value()) {
-                return tcp_listener;
-            }
+    auto accept() -> detail::AcceptStream {
+        return detail::AcceptStream{this->fd_, nullptr, nullptr};
+    }
+
+    [[nodiscard]]
+    auto get_address() const -> Address {
+        return get_local_address(this->fd_);
+    }
+
+    [[nodiscard]]
+    auto get_fd() const noexcept -> int {
+        return this->fd_;
+    }
+
+    [[nodiscard]]
+    auto set_reuse_address(bool status) -> std::error_code {
+        auto optval = status ? 1 : 0;
+        if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
+            [[unlikely]] {
+            return std::error_code{errno, std::system_category()};
         }
-        return std::nullopt;
+        return std::error_code{};
     }
 
 private:
-    int     fd_{-1};
-    Address address_;
+    int fd_{-1};
 };
 
 } // namespace zed::net

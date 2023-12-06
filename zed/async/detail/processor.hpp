@@ -2,136 +2,128 @@
 
 #include "async/detail/io_awaiter.hpp"
 #include "async/detail/timer.hpp"
+#include "async/detail/waker.hpp"
+#include "common/config.hpp"
+#include "common/util/thread.hpp"
+#include "log.hpp"
+// C
+#include <cassert>
+#include <cstring>
 //  C++
-#include <condition_variable>
-#include <future>
-#include <mutex>
-#include <queue>
-#include <thread>
-#include <vector>
+#include <atomic>
+#include <functional>
+
 namespace zed::async::detail {
 
-class ProcessorPool;
 class Processor;
 
 thread_local Processor *t_processor{nullptr};
 
 class Processor {
 public:
-    Processor(ProcessorPool *pool, io_uring *uring, detail::Timer *timer)
-        : pool_(pool)
-        , uring_(uring)
-        , timer_(timer) {
+    Processor()
+        : tid_{current_thread::get_tid()} {
         assert(t_processor == nullptr);
         t_processor = this;
+        if (auto ret = io_uring_queue_init(config::IOURING_QUEUE_SIZE, this->get_uring(), 0);
+            ret != 0) [[unlikely]] {
+            LOG_FATAL("Call io_uring_queue_init failed, error : {}.", strerror(-ret));
+            throw std::runtime_error(
+                std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
+        }
+        LOG_TRACE("Processor {} has constructed.", this->tid_);
     }
 
-    ~Processor() { t_processor = nullptr; }
-
-    void start();
-
-    auto uring() -> io_uring * { return uring_; }
-
-    auto timer() -> Timer * { return timer_; }
-
-    void push_awaiter(LazyBaseIOAwaiter *awaiter) { waiting_awaiters_.push(awaiter); }
-
-private:
-    ProcessorPool              *pool_{nullptr};
-    io_uring                   *uring_{nullptr};
-    Timer                      *timer_{nullptr};
-    std::queue<LazyBaseIOAwaiter *> waiting_awaiters_{};
-};
-
-class ProcessorPool {
-    friend class Processor;
-
-public:
-    ProcessorPool(io_uring *uring, detail::Timer *timer, std::size_t thread_num)
-        : uring_(uring)
-        , timer_(timer)
-        , thread_num_(thread_num) {}
-
-    ~ProcessorPool() {
-        if (running_) {
+    ~Processor() {
+        if (this->running_) {
             stop();
+        }
+        t_processor = nullptr;
+        io_uring_queue_exit(this->get_uring());
+        LOG_TRACE("Processor {} has destructed.", this->tid_);
+    }
+
+    void stop() {
+        if (current_thread::get_tid() == this->tid_) {
+            assert(this->running_);
+            this->running_ = false;
+        } else {
+            this->post([this]() { this->stop(); });
         }
     }
 
     void start() {
-        running_ = true;
-        for (std::size_t i = 0; i < thread_num_; ++i) {
-            threads_.emplace_back([this]() {
-                Processor p(this, this->uring_, this->timer_);
-                p.start();
-            });
-        }
-    }
+        assert(!this->running_);
 
-    void set_thread_num(std::size_t thread_num) { thread_num_ = thread_num; }
+        LazyBaseIOAwaiter *awaiter{nullptr};
+        io_uring_cqe      *cqe{nullptr};
+        __kernel_timespec  ts{.tv_sec = config::IOURING_POLL_TIMEOUTOUT, .tv_nsec = 0};
 
-    void stop() {
-        running_ = false;
-        cond_.notify_all();
-
-        for (auto &thread : threads_) {
-            thread.join();
-        }
-    }
-
-    template <typename F, typename... Args>
-        requires std::same_as<std::invoke_result_t<F, Args...>, void>
-    void submit(F &&f, Args &&...args) {
-        auto task = [f = std::forward<F>(f), ... args = std::forward<Args>(args)] { f(args...); };
-        {
-            std::lock_guard lock(mutex_);
-            tasks_.push(std::move(task));
-        }
-        cond_.notify_one();
-    }
-
-private:
-    io_uring                         *uring_{nullptr};
-    Timer                            *timer_{nullptr};
-    std::queue<std::function<void()>> tasks_{};
-    std::mutex                        mutex_{};
-    std::condition_variable           cond_{};
-    std::vector<std::thread>          threads_{};
-    std::size_t                       thread_num_{0};
-    bool                              running_{false};
-};
-
-void Processor::start() {
-    std::function<void()> task{};
-    LazyBaseIOAwaiter    *awaiter{nullptr};
-    while (true) {
-        {
-            std::unique_lock lock(pool_->mutex_);
-            pool_->cond_.wait(
-                lock, [this]() { return !this->pool_->tasks_.empty() || !this->pool_->running_; });
-            if (!pool_->running_ && pool_->tasks_.empty()) [[unlikely]] {
+        this->waker_.start();
+        this->timer_.start();
+        this->running_ = true;
+        while (this->running_) {
+            if (auto ret = io_uring_wait_cqe_timeout(this->get_uring(), &cqe, &ts); ret < 0)
+                [[unlikely]] {
+                if (-ret == ETIME) {
+                    LOG_TRACE("Processor {} timer expired", this->tid_);
+                    handle_waiting_awaiter();
+                    continue;
+                }
+                LOG_ERROR("io_uring poll failed, error: {}.", strerror(-ret));
                 break;
             }
-            task = std::move(pool_->tasks_.front());
-            pool_->tasks_.pop();
+            if (cqe) [[likely]] {
+                awaiter
+                    = reinterpret_cast<detail::LazyBaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
+                awaiter->res_ = cqe->res;
+                awaiter->handle_.resume();
+                io_uring_cqe_seen(this->get_uring(), cqe);
+            }
+            handle_waiting_awaiter();
         }
-        try{
-            task();
-        } catch (std::exception &ex) {
-            LOG_ERROR("Catch a exception: {}", ex.what());
-        }
-        while (!waiting_awaiters_.empty()) {
-            auto sqe = io_uring_get_sqe(uring_);
+    }
+
+    void post(std::function<void()> &&task) {
+        this->waker_.post(std::move(task));
+        this->waker_.wake();
+    }
+
+    void post(Task<void> &&coroutine) {
+        auto task = [handle = coroutine.take()] { handle.resume(); };
+        this->post(std::move(task));
+    }
+
+    auto get_uring() -> io_uring * { return &this->uring_; }
+
+    auto get_timer() -> Timer & { return this->timer_; }
+
+    auto get_tid() const noexcept -> pid_t { return this->tid_; }
+
+    void push_awaiter(LazyBaseIOAwaiter *awaiter) { this->waiting_awaiters_.push(awaiter); }
+
+private:
+    void handle_waiting_awaiter() {
+        while (!this->waiting_awaiters_.empty()) {
+            auto sqe = io_uring_get_sqe(this->get_uring());
             if (sqe == nullptr) [[unlikely]] {
                 break;
             }
-            awaiter = std::move(waiting_awaiters_.front());
-            waiting_awaiters_.pop();
+            auto awaiter = std::move(this->waiting_awaiters_.front());
+            this->waiting_awaiters_.pop();
             awaiter->cb_(sqe);
             io_uring_sqe_set_data64(sqe, reinterpret_cast<unsigned long long>(awaiter));
-            io_uring_submit(uring_);
+            io_uring_submit(this->get_uring());
         }
     }
-}
+
+private:
+    io_uring                        uring_{};
+    Timer                           timer_{};
+    Waker                           waker_{};
+    std::queue<LazyBaseIOAwaiter *> waiting_awaiters_{};
+    pid_t                           tid_;
+    bool                            running_{false};
+};
 
 } // namespace zed::async::detail

@@ -3,6 +3,8 @@
 #include "async.hpp"
 #include "common/macros.hpp"
 #include "common/util/noncopyable.hpp"
+#include "net/address.hpp"
+#include "net/socket.hpp"
 // C++
 #include <chrono>
 #include <optional>
@@ -11,14 +13,22 @@
 
 namespace zed::net {
 
+namespace detail {
+    struct AcceptStream;
+
+} // namespace detail
+
 class TcpStream : util::Noncopyable {
-public:
-    enum class ShutdownAction { READ = SHUT_RD, WRITE = SHUT_WR, READ_WRITE = SHUT_RDWR };
+    friend struct detail::AcceptStream;
 
 public:
+    enum class ShutdownAction { READ = SHUT_RD, WRITE = SHUT_WR, ALL = SHUT_RDWR };
+
+private:
     explicit TcpStream(int fd)
         : fd_{fd} {}
 
+public:
     ~TcpStream() {
         if (fd_ >= 0) [[likely]] {
             ::close(fd_);
@@ -63,13 +73,26 @@ public:
         return async::Write(fd_, buf, len);
     }
 
-    void set_read_timeout(const std::chrono::milliseconds &timeout = 0ms) {
+    [[nodiscard]]
+    auto set_read_timeout(const std::chrono::microseconds &timeout = 0ms) -> std::error_code {
         struct timeval tv {
-            .tv_sec = timeout.count() / 1000, .tv_usec = timeout.count() % 1000
+            .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
         };
         if (::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0) [[unlikely]] {
-            LOG_FD_SYSERR(fd_, setsockopt, errno);
+            return std::error_code{errno, std::system_category()};
         }
+        return std::error_code{};
+    }
+
+    [[nodiscard]]
+    auto set_write_time(const std::chrono::milliseconds &timeout = 0ms) -> std::error_code {
+        struct timeval tv {
+            .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
+        };
+        if (::setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0) [[unlikely]] {
+            return std::error_code{errno, std::system_category()};
+        }
+        return std::error_code{};
     }
 
     [[nodiscard]]
@@ -82,15 +105,6 @@ public:
             LOG_FD_SYSERR(fd_, getsockopt, errno);
         }
         return std::chrono::milliseconds{tv.tv_sec * 1000 + tv.tv_usec};
-    }
-
-    void set_write_time(const std::chrono::milliseconds &timeout = 0ms) {
-        struct timeval tv {
-            .tv_sec = timeout.count() / 1000, .tv_usec = timeout.count() % 1000
-        };
-        if (::setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0) [[unlikely]] {
-            LOG_FD_SYSERR(fd_, setsockopt, errno);
-        }
     }
 
     [[nodiscard]]
@@ -107,30 +121,31 @@ public:
 
     [[nodiscard]]
     auto get_local_address() -> Address {
-        struct sockaddr_storage addr;
-        ::memset(&addr, 0, sizeof(addr));
-        socklen_t len;
-        ::getsockname(fd_, reinterpret_cast<struct sockaddr *>(&addr), &len);
-        return Address(reinterpret_cast<struct sockaddr *>(&addr), len);
+        return net::get_local_address(this->fd_);
     }
 
     [[nodiscard]]
     auto get_peer_address() -> Address {
-        struct sockaddr_storage addr;
-        ::memset(&addr, 0, sizeof(addr));
-        socklen_t               len;
-        ::getpeername(fd_, reinterpret_cast<struct sockaddr *>(&addr), &len);
-        return Address(reinterpret_cast<struct sockaddr *>(&addr), len);
+        return net::get_peer_address(this->fd_);
     }
 
-    void set_nodelay(bool nodelay) {
+    [[nodiscard]]
+    auto get_fd() const -> int {
+        return fd_;
+    }
+
+    [[nodiscard]]
+    auto set_nodelay(bool need_delay) -> std::error_code {
         auto flags = ::fcntl(fd_, F_GETFL, 0);
-        if (nodelay) {
+        if (need_delay) {
             flags |= O_NDELAY;
         } else {
             flags &= ~O_NDELAY;
         }
-        ::fcntl(fd_, F_SETFL, flags);
+        if (::fcntl(fd_, F_SETFL, flags) == -1) [[unlikely]] {
+            return std::error_code{errno, std::system_category()};
+        }
+        return std::error_code{};
     }
 
     [[nodiscard]]
@@ -139,20 +154,25 @@ public:
         return flags & O_NDELAY;
     }
 
-    // void set_nonblocking(bool nonblocking) {
-    //     auto flags = ::fcntl(fd_, F_GETFL, 0);
-    //     if (nonblocking) {
-    //         flags |= O_NONBLOCK;
-    //     } else {
-    //         flags &= ~O_NONBLOCK;
-    //     }
-    //     ::fcntl(fd_, F_SETFL, flags);
-    // }
+    [[nodiscard]]
+    auto set_nonblocking(bool nonblocking) -> std::error_code {
+        auto flags = ::fcntl(fd_, F_GETFL, 0);
+        if (nonblocking) {
+            flags |= O_NONBLOCK;
+        } else {
+            flags &= ~O_NONBLOCK;
+        }
+        if (::fcntl(fd_, F_SETFL, flags) == -1) {
+            return std::error_code{errno, std::system_category()};
+        }
+        return std::error_code{};
+    }
 
-    // auto is_nonblocking() -> bool{
-    //     auto flags = ::fcntl(fd_, F_GETFL, 0);
-    //     return flags & O_NONBLOCK;
-    // }
+    [[nodiscard]]
+    auto is_nonblocking() -> bool {
+        auto flags = ::fcntl(fd_, F_GETFL, 0);
+        return flags & O_NONBLOCK;
+    }
 
 public:
     [[nodiscard]]
@@ -165,7 +185,7 @@ public:
             [[unlikely]] {
             co_return std::nullopt;
         }
-        LOG_DEBUG("Build a connection [ PEER_ADDR: {}, FD: {} ]", address.to_string(), fd);
+        LOG_DEBUG("Build a client {{address: {},fd: {}}}", address.to_string(), fd);
         co_return TcpStream{fd};
     };
 
