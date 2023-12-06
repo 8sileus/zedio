@@ -124,14 +124,11 @@ private:
         ::memset(&new_value, 0, sizeof(new_value));
         new_value.it_value.tv_sec = internal / 1000;
         new_value.it_value.tv_nsec = internal % 1000 * 1000000;
-        if (auto ret = ::timerfd_settime(fd_, 0, &new_value, nullptr); ret != 0) [[unlikely]] {
-            log::zed_logger.error(FORMAT_FUNC_ERR_MESSAGE(timerfd_settime, errno));
+        if (::timerfd_settime(fd_, 0, &new_value, nullptr) != 0) [[unlikely]] {
+            LOG_SYSERR(timerfd_settime, errno);
         }
-        log::zed_logger.debug("The next expiration of the timer in {}.{}s later",
-                              new_value.it_value.tv_sec, new_value.it_value.tv_nsec);
-#ifdef NDEBUG
-
-#endif
+        LOG_DEBUG("The next expiration of the timer in {}.{}s later", new_value.it_value.tv_sec,
+                  new_value.it_value.tv_nsec);
     }
 
 private:

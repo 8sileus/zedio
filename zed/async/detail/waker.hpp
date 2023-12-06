@@ -44,8 +44,8 @@ private:
     auto work() -> Task<void> {
         char buf[8];
         while (true) {
-            if (auto n = co_await async::Read<async::Exclusive>(fd_, buf, sizeof(buf), 0);
-                n != sizeof(buf)) [[unlikely]] {
+            if (auto n = co_await async::Read(fd_, buf, sizeof(buf), 0); n != sizeof(buf))
+                [[unlikely]] {
                 log::zed_logger.error("waker read {}/{} bytes ", n, sizeof(buf));
             }
         }
