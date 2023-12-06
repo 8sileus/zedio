@@ -41,6 +41,8 @@ private:
                 LOG_DEBUG("Accept a connection from {}",
                           stream.value().get_peer_address().to_string());
                 this->accept_processor_.post(handle_stream(std::move(stream.value())));
+            } else {
+                // LOG ERROR
             }
         }
     }

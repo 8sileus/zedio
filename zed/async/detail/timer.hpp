@@ -139,15 +139,15 @@ private:
     auto work() -> Task<void> {
         char buf[8];
         while (true) {
-            if (auto ret = co_await async::Read(fd_, buf, sizeof(buf), 0); ret != sizeof(buf))
+            if (auto result = co_await async::Read(fd_, buf, sizeof(buf), 0); !result.has_value())
                 [[unlikely]] {
-                LOG_ERROR("Timer read failed, error: {}.", strerror(-ret));
+                LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }
             std::vector<std::shared_ptr<TimerEvent>> expired_events;
             auto tmp = std::make_shared<TimerEvent>(nullptr, 0, 0);
             {
                 // std::lock_guard lock(mutex_);
-                auto            it = events_.upper_bound(tmp);
+                auto it = events_.upper_bound(tmp);
                 expired_events.insert(expired_events.end(), events_.begin(), it);
                 events_.erase(events_.begin(), it);
             }

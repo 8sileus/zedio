@@ -78,10 +78,7 @@ public:
         struct timeval tv {
             .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
         };
-        if (::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0) [[unlikely]] {
-            return std::error_code{errno, std::system_category()};
-        }
-        return std::error_code{};
+        return set_sock_opt(this->fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     }
 
     [[nodiscard]]
@@ -89,10 +86,7 @@ public:
         struct timeval tv {
             .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
         };
-        if (::setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0) [[unlikely]] {
-            return std::error_code{errno, std::system_category()};
-        }
-        return std::error_code{};
+        return set_sock_opt(this->fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     }
 
     [[nodiscard]]
@@ -120,12 +114,12 @@ public:
     }
 
     [[nodiscard]]
-    auto get_local_address() -> Address {
+    auto get_local_address() -> std::expected<Address, std::error_code> {
         return net::get_local_address(this->fd_);
     }
 
     [[nodiscard]]
-    auto get_peer_address() -> Address {
+    auto get_peer_address() -> std::expected<Address, std::error_code> {
         return net::get_peer_address(this->fd_);
     }
 
@@ -176,14 +170,17 @@ public:
 
 public:
     [[nodiscard]]
-    static auto connect(const Address &address) -> async::Task<std::optional<TcpStream>> {
+    static auto connect(const Address &address)
+        -> async::Task<std::expected<TcpStream, std::error_code>> {
         int fd = ::socket(address.get_family(), SOCK_STREAM, 0);
         if (fd < 0) [[unlikely]] {
-            co_return std::nullopt;
+            co_return std::unexpected{
+                std::error_code{errno, std::system_category()}
+            };
         }
-        if (co_await async::Connect(fd, address.get_sockaddr(), address.get_length()) < 0)
-            [[unlikely]] {
-            co_return std::nullopt;
+        auto ex = co_await async::Connect(fd, address.get_sockaddr(), address.get_length());
+        if (!ex.has_value()) [[unlikely]] {
+            co_return std::unexpected{ex.error()};
         }
         LOG_DEBUG("Build a client {{address: {},fd: {}}}", address.to_string(), fd);
         co_return TcpStream{fd};

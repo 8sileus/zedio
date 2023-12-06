@@ -31,17 +31,18 @@ auto client(std::barrier<std::__empty_completion> &b, Address host_addr) -> Task
 }
 
 auto server(std::barrier<std::__empty_completion> &b, Address local_addr) -> Task<void> {
-    TcpListener listener;
-    if (auto err = listener.bind(local_addr); err) {
-        zed::LOG_ERROR("{}", err.message());
+    auto ex = TcpListener::bind(local_addr);
+    if (!ex.has_value()) {
+        zed::LOG_ERROR("{}", ex.error().message());
     }
+    auto listener = std::move(ex.value());
     if (auto err = listener.set_reuse_address(true); err) {
         zed::LOG_ERROR("{}", err.message());
     }
     b.arrive_and_drop();
     auto stream = (co_await listener.accept()).value();
     assert(stream.get_fd() >= 0);
-    zed::LOG_DEBUG("peer_addr:{}", stream.get_peer_address().to_string());
+    zed::LOG_DEBUG("peer_addr:{}", stream.get_peer_address().value().to_string());
     char buf[64]{};
     co_await stream.read(buf, sizeof(buf));
     std::cout << "server: " << buf << "\n";

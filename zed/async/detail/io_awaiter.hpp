@@ -6,7 +6,9 @@
 #include <cassert>
 // C++
 #include <coroutine>
+#include <expected>
 #include <functional>
+#include <system_error>
 
 namespace zed::async::detail {
 
@@ -20,7 +22,14 @@ struct LazyBaseIOAwaiter {
 
     void await_suspend(std::coroutine_handle<> handle);
 
-    constexpr auto await_resume() const noexcept -> int { return res_; }
+    constexpr auto await_resume() const noexcept -> std::expected<int, std::error_code> {
+        if (res_ >= 0) [[likely]] {
+            return res_;
+        }
+        return std::unexpected{
+            std::error_code{-res_, std::system_category()}
+        };
+    }
 
     int                                 res_{0};
     std::function<void(io_uring_sqe *)> cb_;

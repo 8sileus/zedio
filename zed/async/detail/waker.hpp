@@ -49,9 +49,9 @@ private:
     auto work() -> Task<void> {
         char buf[8];
         while (true) {
-            if (auto ret = co_await async::Read(this->fd_, buf, sizeof(buf), 0); ret != sizeof(buf))
-                [[unlikely]] {
-                LOG_ERROR("Waker read failed, error: {}.", strerror(-ret));
+            if (auto result = co_await async::Read(this->fd_, buf, sizeof(buf), 0);
+                !result.has_value()) [[unlikely]] {
+                LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }
             std::vector<std::function<void()>> tasks;
             {
