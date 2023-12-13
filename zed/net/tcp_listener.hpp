@@ -2,7 +2,7 @@
 
 #include "common/macros.hpp"
 #include "common/util/noncopyable.hpp"
-#include "net/address.hpp"
+#include "net/socket_addr.hpp"
 #include "net/tcp_stream.hpp"
 // C
 #include <cstring>
@@ -14,8 +14,8 @@ namespace zed::net {
 
 namespace detail {
     struct AcceptStream : public async::Accept {
-        AcceptStream(int fd, sockaddr *addr, socklen_t *addrlen, int flags = 0)
-            : Accept{fd, addr, addrlen, flags} {}
+        AcceptStream(int fd, int flags = 0)
+            : Accept{fd, nullptr, nullptr, flags} {}
 
         auto await_resume() const noexcept -> std::expected<TcpStream, std::error_code> {
             if (LazyBaseIOAwaiter::res_ >= 0) [[likely]] {
@@ -30,12 +30,10 @@ namespace detail {
 
 class TcpListener : util::Noncopyable {
 private:
-    TcpListener(int fd, const Address &address)
-        : fd_{fd}
-        , address_{address} {}
+    TcpListener(int fd)
+        : fd_{fd} {}
 
 public:
-
     ~TcpListener() {
         if (this->fd_ >= 0) [[likely]] {
             ::close(this->fd_);
@@ -44,8 +42,7 @@ public:
     }
 
     TcpListener(TcpListener &&other)
-        : fd_(other.fd_)
-        , address_(std::move(other.address_)) {
+        : fd_(other.fd_) {
         other.fd_ = -1;
     }
 
@@ -57,19 +54,18 @@ public:
             ::close(this->fd_);
         }
         this->fd_ = other.fd_;
-        address_ = std::move(other.address_);
         other.fd_ = -1;
         return *this;
     }
 
     [[nodiscard]]
     auto accept() -> detail::AcceptStream {
-        return detail::AcceptStream{this->fd_, nullptr, nullptr};
+        return detail::AcceptStream{this->fd_};
     }
 
     [[nodiscard]]
-    auto address() const -> const Address & {
-        return this->address_;
+    auto local_address() const -> std::expected<SocketAddr, std::error_code> {
+        return get_local_address(this->fd_);
     }
 
     [[nodiscard]]
@@ -78,23 +74,23 @@ public:
     }
 
     [[nodiscard]]
-    auto set_reuse_address(bool status) -> std::error_code {
+    auto set_reuse_address(bool status) -> std::expected<void, std::error_code> {
         auto optval = status ? 1 : 0;
         return set_sock_opt(this->fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
     }
 
 public:
     [[nodiscard]]
-    static auto bind(const Address &address) -> std::expected<TcpListener, std::error_code> {
-        auto fd = ::socket(address.get_family(), SOCK_STREAM, 0);
+    static auto bind(const SocketAddr &addresses) -> std::expected<TcpListener, std::error_code> {
+        auto fd = ::socket(addresses.family(), SOCK_STREAM, 0);
         if (fd == -1) [[unlikely]] {
             return std::unexpected{
                 std::error_code{errno, std::system_category()}
             };
         }
-        if (::bind(fd, address.get_sockaddr(), address.get_length()) != 0) [[unlikely]] {
+        if (::bind(fd, addresses.sockaddr(), addresses.length()) != 0) [[unlikely]] {
             ::close(fd);
-              return std::unexpected{
+            return std::unexpected{
                 std::error_code{errno, std::system_category()}
             };
         }
@@ -104,11 +100,11 @@ public:
                 std::error_code{errno, std::system_category()}
             };
         }
-        return TcpListener{fd, address};
+        return TcpListener{fd};
     }
 
     [[nodiscard]]
-    static auto bind(const std::vector<Address> &addresses)
+    static auto bind(const std::vector<SocketAddr> &addresses)
         -> std::expected<TcpListener, std::error_code> {
         for (const auto &address : addresses) {
             if (auto result = TcpListener::bind(address); result.has_value()) {
@@ -119,8 +115,7 @@ public:
     }
 
 private:
-    int     fd_;
-    Address address_;
+    int fd_;
 };
 
 } // namespace zed::net

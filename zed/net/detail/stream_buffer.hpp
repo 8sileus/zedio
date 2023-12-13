@@ -4,7 +4,7 @@
 
 // C
 #include <cassert>
-#include <cstring>
+#include <cstring> //memcpy
 // C++
 #include <string>
 #include <string_view>
@@ -39,12 +39,12 @@ public:
     }
 
     [[nodiscard]]
-    auto begin_write() -> char * {
+    auto write_begin() -> char * {
         return buffer_.data() + write_index_;
     }
 
     [[nodiscard]]
-    auto begin_read() const -> const char * {
+    auto read_begin() const -> const char * {
         return buffer_.data() + read_index_;
     }
 
@@ -57,7 +57,7 @@ public:
         if (writeable_bytes() < len) {
             expand(len);
         }
-        ::memcpy(begin_write(), data, len);
+        ::memcpy(write_begin(), data, len);
         increase_read_index(len);
     }
 
@@ -79,11 +79,11 @@ public:
 
 private:
     void expand(std::size_t len) {
-        if (writeable_bytes() < prependable_bytes()) {
+        if (writeable_bytes() + prependable_bytes() < len) {
             buffer_.resize(write_index_ + len);
         } else {
             auto n = writeable_bytes();
-            ::memcpy(buffer_.data(), buffer_.data() + read_index_, n);
+            std::memcpy(buffer_.data(), buffer_.data() + read_index_, n);
             read_index_ = 0;
             write_index_ = n;
         }
