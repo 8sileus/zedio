@@ -2,8 +2,8 @@
 
 #include "async/async_io.hpp"
 #include "async/task.hpp"
+#include "common/debug.hpp"
 #include "common/util/noncopyable.hpp"
-#include "log.hpp"
 // Linux
 #include <sys/eventfd.h>
 // C
@@ -19,26 +19,18 @@ namespace zed::async::detail {
 class Waker : util::Noncopyable {
 public:
     Waker()
-        : fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
+        : fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)}
+        , handle_{work()} {
         if (this->fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
                                                  this->fd_, strerror(errno)));
         }
+        handle_.resume();
     }
 
     ~Waker() { ::close(this->fd_); }
 
-    void start() {
-        this->handle_ = work();
-        this->handle_.resume();
-    }
-
-    void post(std::function<void()> &&task) {
-        std::lock_guard lock(tasks_mutex_);
-        tasks_.push_back(std::move(task));
-    }
-
-    void wake() {
+    void wake_up() {
         char buf[8];
         if (auto ret = ::write(this->fd_, buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
             LOG_ERROR("Waker write failed, error: {}.", strerror(ret));
@@ -49,25 +41,15 @@ private:
     auto work() -> Task<void> {
         char buf[8];
         while (true) {
-            if (auto result = co_await async::Read(this->fd_, buf, sizeof(buf), 0);
+            if (auto result = co_await async::Read<AL::privated>(this->fd_, buf, sizeof(buf));
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
-            }
-            std::vector<std::function<void()>> tasks;
-            {
-                std::lock_guard lock(this->tasks_mutex_);
-                this->tasks_.swap(tasks);
-            }
-            for (auto &task : tasks) {
-                task();
             }
         }
     }
 
 private:
     Task<void>                         handle_{};
-    std::mutex                         tasks_mutex_;
-    std::vector<std::function<void()>> tasks_;
     int                                fd_;
 };
 

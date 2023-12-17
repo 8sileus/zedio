@@ -12,13 +12,19 @@
 
 namespace zed::async::detail {
 
-struct LazyBaseIOAwaiter {
-    LazyBaseIOAwaiter(const std::function<void(io_uring_sqe *)> &cb)
-        : cb_{cb} {}
+// Access Level
+enum class AL : int8_t {
+    shared,
+    privated,
+};
 
-    ~LazyBaseIOAwaiter() = default;
+struct BaseIOAwaiter {
+    BaseIOAwaiter(AL level)
+        : level_{level} {}
 
-    constexpr auto await_ready() const noexcept -> bool { return false; }
+    auto await_ready() const noexcept -> bool {
+        return ready_;
+    }
 
     void await_suspend(std::coroutine_handle<> handle);
 
@@ -32,8 +38,10 @@ struct LazyBaseIOAwaiter {
     }
 
     int                                 res_{0};
-    std::function<void(io_uring_sqe *)> cb_;
+    bool                                ready_{false};
+    AL                                  level_;
     std::coroutine_handle<>             handle_{};
+    std::function<void(io_uring_sqe *)> cb_{nullptr};
 };
 
 } // namespace zed::async::detail

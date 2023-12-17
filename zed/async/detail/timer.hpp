@@ -2,7 +2,6 @@
 
 #include "async/async_io.hpp"
 #include "async/task.hpp"
-#include "common/macros.hpp"
 #include "common/util/noncopyable.hpp"
 #include "common/util/time.hpp"
 #include "log.hpp"

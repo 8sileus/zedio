@@ -8,6 +8,7 @@ AlignArrayOfStructures: Right
 AlignConsecutiveDeclarations: true
 AlignEscapedNewlines: Left
 AlignOperands: true
+AllowShortFunctionsOnASingleLine: Empty
 AlwaysBreakTemplateDeclarations: true
 BreakBeforeBinaryOperators: true
 BreakConstructorInitializers: BeforeComma

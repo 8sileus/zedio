@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/macros.hpp"
+#include "common/debug.hpp"
 #include "common/util/noncopyable.hpp"
 #include "net/socket_addr.hpp"
 #include "net/tcp_stream.hpp"
@@ -13,12 +13,12 @@
 namespace zed::net {
 
 namespace detail {
-    struct AcceptStream : public async::Accept {
-        AcceptStream(int fd, int flags = 0)
-            : Accept{fd, nullptr, nullptr, flags} {}
+    struct AcceptStream : public async::Accept<async::AL::shared> {
+        AcceptStream(int fd)
+            : Accept{fd, nullptr, nullptr} {}
 
         auto await_resume() const noexcept -> std::expected<TcpStream, std::error_code> {
-            if (LazyBaseIOAwaiter::res_ >= 0) [[likely]] {
+            if (BaseIOAwaiter::res_ >= 0) [[likely]] {
                 return TcpStream{res_};
             }
             return std::unexpected{
@@ -31,7 +31,9 @@ namespace detail {
 class TcpListener : util::Noncopyable {
 private:
     TcpListener(int fd)
-        : fd_{fd} {}
+        : fd_{fd} {
+        LOG_TRACE("Build a tcp listener fd {}", fd_);
+    }
 
 public:
     ~TcpListener() {
@@ -82,7 +84,7 @@ public:
 public:
     [[nodiscard]]
     static auto bind(const SocketAddr &addresses) -> std::expected<TcpListener, std::error_code> {
-        auto fd = ::socket(addresses.family(), SOCK_STREAM, 0);
+        auto fd = ::socket(addresses.family(), SOCK_STREAM | SOCK_NONBLOCK, 0);
         if (fd == -1) [[unlikely]] {
             return std::unexpected{
                 std::error_code{errno, std::system_category()}

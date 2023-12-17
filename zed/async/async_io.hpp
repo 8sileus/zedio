@@ -4,112 +4,184 @@
 
 namespace zed::async {
 
-struct Accept : public detail::LazyBaseIOAwaiter {
-    Accept(int fd, sockaddr *addr, socklen_t *addrlen, int flags = 0)
-        : LazyBaseIOAwaiter([fd, addr, addrlen, flags](io_uring_sqe *sqe) {
-            io_uring_prep_accept(sqe, fd, addr, addrlen, flags);
-        }) {}
+using detail::AL;
+
+template <AL level = AL::shared>
+struct Accept : public detail::BaseIOAwaiter {
+    Accept(int fd, sockaddr *addr, socklen_t *addrlen)
+        : BaseIOAwaiter{level} {
+        res_ = accept4(fd, addr, addrlen, SOCK_NONBLOCK);
+        if (res_ != -1) {
+            ready_ = true;
+        } else if (errno != EWOULDBLOCK) {
+            res_ = errno;
+            ready_ = true;
+        } else {
+            cb_ = [fd, addr, addrlen](io_uring_sqe *sqe) {
+                io_uring_prep_accept(sqe, fd, addr, addrlen, SOCK_NONBLOCK);
+            };
+        }
+    }
 };
 
-struct Close : public detail::LazyBaseIOAwaiter {
-    Close(int fd)
-        : LazyBaseIOAwaiter([fd](io_uring_sqe *sqe) { io_uring_prep_close(sqe, fd); }) {}
-};
+#define X(f1, f2, ...)                                                    \
+    res_ = f1(__VA_ARGS__);                                               \
+    if (res_ != -1) {                                                     \
+        ready_ = true;                                                    \
+    } else if (errno != EWOULDBLOCK) {                                    \
+        res_ = errno;                                                     \
+        ready_ = true;                                                    \
+    } else {                                                              \
+        cb_ = [__VA_ARGS__](io_uring_sqe *sqe) { f2(sqe, __VA_ARGS__); }; \
+    }
 
-struct Connect : public detail::LazyBaseIOAwaiter {
+template <AL level = AL::shared>
+struct Connect : public detail::BaseIOAwaiter {
     Connect(int fd, const sockaddr *addr, socklen_t addrlen)
-        : LazyBaseIOAwaiter([fd, addr, addrlen](io_uring_sqe *sqe) {
-            io_uring_prep_connect(sqe, fd, addr, addrlen);
-        }) {}
+        : BaseIOAwaiter{level} {
+        X(connect, io_uring_prep_connect, fd, addr, addrlen)
+    }
 };
 
-struct Read : public detail::LazyBaseIOAwaiter {
-    Read(int fd, void *buf, std::size_t nbytes, uint64_t offset = -1)
-        : LazyBaseIOAwaiter([fd, buf, nbytes, offset](io_uring_sqe *sqe) {
-            io_uring_prep_read(sqe, fd, buf, nbytes, offset);
-        }) {}
+template <AL level = AL::shared>
+struct Shutdown : public detail::BaseIOAwaiter {
+    Shutdown(int fd, int how)
+        : BaseIOAwaiter{level} {
+        X(shutdown, io_uring_prep_shutdown, fd, how)
+    }
 };
 
-struct Readv : public detail::LazyBaseIOAwaiter {
-    Readv(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset = -1)
-        : LazyBaseIOAwaiter([fd, iovecs, nr_vecs, offset](io_uring_sqe *sqe) {
-            io_uring_prep_readv(sqe, fd, iovecs, nr_vecs, offset);
-        }) {}
+template <AL level = AL::shared>
+struct Close : public detail::BaseIOAwaiter {
+    Close(int fd)
+        : BaseIOAwaiter{level} {
+        X(close, io_uring_prep_close, fd)
+    }
 };
 
-struct Readv2 : public detail::LazyBaseIOAwaiter {
-    Readv2(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset = -1, int flags = 0)
-        : LazyBaseIOAwaiter([fd, iovecs, nr_vecs, offset, flags](io_uring_sqe *sqe) {
-            io_uring_prep_readv2(sqe, fd, iovecs, nr_vecs, offset, flags);
-        }) {}
-};
 
-struct Recv : public detail::LazyBaseIOAwaiter {
+template <AL level = AL::shared>
+struct Recv : public detail::BaseIOAwaiter {
     Recv(int sockfd, void *buf, std::size_t len, int flags)
-        : LazyBaseIOAwaiter([sockfd, buf, len, flags](io_uring_sqe *sqe) {
-            io_uring_prep_recv(sqe, sockfd, buf, len, flags);
-        }) {}
+        : BaseIOAwaiter{level} {
+        X(recv, io_uring_prep_recv, sockfd, buf, len, flags)
+    }
 };
 
-struct RecvMsg : public detail::LazyBaseIOAwaiter {
+template <AL level = AL::shared>
+struct RecvMsg : public detail::BaseIOAwaiter {
     RecvMsg(int fd, msghdr *msg, unsigned flags)
-        : LazyBaseIOAwaiter(
-            [fd, msg, flags](io_uring_sqe *sqe) { io_uring_prep_recvmsg(sqe, fd, msg, flags); }) {}
+        : BaseIOAwaiter{level} {
+        X(recvmsg, io_uring_prep_recvmsg, fd, msg, flags)
+    }
 };
 
-struct Send : public detail::LazyBaseIOAwaiter {
+template <AL level = AL::shared>
+struct Send : public detail::BaseIOAwaiter {
     Send(int sockfd, const void *buf, std::size_t len, int flags)
-        : LazyBaseIOAwaiter([sockfd, buf, len, flags](io_uring_sqe *sqe) {
-            io_uring_prep_send(sqe, sockfd, buf, len, flags);
-        }) {}
+        : BaseIOAwaiter{level} {
+        X(send, io_uring_prep_send, sockfd, buf, len, flags)
+    }
 };
 
-struct SendTo : public detail::LazyBaseIOAwaiter {
+template <AL level = AL::shared>
+struct SendMsg : public detail::BaseIOAwaiter {
+    SendMsg(int fd, const msghdr *msg, unsigned flags)
+        : BaseIOAwaiter{level} {
+        X(sendmsg, io_uring_prep_sendmsg, fd, msg, flags)
+    }
+};
+
+template <AL level = AL::shared>
+struct SendTo : public detail::BaseIOAwaiter {
     SendTo(int sockfd, const void *buf, size_t len, int flags, const sockaddr *addr,
            socklen_t addrlen)
-        : LazyBaseIOAwaiter([sockfd, buf, len, flags, addr, addrlen](io_uring_sqe *sqe) {
-            io_uring_prep_sendto(sqe, sockfd, buf, len, flags, addr, addrlen);
-        }) {}
+        : BaseIOAwaiter{level} {
+        X(sendto, io_uring_prep_sendto, sockfd, buf, len, flags, addr, addrlen)
+    }
 };
 
-struct SendMsg : public detail::LazyBaseIOAwaiter {
-    SendMsg(int fd, const msghdr *msg, unsigned flags)
-        : LazyBaseIOAwaiter(
-            [fd, msg, flags](io_uring_sqe *sqe) { io_uring_prep_sendmsg(sqe, fd, msg, flags); }) {}
+#undef X
+
+#define X(f1, f2, ...)                                                        \
+    res_ = f1(__VA_ARGS__);                                                   \
+    if (res_ != -1) {                                                         \
+        ready_ = true;                                                        \
+    } else if (errno != EWOULDBLOCK) {                                        \
+        res_ = errno;                                                         \
+        ready_ = true;                                                        \
+    } else {                                                                  \
+        cb_ = [__VA_ARGS__](io_uring_sqe *sqe) { f2(sqe, __VA_ARGS__, -1); }; \
+    }
+
+template <AL level = AL::shared>
+struct Read : public detail::BaseIOAwaiter {
+    Read(int fd, void *buf, std::size_t nbytes)
+        : BaseIOAwaiter{level} {
+        X(read, io_uring_prep_read, fd, buf, nbytes)
+    }
 };
 
-struct Shutdown : public detail::LazyBaseIOAwaiter {
-    Shutdown(int fd, int how)
-        : LazyBaseIOAwaiter(
-            [fd, how](io_uring_sqe *sqe) { io_uring_prep_shutdown(sqe, fd, how); }) {}
+template <AL level = AL::shared>
+struct Readv : public detail::BaseIOAwaiter {
+    Readv(int fd, const iovec *iovecs, int nr_vecs)
+        : BaseIOAwaiter{level} {
+        X(readv, io_uring_prep_readv, fd, iovecs, nr_vecs)
+    }
 };
 
-struct Socket : public detail::LazyBaseIOAwaiter {
-    Socket(int domain, int type, int protocol, int flags = 0)
-        : LazyBaseIOAwaiter([domain, type, protocol, flags](io_uring_sqe *sqe) {
-            io_uring_prep_socket(sqe, domain, type, protocol, flags);
-        }) {}
+
+
+template <AL level = AL::shared>
+struct Write : public detail::BaseIOAwaiter {
+    Write(int fd, const void *buf, unsigned nbytes)
+        : BaseIOAwaiter{level} {
+        X(write, io_uring_prep_write, fd, buf, nbytes)
+    }
 };
 
-struct Write : public detail::LazyBaseIOAwaiter {
-    Write(int fd, const void *buf, unsigned nbytes, uint64_t offset = -1)
-        : LazyBaseIOAwaiter([fd, buf, nbytes, offset](io_uring_sqe *sqe) {
-            io_uring_prep_write(sqe, fd, buf, nbytes, offset);
-        }) {}
+template <AL level = AL::shared>
+struct Writev : public detail::BaseIOAwaiter {
+    Writev(int fd, const iovec *iovecs, unsigned nr_vecs)
+        : BaseIOAwaiter{level} {
+        X(writev, io_uring_prep_writev, fd, iovecs, nr_vecs)
+    }
 };
 
-struct Writev : public detail::LazyBaseIOAwaiter {
-    Writev(int fd, const iovec *iovecs, unsigned nr_vecs, uint64_t offset = -1)
-        : LazyBaseIOAwaiter([fd, iovecs, nr_vecs, offset](io_uring_sqe *sqe) {
-            io_uring_prep_writev(sqe, fd, iovecs, nr_vecs, offset);
-        }) {}
-};
+#undef X
 
-struct Writev2 : public detail::LazyBaseIOAwaiter {
-    Writev2(int fd, const iovec *iovecs, unsigned nr_vecs, uint64_t offset = -1, int flags = 0)
-        : LazyBaseIOAwaiter([fd, iovecs, nr_vecs, offset, flags](io_uring_sqe *sqe) {
-            io_uring_prep_writev2(sqe, fd, iovecs, nr_vecs, offset, flags);
-        }) {}
+
+// template <AL level = AL::shared>
+// struct Readv2 : public detail::BaseIOAwaiter {
+//     Readv2(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset, int flags )
+//         : BaseIOAwaiter{level} {
+//         auto cb_ = []
+//     }
+// };
+
+// template <AL level = AL::shared>
+// struct Writev2 : public detail::BaseIOAwaiter {
+//     Writev2(int fd, const iovec *iovecs, unsigned nr_vecs, uint64_t offset, int flags)
+//         : BaseIOAwaiter{level} {
+//         X(readv, io_uring_prep_readv, fd, iovecs, nr_vecs, offset)
+//     }
+// };
+
+template <AL level = AL::shared>
+struct Socket : public detail::BaseIOAwaiter {
+    Socket(int domain, int type, int protocol)
+        : BaseIOAwaiter{level} {
+        type |= SOCK_NONBLOCK;
+        res_ = socket(domain, type, protocol);
+        if (res_ >= 0) {
+            ready_ = true;
+        } else {
+            cb_ = [domain, type, protocol](io_uring_sqe *sqe) {
+                // FUTURE:  The flags argument are currently unused 
+                io_uring_prep_socket(sqe, domain, type, protocol, 0);
+            };
+        }
+    }
 };
 
 } // namespace zed::async

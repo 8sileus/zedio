@@ -9,11 +9,13 @@
 
 namespace zed::async::detail {
 
+class Dispatcher;
+
+
 class Dispatcher : util::Noncopyable {
 public:
     Dispatcher(std::size_t worker_num = std::thread::hardware_concurrency())
         : worker_num_{worker_num} {
-        assert(worker_num > 0);
         this->processors_.reserve(worker_num);
         this->threads_.reserve(worker_num);
         std::barrier b(worker_num + 1);

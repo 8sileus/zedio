@@ -1,7 +1,6 @@
 #pragma once
 
 #include "async.hpp"
-#include "common/macros.hpp"
 #include "common/util/noncopyable.hpp"
 #include "net/socket.hpp"
 #include "net/socket_addr.hpp"
@@ -18,11 +17,15 @@ namespace detail {
 
 } // namespace detail
 
+/// shutdown option
+enum class SHUTDOWN_OPTION : int {
+    READ = SHUT_RD,
+    WRITE = SHUT_WR,
+    READ_WRITE = SHUT_RDWR,
+};
+
 class TcpStream : util::Noncopyable {
     friend struct detail::AcceptStream;
-
-public:
-    enum class ShutdownAction { READ = SHUT_RD, WRITE = SHUT_WR, ALL = SHUT_RDWR };
 
 private:
     explicit TcpStream(int fd)
@@ -33,7 +36,6 @@ public:
         if (fd_ >= 0) [[likely]] {
             ::close(fd_);
         }
-        fd_ = -1;
     }
 
     TcpStream(TcpStream &&other)
@@ -54,27 +56,27 @@ public:
     }
 
     [[nodiscard]]
-    auto shutdown(ShutdownAction action) -> async::Shutdown {
-        return async::Shutdown(fd_, static_cast<int>(action));
+    auto shutdown(SHUTDOWN_OPTION opition) -> async::Shutdown<> {
+        return async::Shutdown(fd_, static_cast<int>(opition));
     }
 
     [[nodiscard]]
-    auto read(void *buf, std::size_t len) -> async::Read {
+    auto read(void *buf, std::size_t len) -> async::Read<> {
         return async::Read(fd_, buf, len);
     }
 
     [[nodiscard]]
-    auto readv(const iovec *iovecs, int nr_vecs) -> async::Readv {
+    auto readv(const iovec *iovecs, int nr_vecs) -> async::Readv<> {
         return async::Readv(fd_, iovecs, nr_vecs);
     }
 
     [[nodiscard]]
-    auto write(const void *buf, std::size_t len) -> async::Write {
+    auto write(const void *buf, std::size_t len) -> async::Write<> {
         return async::Write(fd_, buf, len);
     }
 
     [[nodiscard]]
-    auto set_read_timeout(const std::chrono::microseconds &timeout = 0ms)
+    auto set_read_timeout(const std::chrono::microseconds &timeout = std::chrono::microseconds{0})
         -> std::expected<void, std::error_code> {
         struct timeval tv {
             .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
@@ -83,7 +85,7 @@ public:
     }
 
     [[nodiscard]]
-    auto set_write_timeout(const std::chrono::microseconds &timeout = 0ms)
+    auto set_write_timeout(const std::chrono::microseconds &timeout = std::chrono::microseconds{0})
         -> std::expected<void, std::error_code> {
         struct timeval tv {
             .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
