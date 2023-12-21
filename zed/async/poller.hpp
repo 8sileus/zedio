@@ -1,8 +1,8 @@
 #pragma once
 
-#include "async/detail/inject.hpp"
-#include "async/detail/io_awaiter.hpp"
-#include "async/detail/queue.hpp"
+#include "async/inject.hpp"
+#include "async/io_awaiter.hpp"
+#include "async/queue.hpp"
 #include "common/config.hpp"
 #include "common/debug.hpp"
 #include "common/util/noncopyable.hpp"
@@ -70,7 +70,7 @@ public:
             return false;
         }
 
-        unsigned head;
+        unsigned    head;
         std::size_t cnt = 0;
         io_uring_for_each_cqe(&ring_, head, cqe) {
             auto awaiter = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
@@ -111,5 +111,17 @@ private:
     io_uring                            ring_{};
     std::queue<detail::BaseIOAwaiter *> waiting_awaiters_;
 };
+
+void BaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
+    handle_ = std::move(handle);
+    auto sqe = io_uring_get_sqe(t_poller->ring());
+    if (sqe == nullptr) [[unlikely]] {
+        t_poller->push_awaiter(this);
+    } else {
+        cb_(sqe);
+        io_uring_sqe_set_data64(sqe, reinterpret_cast<unsigned long long>(this));
+        io_uring_submit(t_poller->ring());
+    }
+}
 
 } // namespace zed::async::detail

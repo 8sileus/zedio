@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/detail/io_awaiter.hpp"
+#include "async/io_awaiter.hpp"
 
 namespace zed::async {
 

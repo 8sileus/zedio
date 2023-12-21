@@ -24,7 +24,6 @@ Task<void> process(TcpStream stream) {
     char buf[1024];
 
     while (true) {
-        LOG_DEBUG("ok");
         auto ok = co_await stream.read(buf, sizeof(buf));
         // error or peer close connection
         if (!ok) {

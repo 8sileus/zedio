@@ -1,11 +1,11 @@
 #pragma once
 
-#include "async/detail/idle.hpp"
-#include "async/detail/inject.hpp"
-#include "async/detail/poller.hpp"
-#include "async/detail/queue.hpp"
-#include "async/detail/shared.hpp"
-#include "async/detail/waker.hpp"
+#include "async/idle.hpp"
+#include "async/inject.hpp"
+#include "async/poller.hpp"
+#include "async/queue.hpp"
+#include "async/shared.hpp"
+#include "async/waker.hpp"
 #include "common/debug.hpp"
 #include "common/util/thread.hpp"
 // C++

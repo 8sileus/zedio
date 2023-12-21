@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/detail/worker.hpp"
+#include "async/worker.hpp"
 
 namespace zed::async {
 
