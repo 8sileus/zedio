@@ -43,7 +43,6 @@ public:
         handle_waiting_awatiers();
 
         io_uring_cqe *cqe{nullptr};
-        std::size_t   cnt = 0;
         while (true) {
             io_uring_wait_cqe(&ring_, &cqe);
             if (cqe != nullptr) {

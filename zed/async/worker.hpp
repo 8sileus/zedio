@@ -265,7 +265,7 @@ private:
         if (this->tick_ % zed::config::EVENT_INTERVAL == 0) {
             // Poll happend I/O events, I don't care if I/O events happen
             // Just a regular checking
-            auto _ = poll();
+            [[maybe_unused]] auto _ = poll();
             // regularly check that the scheduelr is shutdown
             check_shutdown();
         }

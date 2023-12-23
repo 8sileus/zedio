@@ -1,5 +1,6 @@
 #pragma once
 
+#include "async/inject.hpp"
 #include "common/config.hpp"
 #include "common/debug.hpp"
 
@@ -10,6 +11,7 @@
 #include <atomic>
 #include <coroutine>
 #include <expected>
+#include <format>
 #include <memory>
 #include <utility>
 
@@ -20,21 +22,23 @@ public:
     [[nodiscard]]
     auto remaining_slots() -> std::size_t {
         auto [steal, _] = unpack(head_.load(std::memory_order::acquire));
-        auto tail = tail_.load(std::memory_order::acquire);
-        return zed::config::LOCAL_QUEUE_CAPACITY
-               - static_cast<std::size_t>(wrapping_sub(tail, steal));
+        std::atomic_ref<uint32_t> atoimc_tail{tail_};
+        auto                      tail = atoimc_tail.load(std::memory_order::acquire);
+        assert(zed::config::LOCAL_QUEUE_CAPACITY > static_cast<std::size_t>(tail - steal));
+        return zed::config::LOCAL_QUEUE_CAPACITY - static_cast<std::size_t>(tail - steal);
     }
 
     [[nodiscard]]
     auto size() -> uint32_t {
         auto [_, head] = unpack(head_.load(std::memory_order::acquire));
-        auto tail = tail_.load(std::memory_order::acquire);
-        return wrapping_sub(tail, head);
+        std::atomic_ref<uint32_t> atoimc_tail{tail_};
+        auto                      tail = atoimc_tail.load(std::memory_order::acquire);
+        return tail - head;
     }
 
     [[nodiscard]]
     auto empty() -> bool {
-        return size() == 0;
+        return size() == 0u;
     }
 
     [[nodiscard]]
@@ -46,14 +50,23 @@ public:
     void push_back(std::list<std::coroutine_handle<>> &&tasks, std::size_t len) {
         assert(0 < len && len <= capacity());
 
-        auto tail = tail_.load(std::memory_order::relaxed);
+        auto [steal, _] = unpack(head_.load(std::memory_order::acquire));
+        auto tail = tail_;
 
-        for (auto &&task : tasks) {
-            buffer_[tail] = std::move(task);
-            tail = wrapping_add(tail, 1);
+        if (tail - steal > static_cast<uint32_t>(capacity() - len)) [[unlikely]] {
+            throw std::runtime_error(std::format("push_back overflow! cur size {}, push size {}",
+                                                 tail - steal, capacity() - len));
         }
 
-        tail_.store(tail, std::memory_order::release);
+        for (auto &&task : tasks) {
+            std::size_t idx = tail & MASK;
+            buffer_[idx] = std::move(task);
+            tail += 1;
+            // tail = wrapping_add(tail, 1);
+        }
+
+        std::atomic_ref<uint32_t> atomic_tail{tail_};
+        atomic_tail.store(tail, std::memory_order::release);
     }
 
     void push_back_or_overflow(std::coroutine_handle<> &&task, GlobalQueue &global_queue) {
@@ -61,9 +74,8 @@ public:
         while (true) {
             auto head = head_.load(std::memory_order::acquire);
             auto [steal, real] = unpack(head);
-            tail = tail_.load(std::memory_order::relaxed);
-            if (wrapping_sub(tail, steal)
-                < static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY)) {
+            tail = tail_;
+            if (tail - steal < static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY)) {
                 // There is capacity for the task
                 break;
             } else if (steal != real) {
@@ -87,12 +99,12 @@ public:
         std::size_t idx = 0;
         while (true) {
             auto [steal, real] = unpack(head);
-            auto tail = tail_.load(std::memory_order::relaxed);
+            auto tail = tail_;
             if (real == tail) {
                 // Queue is empty
                 return std::nullopt;
             }
-            auto next_real = wrapping_add(real, 1);
+            auto next_real = real + 1;
             auto next = steal == real ? pack(next_real, next_real) : pack(steal, next_real);
             if (head_.compare_exchange_strong(head, next, std::memory_order::acq_rel,
                                               std::memory_order::acquire)) {
@@ -109,11 +121,10 @@ public:
         std::optional<std::coroutine_handle<>> result{std::nullopt};
 
         auto [steal, _] = unpack(dst.head_.load(std::memory_order::acquire));
-        auto dst_tail = dst.tail_.load(std::memory_order::relaxed);
+        auto dst_tail = dst.tail_;
 
         // less than half of local_queue_capacity just return
-        if (wrapping_sub(dst_tail, steal)
-            > static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY / 2)) {
+        if (dst_tail - steal > static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY / 2)) {
             return result;
         }
         auto n = steal_into2(dst, dst_tail);
@@ -123,10 +134,12 @@ public:
         LOG_TRACE("steal {} tasks", n);
         /// Take the final task for result
         n -= 1;
-        auto dst_new_tail = wrapping_add(dst_tail, n);
-        result.emplace(std::move(dst.buffer_[dst_new_tail]));
+        auto dst_new_tail = dst_tail + n;
+        std::size_t idx = static_cast<std::size_t>(dst_new_tail) & MASK;
+        result.emplace(std::move(dst.buffer_[idx]));
         if (n > 0) {
-            dst.tail_.store(dst_new_tail, std::memory_order::release);
+            std::atomic_ref atomic_dst_tail{dst.tail_};
+            atomic_dst_tail.store(dst_new_tail, std::memory_order::release);
         }
         return result;
     }
@@ -139,19 +152,21 @@ private:
         uint32_t n = 0;
         while (true) {
             auto [src_steal, src_real] = unpack(prev_packed);
-            auto src_tail = tail_.load(std::memory_order::acquire);
+            std::atomic_ref<uint32_t> atomic_src_tail{tail_};
+            auto                      src_tail = atomic_src_tail.load(std::memory_order::acquire);
 
             if (src_steal != src_real) {
                 // Other thread is stealing
                 return 0;
             }
 
-            n = wrapping_sub(src_tail, src_real);
+            n = src_tail - src_real;
             n = n - n / 2;
             if (n == 0) {
                 return 0;
             }
-            auto next_src_real = wrapping_add(src_real, n);
+            auto next_src_real = src_real + n;
+            assert(src_steal != next_src_real);
             next_packed = pack(src_steal, next_src_real);
             if (head_.compare_exchange_strong(prev_packed, next_packed, std::memory_order::acq_rel,
                                               std::memory_order::acquire)) {
@@ -160,9 +175,9 @@ private:
             }
         }
         auto [first, _] = unpack(next_packed);
-        for (auto i = 0; i < n; ++i) {
-            auto src_idx = wrapping_add(first, i);
-            auto dst_idx = wrapping_add(dst_tail, i);
+        for (uint32_t i = 0; i < n; ++i) {
+            auto src_idx = static_cast<std::size_t>(first + i) & MASK;
+            auto dst_idx = static_cast<std::size_t>(dst_tail + i) & MASK;
             dst.buffer_[dst_idx] = std::move(buffer_[src_idx]);
         }
 
@@ -179,46 +194,49 @@ private:
     }
 
     void push_back_finish(std::coroutine_handle<> &&task, uint32_t tail) {
-        buffer_[tail] = std::move(task);
-        tail_.store(wrapping_add(tail, 1), std::memory_order::release);
+        std::size_t idx = tail & MASK;
+        buffer_[idx] = std::move(task);
+        std::atomic_ref atomic_tail{tail_};
+        atomic_tail.store(tail + 1, std::memory_order::release);
     }
 
     auto push_overflow(std::coroutine_handle<> &task, uint32_t head, uint32_t tail,
                        GlobalQueue &global_queue) -> bool {
-        constexpr uint32_t NUM_TASKS_TAKEN{
+        static constexpr auto NUM_TASKS_TAKEN{
             static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY / 2)};
 
-        assert(wrapping_sub(tail, head) == zed::config::LOCAL_QUEUE_CAPACITY);
+        assert(tail - head == zed::config::LOCAL_QUEUE_CAPACITY);
 
         auto prev = pack(head, head);
 
         if (!head_.compare_exchange_strong(
-                prev,
-                pack(wrapping_add(head, NUM_TASKS_TAKEN), wrapping_add(head, NUM_TASKS_TAKEN)),
+                prev, pack(head + NUM_TASKS_TAKEN, head + NUM_TASKS_TAKEN),
                 std::memory_order::release, std::memory_order::relaxed)) {
             return false;
         }
 
         std::list<std::coroutine_handle<>> tasks;
-        for (std::size_t i = 0; i < NUM_TASKS_TAKEN; ++i) {
-            tasks.push_back(std::move(buffer_[wrapping_add(head, i)]));
+        for (uint32_t i = 0; i < NUM_TASKS_TAKEN; ++i) {
+            std::size_t idx = static_cast<std::size_t>(head + i) & MASK;
+            tasks.push_back(std::move(buffer_[idx]));
         }
-        global_queue.push(std::move(tasks), NUM_TASKS_TAKEN);
+        tasks.push_back(std::move(task));
+        global_queue.push(std::move(tasks), NUM_TASKS_TAKEN + 1);
         return true;
     }
 
 private:
-    [[nodiscard]]
-    static auto wrapping_add(uint32_t a, uint32_t b) -> uint32_t {
-        constexpr uint32_t limit{static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY)};
-        return (a + b) % limit;
-    }
+    static constexpr std::size_t MASK = zed::config::LOCAL_QUEUE_CAPACITY - 1;
 
-    [[nodiscard]]
-    static auto wrapping_sub(uint32_t a, uint32_t b) -> uint32_t {
-        constexpr uint32_t limit{static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY)};
-        return (a + limit - b) % limit;
-    }
+    // [[nodiscard]]
+    // static auto wrapping_add(uint32_t a, uint32_t b) -> uint32_t {
+    //     return a + b;
+    // }
+
+    // [[nodiscard]]
+    // static auto wrapping_sub(uint32_t a, uint32_t b) -> uint32_t {
+    //     return a - b;
+    // }
 
     [[nodiscard]]
     static auto unpack(uint64_t head) -> std::pair<uint32_t, uint32_t> {
@@ -230,10 +248,10 @@ private:
         return static_cast<uint64_t>(steal) << 32 | static_cast<uint64_t>(real);
     }
 
-
 private:
     std::atomic<uint64_t>                                                  head_{0};
-    std::atomic<uint32_t>                                                  tail_{0};
+    uint32_t                                                               tail_{0};
+    // std::atomic<uint32_t>                                                  tail_{0};
     std::array<std::coroutine_handle<>, zed::config::LOCAL_QUEUE_CAPACITY> buffer_;
 };
 

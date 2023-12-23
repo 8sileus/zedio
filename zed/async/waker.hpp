@@ -19,8 +19,8 @@ namespace zed::async::detail {
 class Waker : util::Noncopyable {
 public:
     Waker()
-        : fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)}
-        , handle_{work()} {
+        : handle_{work()}
+        , fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
         if (this->fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
                                                  this->fd_, strerror(errno)));
@@ -31,8 +31,8 @@ public:
     ~Waker() { ::close(this->fd_); }
 
     void wake_up() {
-        char buf[8];
-        if (auto ret = ::write(this->fd_, buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
+        uint64_t buf{0};
+        if (auto ret = ::write(this->fd_, &buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
             LOG_ERROR("Waker write failed, error: {}.", strerror(ret));
         }
     }
@@ -49,7 +49,7 @@ private:
     }
 
 private:
-    Task<void>                         handle_{};
+    Task<void>                         handle_;
     int                                fd_;
 };
 

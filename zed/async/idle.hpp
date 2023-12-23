@@ -28,7 +28,7 @@ public:
     [[nodiscard]]
     auto num_wokring_and_searching(std::memory_order order) -> std::pair<std::size_t, std::size_t> {
         auto state = state_.load(order);
-        return {(state_ & WORKING_MASK) >> WORKING_SHIFT, state_ & SEARCHING_MASK};
+        return {(state & WORKING_MASK) >> WORKING_SHIFT, state & SEARCHING_MASK};
     }
 
     void inc_num_searching(std::memory_order order) {

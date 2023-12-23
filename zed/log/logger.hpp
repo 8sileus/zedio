@@ -172,7 +172,6 @@ private:
             }
 
             if (full_buffers_.size() > max_buffer_list_size) {
-                char buf[256];
                 std::cerr << std::format("Dropped log messages {} larger buffers\n",
                                          full_buffers_.size() - 2);
                 full_buffers_.resize(2);
