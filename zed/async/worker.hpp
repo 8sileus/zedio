@@ -105,6 +105,7 @@ public:
         LOG_TRACE("Worker-{}: build in thread {}", index_, current_thread::get_tid());
         assert(t_worker == nullptr);
         t_worker = this;
+        waker_.run();
     }
 
     void run() {
@@ -139,10 +140,6 @@ public:
             sleep();
         }
         LOG_TRACE("Worker-{}: stop", index_);
-    }
-
-    void shutdown() {
-        is_shutdown_ = true;
     }
 
     void wake_up() {
@@ -340,8 +337,7 @@ private:
         if (transition_to_sleeping()) {
             LOG_TRACE("Worker-{}: sleep", index_);
             while (!is_shutdown_) {
-                run_next_ = poller_.wait();
-
+                poller_.wait();
                 check_shutdown();
                 if (transition_from_sleeping()) {
                     LOG_TRACE("Worker-{}: awaken", index_);
@@ -354,7 +350,7 @@ private:
 private:
     Shared                                &shared_;
     std::size_t                            index_;
-    std::optional<std::coroutine_handle<>> run_next_;
+    std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     Poller                                 poller_{};
     Waker                                  waker_{};
     LocalQueue                             local_queue_{};

@@ -72,6 +72,5 @@ Task<void> accept() {
 int main() {
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
     Runtime runtime;
-    spawn(accept());
-    runtime.run();
+    runtime.block_on(accept());
 }

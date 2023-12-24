@@ -25,23 +25,27 @@ public:
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
                                                  this->fd_, strerror(errno)));
         }
-        handle_.resume();
     }
 
     ~Waker() { ::close(this->fd_); }
 
+    void run() {
+        handle_.resume();
+    }
+
     void wake_up() {
-        uint64_t buf{0};
+        // debug for 3 hours NOTE:must not be zero
+        uint64_t buf{1};
         if (auto ret = ::write(this->fd_, &buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
-            LOG_ERROR("Waker write failed, error: {}.", strerror(ret));
+            LOG_ERROR("Waker write failed, error: {}.", strerror(errno));
         }
     }
 
 private:
     auto work() -> Task<void> {
-        char buf[8];
+        uint64_t buf{0};
         while (true) {
-            if (auto result = co_await async::Read<AL::privated>(this->fd_, buf, sizeof(buf));
+            if (auto result = co_await async::Read<AL::privated>(this->fd_, &buf, sizeof(buf));
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }

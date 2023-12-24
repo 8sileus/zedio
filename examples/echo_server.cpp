@@ -44,7 +44,7 @@ Task<void> accept() {
     }
     auto listener = std::move(has_listener.value());
     auto _ = listener.set_reuse_address(true);
-    while (true) {
+    // while (true) {
         auto has_stream = co_await listener.accept();
         if (has_stream) {
             console.info("Accept a connection from {}",
@@ -52,13 +52,13 @@ Task<void> accept() {
             spawn(process(std::move(has_stream.value())));
         } else {
             console.error(has_stream.error().message());
-            break;
+            // break;
         }
-    }
+    // }
 }
 
 int main() {
+    SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
     Runtime runtime;
-    spawn(accept());
-    runtime.run();
+    runtime.block_on(accept());
 }

@@ -35,6 +35,9 @@ public:
 
     void push(std::list<std::coroutine_handle<>> &&tasks, std::size_t n) {
         std::lock_guard lock(mutex_);
+        if (is_closed_) {
+            return;
+        }
         tasks_.splice(tasks_.end(), tasks);
         num_.fetch_add(n, std::memory_order::seq_cst);
     }

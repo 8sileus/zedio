@@ -39,20 +39,22 @@ public:
 
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
-    auto wait() -> std::coroutine_handle<> {
+    auto wait() {
         handle_waiting_awatiers();
 
         io_uring_cqe *cqe{nullptr};
         while (true) {
-            io_uring_wait_cqe(&ring_, &cqe);
+            if (auto err = io_uring_wait_cqe(&ring_, &cqe); err != 0) [[unlikely]] {
+                LOG_DEBUG("failed {}", err);
+            }
             if (cqe != nullptr) {
                 break;
             }
         }
         auto awaiter = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
         awaiter->res_ = cqe->res;
+        awaiter->handle_.resume();
         io_uring_cqe_seen(&ring_, cqe);
-        return std::move(awaiter->handle_);
     }
 
     [[nodiscard]]
