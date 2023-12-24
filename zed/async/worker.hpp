@@ -269,7 +269,7 @@ private:
     }
 
     void check_shutdown() {
-        if (!is_shutdown_) {
+        if (!is_shutdown_) [[likely]] {
             is_shutdown_ = shared_.global_queue_.is_closed();
         }
     }
@@ -334,7 +334,9 @@ private:
 
     // Let current worker sleep
     void sleep() {
-        if (transition_to_sleeping()) {
+        check_shutdown();
+
+        if (!is_shutdown_ && transition_to_sleeping()) {
             LOG_TRACE("Worker-{}: sleep", index_);
             while (!is_shutdown_) {
                 poller_.wait();
