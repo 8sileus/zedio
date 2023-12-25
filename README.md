@@ -43,11 +43,10 @@ auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
         auto len = co_await stream.read(buf, sizeof(buf)).value();
-        ok = co_await stream.write(buf, len);
-        if (!ok) {
-            console.error(ok.error().message());
+        if (len == 0) {
             break;
         }
+        co_await stream.write(buf, len);
     }
 }
 
