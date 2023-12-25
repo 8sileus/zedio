@@ -131,7 +131,7 @@ public:
     }
 
     Task(Task &&other) noexcept
-        : m_handle(std::move(other.handle)) {
+        : m_handle(std::move(other.m_handle)) {
         other.m_handle = nullptr;
     }
 

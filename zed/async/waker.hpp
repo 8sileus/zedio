@@ -10,39 +10,42 @@
 #include <cstring>
 // C++
 #include <format>
-#include <functional>
 #include <mutex>
-#include <vector>
 
 namespace zed::async::detail {
 
 class Waker : util::Noncopyable {
 public:
     Waker()
-        : handle_{work()}
+        : loop_{loop()}
         , fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
         if (this->fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
                                                  this->fd_, strerror(errno)));
         }
+        loop_.resume();
     }
 
-    ~Waker() { ::close(this->fd_); }
-
-    void run() {
-        handle_.resume();
+    ~Waker() {
+        ::close(this->fd_);
     }
 
     void wake_up() {
         // debug for 3 hours NOTE:must not be zero
-        uint64_t buf{1};
+        constexpr uint64_t buf{1};
+        std::lock_guard    lock{mutex_};
         if (auto ret = ::write(this->fd_, &buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
             LOG_ERROR("Waker write failed, error: {}.", strerror(errno));
         }
     }
 
+    [[nodiscard]]
+    auto fd() const -> int {
+        return fd_;
+    }
+
 private:
-    auto work() -> Task<void> {
+    auto loop() -> Task<void> {
         uint64_t buf{0};
         while (true) {
             if (auto result = co_await async::Read<AL::privated>(this->fd_, &buf, sizeof(buf));
@@ -53,8 +56,9 @@ private:
     }
 
 private:
-    Task<void>                         handle_;
-    int                                fd_;
+    Task<void> loop_;
+    std::mutex mutex_;
+    int        fd_;
 };
 
 } // namespace zed::async::detail

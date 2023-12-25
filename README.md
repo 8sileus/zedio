@@ -38,25 +38,26 @@ ctest .
 
 # 3.简单echo server
 ``` C++
-Task<void> process(TcpStream stream) {
+// 去除所有检查
+auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
-        auto ok = co_await stream.read(buf, sizeof(buf)).value();
-        if(!ok||ok.value()==0){
-          break;
+        auto len = co_await stream.read(buf, sizeof(buf)).value();
+        ok = co_await stream.write(buf, len);
+        if (!ok) {
+            console.error(ok.error().message());
+            break;
         }
-        console.info("read: {}", buf);
-        ok = co_await stream.write(buf, ok.value());
     }
 }
 
-Task<void> accept() {
-    auto addr = SocketAddr::parse("localhost", 9999).value();
-    auto listener = TcpListener::bind(has_addr.value());
+auto accept() -> Task<void> {
+    auto addr = SocketAddr::parse("localhost", 8888).value();
+    auto listener = TcpListener::bind(has_addr).value();
     while (true) {
         auto has_stream = co_await listener.accept();
         if (has_stream) {
-            spawn(process(std::move(has_stream.value())));
+            spwan(process(std::move(has_stream.value())));
         } else {
             console.error(has_stream.error().message());
             break;
@@ -66,22 +67,24 @@ Task<void> accept() {
 
 int main() {
     Runtime runtime;
-    spawn(accept());
-    runtime.run();
+    runtime.block_on(accept());
 }
 ```
-
-# 4.项目介绍
-## 4.1.多线程，任务窃取机制
-  zedio的多线程和任务窃取模型，参考自tokio。
-
-## 4.2.异步IO
-- 对所有的I/O操作进行封装，提供异步调用的接口，该接口会先以非阻塞IO的方式调用原始的IO接口，如果还没有事件到达，将会把当前的coroutine注册进iouring，然后放弃执行权。（如果当前没有io_uring_sqe可用，则将把coroutine推送到等待队列，调度器空闲时处理这些等待的coroutine。）
-## 4.3.统一错误处理
-- 所有的错误，都使用std::error_code存储。如std::expected<int,std::error_code>，任何可能会出错的操作都使用std::expected或std::optional进行封装。
-## 4.4log
-- 支持异步输出，日志分级，文件滚动。
+# 4.当前特性
+- 实现多线程工作窃取并发模型 基于rust的tokio
+- 封装IOURING,使用co_await异步执行IO
+- 使用std::expected和std::opitional做错误处理
+- 异步日志库，编译时指定ZED_LOG，获取ZEDIO的运行日志
+- 支持协程链式执行
+    ``` C++
+    auto test_spwan_chain(std::string_view str) -> Task<void> {
+        LOG_INFO("test spwan chain {}", str);
+        co_return;
+    }
+    spwan(test_spwan_chain("hello"), test_spwan_chain("world"));
+    ```
+- 实现定时器，支持延迟调用 //已完成定时器，细节待定。
 
 # 5.依赖
-boost 
+boost: https://github.com/boostorg/boost   
 liburing: https://github.com/axboe/liburing

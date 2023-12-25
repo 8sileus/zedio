@@ -1,6 +1,5 @@
 #pragma once
 
-#include "async/inject.hpp"
 #include "async/io_awaiter.hpp"
 #include "async/queue.hpp"
 #include "common/config.hpp"

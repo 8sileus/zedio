@@ -42,7 +42,7 @@ public:
         return (prev & SEARCHING_MASK) == 1;
     }
 
-    void unpark_one(std::size_t num_searching) {
+    void wake_up_one(std::size_t num_searching) {
         state_.fetch_add(num_searching | (1 << WORKING_SHIFT), std::memory_order::seq_cst);
     }
 
@@ -93,7 +93,7 @@ public:
             return std::nullopt;
         }
 
-        state_.unpark_one(1);
+        state_.wake_up_one(1);
 
         auto result = sleepers_.front();
         sleepers_.pop_front();
@@ -129,7 +129,7 @@ public:
         for (auto it = sleepers_.begin(); it != sleepers_.end(); ++it) {
             if (*it == worker) {
                 sleepers_.erase(it);
-                state_.unpark_one(0);
+                state_.wake_up_one(0);
                 return true;
             }
         }

@@ -2,16 +2,14 @@
 
 #include "async/async_io.hpp"
 #include "async/task.hpp"
+#include "common/debug.hpp"
 #include "common/util/noncopyable.hpp"
-#include "common/util/time.hpp"
-#include "log.hpp"
 // Linux
 #include <sys/timerfd.h>
 // C
 #include <cassert>
 #include <cstring>
 // C++
-#include <atomic>
 #include <format>
 #include <functional>
 #include <memory>
@@ -22,24 +20,42 @@ using namespace std::literals::chrono_literals;
 
 namespace zed::async::detail {
 
-class TimerEvent : util::Noncopyable {
-    friend class Timer;
 
+class TimerEvent : util::Noncopyable {
 public:
-    TimerEvent(const std::function<void()> &cb, time_t delay, time_t period)
-        : cb_{cb}
-        , delay_{delay}
-        , period_{period} {
-        expired_time_ = util::get_time_since_epoch<util::TimeUnit::MilliSecond>() + delay;
+    TimerEvent(const std::function<void()> &cb, const std::chrono::nanoseconds delay,
+               const std::chrono::nanoseconds &period)
+        : delay_{delay}
+        , period_{period}
+        , expired_time_{std::chrono::steady_clock::now() + delay}
+        , cb_(cb) {}
+
+    void cancel() {
+        cancel_ = true;
     }
 
-    TimerEvent(const std::function<void()> &cb, const std::chrono::milliseconds &delay,
-               const std::chrono::milliseconds &period)
-        : TimerEvent(cb, delay.count(), period.count()) {}
+    [[nodiscard]]
+    auto is_canceled() const -> bool {
+        return cancel_;
+    }
 
-    void cancel() { cancel_ = true; }
+    void stop_repeating() {
+        period_ = std::chrono::nanoseconds{0};
+    }
 
-    auto expired_time() const -> time_t { return expired_time_; }
+    [[nodiscard]]
+    auto is_repeated() const -> bool {
+        return period_.count() != 0;
+    }
+
+    [[nodiscard]]
+    auto expired_time() const -> const std::chrono::steady_clock::time_point & {
+        return expired_time_;
+    }
+
+    void execute() {
+        cb_();
+    }
 
     auto operator<=>(const TimerEvent &other) const {
         return this->expired_time_ <=> other.expired_time_;
@@ -54,126 +70,111 @@ public:
         return *lhs <=> *rhs;
     }
 
-private:
     void update() {
-        expired_time_ = period_ + util::get_time_since_epoch<util::TimeUnit::MilliSecond>();
+        expired_time_ = std::chrono::steady_clock::now() + period_;
     }
 
 private:
-    time_t                expired_time_{0};
-    time_t                delay_{0};
-    time_t                period_{0};
-    std::function<void()> cb_{};
-    std::atomic<bool>     cancel_{false};
+    std::chrono::nanoseconds              delay_;
+    std::chrono::nanoseconds              period_;
+    std::chrono::steady_clock::time_point expired_time_;
+    std::function<void()>                 cb_;
+    bool                                  cancel_{false};
 };
 
 class Timer : util::Noncopyable {
 public:
     Timer()
-        : fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)} {
+        : loop_{loop()}
+        , fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)} {
         if (fd_ < 0) [[unlikely]] {
-            throw std::runtime_error(std::format(
-                "call timer_create failed, errorno: {} message: {}", fd_, strerror(errno)));
+            throw std::runtime_error(
+                std::format("call timer_create failed, error: {}", strerror(errno)));
         }
+        loop_.resume();
     }
 
-    ~Timer() { ::close(fd_); }
-
-    void start() {
-        task_ = work();
-        task_.resume();
+    ~Timer() {
+        ::close(fd_);
     }
 
-    auto add_timer_event(const std::function<void()> &cb, const std::chrono::milliseconds &delay,
-                         const std::chrono::milliseconds &period = 0ms)
+    auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
+                         const std::chrono::nanoseconds &period = 0ms)
         -> std::shared_ptr<TimerEvent> {
         auto event = std::make_shared<TimerEvent>(cb, delay, period);
-        bool need_update = false;
-        {
-            // std::lock_guard lock(mutex_);
-            if (events_.empty() || (*events_.begin())->expired_time_ > event->expired_time_) {
-                need_update = true;
-            };
-            events_.emplace(event);
-        }
+        bool need_update
+            = events_.empty() || (*events_.begin())->expired_time() > event->expired_time();
+        events_.emplace(event);
         if (need_update) {
             update_expired_time();
         }
         return event;
     }
 
-    auto fd() const -> int { return fd_; }
+    [[nodiscard]]
+    auto fd() const -> int {
+        return fd_;
+    }
 
 private:
     void update_expired_time() {
-        // decltype(events_.begin()) it;
-        // {
-        //     std::lock_guard lock(mutex_);
-        //     it = events_.begin();
-        //     if (it == events_.end()) {
-        //         return;
-        //     }
-        // }
         if (events_.empty()) {
             return;
         }
-        auto first_event = *events_.begin();
-        auto now = util::get_time_since_epoch<util::TimeUnit::MilliSecond>();
-        if (first_event->expired_time_ < now) {
+        auto first_expired_time = (*events_.begin())->expired_time();
+        auto now = std::chrono::steady_clock::now();
+        if (first_expired_time < now) {
+            LOG_ERROR("after timer expired, but some tasks were not executed");
             return;
         }
-        auto       internal = first_event->expired_time_ - now;
+        auto internal = static_cast<std::chrono::nanoseconds>(first_expired_time - now).count();
         itimerspec new_value;
         ::memset(&new_value, 0, sizeof(new_value));
-        new_value.it_value.tv_sec = internal / 1000;
-        new_value.it_value.tv_nsec = internal % 1000 * 1000000;
+        new_value.it_value.tv_sec = internal / 1000'000'000;
+        new_value.it_value.tv_nsec = internal % 1000'000'000;
         if (::timerfd_settime(fd_, 0, &new_value, nullptr) != 0) [[unlikely]] {
-            LOG_SYSERR(timerfd_settime, errno);
+            LOG_ERROR("timerfd_settime failed error: {}", strerror(errno));
         }
         LOG_TRACE("The next expiration of the timer in {}.{}s later", new_value.it_value.tv_sec,
                   new_value.it_value.tv_nsec);
     }
 
 private:
-    auto work() -> Task<void> {
-        char buf[8];
+    [[nodiscard]]
+    auto loop() -> Task<void> {
+        char buf[8]{};
         while (true) {
-            if (auto result = co_await async::Read(fd_, buf, sizeof(buf), 0); !result.has_value())
-                [[unlikely]] {
+            if (auto result = co_await Read<AL::privated>(fd_, buf, sizeof(buf));
+                !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }
-            std::vector<std::shared_ptr<TimerEvent>> expired_events;
-            auto tmp = std::make_shared<TimerEvent>(nullptr, 0, 0);
-            {
-                // std::lock_guard lock(mutex_);
-                auto it = events_.upper_bound(tmp);
-                expired_events.insert(expired_events.end(), events_.begin(), it);
-                events_.erase(events_.begin(), it);
-            }
-            LOG_TRACE("{} timer events expire", expired_events.size());
-            std::vector<std::function<void()>> cbs;
-            cbs.reserve(expired_events.size());
-            for (auto &event : expired_events) {
-                if (event->cancel_) {
+            auto                                     now = std::chrono::steady_clock::now();
+            auto                                     it = events_.begin();
+            auto                                     cnt = 0uz;
+            std::vector<std::shared_ptr<TimerEvent>> repeated_time_event;
+            for (; it != events_.end() && (*it)->expired_time() < now; ++it) {
+                auto &event = *it;
+                if (event->is_canceled()) {
                     continue;
-                } else if (event->period_) {
-                    event->update();
-                    events_.emplace(event);
                 }
-                cbs.emplace_back(event->cb_);
+                event->execute();
+                cnt += 1;
+                if (event->is_repeated()) {
+                    event->update();
+                    repeated_time_event.push_back(*it);
+                }
             }
+            LOG_TRACE("{} timer events expire", cnt);
+            events_.erase(events_.begin(), it);
+            events_.insert(repeated_time_event.begin(), repeated_time_event.end());
             update_expired_time();
-            for (auto &cb : cbs) {
-                cb();
-            }
         }
     }
 
 private:
-    Task<void>                                 task_{};
+    Task<void>                                 loop_;
     std::multiset<std::shared_ptr<TimerEvent>> events_{};
-    // std::mutex                                 mutex_{};
-    int fd_;
+    int                                        fd_;
 };
 
 } // namespace zed::async::detail

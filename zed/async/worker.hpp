@@ -1,10 +1,10 @@
 #pragma once
 
 #include "async/idle.hpp"
-#include "async/inject.hpp"
 #include "async/poller.hpp"
 #include "async/queue.hpp"
 #include "async/shared.hpp"
+#include "async/timer.hpp"
 #include "async/waker.hpp"
 #include "common/debug.hpp"
 #include "common/util/thread.hpp"
@@ -102,10 +102,10 @@ public:
     Worker(Shared &shared, std::size_t index)
         : shared_{shared}
         , index_{index} {
-        LOG_TRACE("Worker-{}: build in thread {}", index_, current_thread::get_tid());
+        LOG_TRACE("Worker-{}: build in thread {} ,waker fd {}, timer fd {}", index_,
+                  current_thread::get_tid(), waker_.fd(), timer_.fd());
         assert(t_worker == nullptr);
         t_worker = this;
-        waker_.run();
     }
 
     void run() {
@@ -144,6 +144,12 @@ public:
 
     void wake_up() {
         waker_.wake_up();
+    }
+
+    auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
+                         const std::chrono::nanoseconds &period = 0ms)
+        -> std::shared_ptr<TimerEvent> {
+        return timer_.add_timer_event(cb, delay, period);
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {
@@ -355,6 +361,7 @@ private:
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     Poller                                 poller_{};
     Waker                                  waker_{};
+    Timer                                  timer_{};
     LocalQueue                             local_queue_{};
     uint32_t                               tick_{0};
     bool                                   is_shutdown_{false};

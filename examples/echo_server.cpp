@@ -6,7 +6,7 @@ using namespace zed::async;
 using namespace zed::net;
 using namespace zed::log;
 
-Task<void> process(TcpStream stream) {
+auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
         auto ok = co_await stream.read(buf, sizeof(buf));
@@ -31,8 +31,15 @@ Task<void> process(TcpStream stream) {
     LOG_DEBUG("process {} end", stream.get_fd());
 }
 
-Task<void> accept() {
-    auto has_addr = SocketAddr::parse("localhost", 9999);
+auto test_spwan_chain(std::string_view str) -> Task<void> {
+    LOG_INFO("test spwan chain {}", str);
+    co_return;
+}
+
+auto accept() -> Task<void> {
+    spwan(test_spwan_chain("hello"), test_spwan_chain("world"));
+
+    auto has_addr = SocketAddr::parse("localhost", 8888);
     if (!has_addr) {
         console.error(has_addr.error().message());
         co_return;
@@ -44,17 +51,17 @@ Task<void> accept() {
     }
     auto listener = std::move(has_listener.value());
     auto _ = listener.set_reuse_address(true);
-    // while (true) {
+    while (true) {
         auto has_stream = co_await listener.accept();
         if (has_stream) {
             console.info("Accept a connection from {}",
                          has_stream.value().peer_address().value().to_string());
-            spawn(process(std::move(has_stream.value())));
+            spwan(process(std::move(has_stream.value())));
         } else {
             console.error(has_stream.error().message());
-            // break;
+            break;
         }
-    // }
+    }
 }
 
 int main() {

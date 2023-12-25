@@ -20,7 +20,7 @@ Content-Type: text/html
 </html>
                             )";
 
-Task<void> process(TcpStream stream) {
+auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
 
     while (true) {
@@ -43,7 +43,7 @@ Task<void> process(TcpStream stream) {
     }
 }
 
-Task<void> accept() {
+auto accept() -> Task<void> {
     auto has_addr = SocketAddr::parse("192.168.15.33", 8888);
     if (!has_addr) {
         console.error(has_addr.error().message());
@@ -61,7 +61,7 @@ Task<void> accept() {
         if (has_stream) {
             console.info("Accept a connection from {}",
                          has_stream.value().peer_address().value().to_string());
-            spawn(process(std::move(has_stream.value())));
+            spwan(process(std::move(has_stream.value())));
         } else {
             console.error(has_stream.error().message());
             break;
