@@ -183,7 +183,9 @@ public:
         return res;
     }
 
-    void resume() { m_handle.resume(); }
+    void resume() const {
+        m_handle.resume();
+    }
 
 private:
     std::coroutine_handle<promise_type> m_handle{nullptr};

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "async/detail/timer.hpp"
+#include "async/worker.hpp"
 // C++
 #include <chrono>
 #include <coroutine>
 
-namespace zed::async {
+namespace zed::detail::async {
 
 struct Sleep {
     Sleep(const std::chrono::milliseconds &timeout)
@@ -16,7 +16,7 @@ struct Sleep {
     template <typename T>
     void await_suspend(std::coroutine_handle<T> handle) const noexcept {
         auto task = [handle]() { handle.resume(); };
-        detail::t_processor->get_timer().add_timer_event(task, timeout_);
+        detail::t_worker->add_timer_event(task, timeout_);
     }
 
     constexpr void await_resume() const noexcept {};
@@ -24,4 +24,4 @@ struct Sleep {
     std::chrono::milliseconds timeout_{};
 };
 
-} // namespace zed::async
+} // namespace zed::detail::async

@@ -146,10 +146,9 @@ public:
         waker_.wake_up();
     }
 
-    auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
-                         const std::chrono::nanoseconds &period = 0ms)
-        -> std::shared_ptr<TimerEvent> {
-        return timer_.add_timer_event(cb, delay, period);
+    auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
+                         const std::chrono::nanoseconds &period) -> std::shared_ptr<TimerEvent> {
+        return timer_.add_timer_event(work, delay, period);
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {

@@ -23,20 +23,20 @@ namespace zed::async::detail {
 
 class TimerEvent : util::Noncopyable {
 public:
-    TimerEvent(const std::function<void()> &cb, const std::chrono::nanoseconds delay,
+    TimerEvent(const std::function<void()> &work, const std::chrono::nanoseconds delay,
                const std::chrono::nanoseconds &period)
         : delay_{delay}
         , period_{period}
         , expired_time_{std::chrono::steady_clock::now() + delay}
-        , cb_(cb) {}
+        , work_(work) {}
 
     void cancel() {
-        cancel_ = true;
+        is_canceled_ = true;
     }
 
     [[nodiscard]]
     auto is_canceled() const -> bool {
-        return cancel_;
+        return is_canceled_;
     }
 
     void stop_repeating() {
@@ -54,7 +54,7 @@ public:
     }
 
     void execute() {
-        cb_();
+        work_();
     }
 
     auto operator<=>(const TimerEvent &other) const {
@@ -75,11 +75,11 @@ public:
     }
 
 private:
-    std::chrono::nanoseconds              delay_;
-    std::chrono::nanoseconds              period_;
-    std::chrono::steady_clock::time_point expired_time_;
-    std::function<void()>                 cb_;
-    bool                                  cancel_{false};
+    std::chrono::nanoseconds                                        delay_;
+    std::chrono::nanoseconds                                        period_;
+    std::chrono::steady_clock::time_point                           expired_time_;
+    std::function<void()>                                           work_;
+    bool                                                            is_canceled_{false};
 };
 
 class Timer : util::Noncopyable {
@@ -98,10 +98,9 @@ public:
         ::close(fd_);
     }
 
-    auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
-                         const std::chrono::nanoseconds &period = 0ms)
-        -> std::shared_ptr<TimerEvent> {
-        auto event = std::make_shared<TimerEvent>(cb, delay, period);
+    auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
+                         const std::chrono::nanoseconds &period) -> std::shared_ptr<TimerEvent> {
+        auto event = std::make_shared<TimerEvent>(work, delay, period);
         bool need_update
             = events_.empty() || (*events_.begin())->expired_time() > event->expired_time();
         events_.emplace(event);
@@ -123,11 +122,12 @@ private:
         }
         auto first_expired_time = (*events_.begin())->expired_time();
         auto now = std::chrono::steady_clock::now();
+        time_t internal = 1;
         if (first_expired_time < now) {
-            LOG_ERROR("after timer expired, but some tasks were not executed");
-            return;
+            // do nothing
+        } else {
+            internal = static_cast<std::chrono::nanoseconds>(first_expired_time - now).count();
         }
-        auto internal = static_cast<std::chrono::nanoseconds>(first_expired_time - now).count();
         itimerspec new_value;
         ::memset(&new_value, 0, sizeof(new_value));
         new_value.it_value.tv_sec = internal / 1000'000'000;
@@ -135,8 +135,8 @@ private:
         if (::timerfd_settime(fd_, 0, &new_value, nullptr) != 0) [[unlikely]] {
             LOG_ERROR("timerfd_settime failed error: {}", strerror(errno));
         }
-        LOG_TRACE("The next expiration of the timer in {}.{}s later", new_value.it_value.tv_sec,
-                  new_value.it_value.tv_nsec);
+        // LOG_TRACE("The next expiration of the timer in {}.{}s later", new_value.it_value.tv_sec,
+        //   new_value.it_value.tv_nsec);
     }
 
 private:

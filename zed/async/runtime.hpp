@@ -40,7 +40,6 @@ namespace detail {
 
 void spwan(std::vector<Task<void>> &&tasks) {
     auto handle = [](std::vector<Task<void>> tasks) -> Task<void> {
-        LOG_DEBUG("2.remenber delete me {}", tasks.size());
         for (auto &task : tasks) {
             co_await task;
         }
@@ -62,6 +61,11 @@ void spwan(T &&first_task, F &&...chain_tasks) {
         detail::spwan_helper(tasks, std::forward<F>(chain_tasks)...);
         spwan(std::move(tasks));
     }
+}
+
+auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
+                     const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {
+    return detail::t_worker->add_timer_event(work, delay, period);
 }
 
 } // namespace zed::async
