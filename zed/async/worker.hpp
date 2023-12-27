@@ -48,13 +48,13 @@ public:
 
         void wake_up_one() {
             if (auto index = idle_.worker_to_notify(); index) {
-                workers_[index.value()]->wake_up();
+                workers_[index.value()]->waker().wake_up();
             }
         }
 
         void wake_up_all() {
             for (auto &worker : workers_) {
-                worker->wake_up();
+                worker->waker().wake_up();
             }
         }
 
@@ -142,13 +142,14 @@ public:
         LOG_TRACE("Worker-{}: stop", index_);
     }
 
-    void wake_up() {
-        waker_.wake_up();
+    [[nodiscard]]
+    auto timer()->Timer&{
+        return timer_;
     }
 
-    auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
-                         const std::chrono::nanoseconds &period) -> std::shared_ptr<TimerEvent> {
-        return timer_.add_timer_event(work, delay, period);
+    [[nodiscard]]
+    auto waker() -> Waker & {
+        return waker_;
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {

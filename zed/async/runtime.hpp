@@ -63,9 +63,10 @@ void spwan(T &&first_task, F &&...chain_tasks) {
     }
 }
 
-auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
+auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
                      const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {
-    return detail::t_worker->add_timer_event(work, delay, period);
+    return detail::t_worker->timer().add_timer_event(cb, std::chrono::steady_clock::now() + delay,
+                                                     period);
 }
 
 } // namespace zed::async

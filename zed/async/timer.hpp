@@ -23,20 +23,20 @@ namespace zed::async::detail {
 
 class TimerEvent : util::Noncopyable {
 public:
-    TimerEvent(const std::function<void()> &work, const std::chrono::nanoseconds delay,
-               const std::chrono::nanoseconds &period)
-        : delay_{delay}
-        , period_{period}
-        , expired_time_{std::chrono::steady_clock::now() + delay}
-        , work_(work) {}
+    TimerEvent(const std::function<void()>                 &cb,
+               const std::chrono::steady_clock::time_point &expired_time,
+               const std::chrono::nanoseconds              &period)
+        : cb_(cb)
+        , expired_time_{expired_time}
+        , period_{period} {}
 
     void cancel() {
-        is_canceled_ = true;
+        cb_ = nullptr;
     }
 
     [[nodiscard]]
     auto is_canceled() const -> bool {
-        return is_canceled_;
+        return cb_ == nullptr;
     }
 
     void stop_repeating() {
@@ -54,7 +54,7 @@ public:
     }
 
     void execute() {
-        work_();
+        cb_();
     }
 
     auto operator<=>(const TimerEvent &other) const {
@@ -75,12 +75,11 @@ public:
     }
 
 private:
-    std::chrono::nanoseconds                                        delay_;
-    std::chrono::nanoseconds                                        period_;
+    std::function<void()>                                           cb_;
     std::chrono::steady_clock::time_point                           expired_time_;
-    std::function<void()>                                           work_;
-    bool                                                            is_canceled_{false};
+    std::chrono::nanoseconds                                        period_;
 };
+
 
 class Timer : util::Noncopyable {
 public:
@@ -98,9 +97,10 @@ public:
         ::close(fd_);
     }
 
-    auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
+    auto add_timer_event(const std::function<void()>                 &work,
+                         const std::chrono::steady_clock::time_point &expired_time,
                          const std::chrono::nanoseconds &period) -> std::shared_ptr<TimerEvent> {
-        auto event = std::make_shared<TimerEvent>(work, delay, period);
+        auto event = std::make_shared<TimerEvent>(work, expired_time, period);
         bool need_update
             = events_.empty() || (*events_.begin())->expired_time() > event->expired_time();
         events_.emplace(event);
