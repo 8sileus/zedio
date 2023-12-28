@@ -6,7 +6,6 @@ using namespace zed::async;
 using namespace zed::net;
 using namespace zed::log;
 
-
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
@@ -32,15 +31,7 @@ auto process(TcpStream stream) -> Task<void> {
     LOG_DEBUG("process {} end", stream.get_fd());
 }
 
-auto test_spwan_chain(std::string_view str) -> Task<void> {
-    LOG_INFO("test spwan chain {}", str);
-    co_return;
-}
-
 auto accept() -> Task<void> {
-    spwan(test_spwan_chain("hello"), test_spwan_chain("world"));
-    add_timer_event([]() { LOG_DEBUG("tick"); }, 0s, 1s);
-
     auto has_addr = SocketAddr::parse("localhost", 9898);
     if (!has_addr) {
         console.error(has_addr.error().message());

@@ -9,22 +9,24 @@ public:
     Runtime(std::size_t num_worker = std::thread::hardware_concurrency())
         : shared_{num_worker} {}
 
-    // void run() {
-    // shared_.workers_[0]->run();
-    // }
-
-    void block_on(Task<void> &&task) {
-        detail::t_worker->schedule_task(main_coro(std::move(task)).take());
+    // Never stop
+    void run() {
         shared_.workers_[0]->run();
+    }
+
+    // Waiting for the task to close
+    void block_on(Task<void> &&main_task) {
+        detail::t_worker->schedule_task([](Runtime *runtime, Task<void> &&task) -> Task<void> {
+            co_await task;
+            runtime->shared_.close();
+            co_return;
+        }(this, std::move(main_task))
+                                                                                       .take());
+        run();
     }
 
 private:
     detail::Worker::Shared shared_;
-
-    auto main_coro(Task<void> &&main_task) -> Task<void> {
-        co_await main_task;
-        shared_.close();
-    }
 };
 
 namespace detail {

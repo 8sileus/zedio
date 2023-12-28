@@ -44,7 +44,8 @@ public:
         io_uring_cqe *cqe{nullptr};
         while (true) {
             if (auto err = io_uring_wait_cqe(&ring_, &cqe); err != 0) [[unlikely]] {
-                LOG_DEBUG("failed {}", err);
+                LOG_DEBUG("io_uring_wait_cqe failed {}", strerror(-err));
+                break;
             }
             if (cqe != nullptr) {
                 break;

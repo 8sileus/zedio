@@ -48,6 +48,7 @@ public:
 
         void wake_up_one() {
             if (auto index = idle_.worker_to_notify(); index) {
+                LOG_DEBUG("Wake up index");
                 workers_[index.value()]->waker().wake_up();
             }
         }
@@ -318,11 +319,13 @@ private:
     [[nodiscard]]
     auto next_local_task() -> std::optional<std::coroutine_handle<>> {
         if (run_next_.has_value()) {
+            // LOG_DEBUG("get a task from run_next");
             std::optional<std::coroutine_handle<>> result{std::nullopt};
             result.swap(run_next_);
             assert(!run_next_.has_value());
             return result;
         }
+        // LOG_DEBUG("get a task from local_queue");
         return local_queue_.pop();
     }
 
@@ -366,6 +369,7 @@ private:
     uint32_t                               tick_{0};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};
+    bool                                   is_main{false};
 };
 
 } // namespace zed::async::detail

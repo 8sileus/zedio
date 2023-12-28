@@ -8,21 +8,16 @@ using namespace zed::async;
 using namespace zed::net;
 using namespace zed::log;
 
-std::string_view response = R"(
-HTTP/1.1 200 OK
-Content-Length: 88
-Content-Type: text/html
+std::string_view response =
+    R"(HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Content-Length: 40
 
-<html>
-<body>
-<h1>It Works!</h1>
-</body>
-</html>
-                            )";
+<html><body><h1>TEST</h1></body></html>)";
 
 auto process(TcpStream stream) -> Task<void> {
-    char buf[1024];
 
+    char buf[1024];
     while (true) {
         auto ok = co_await stream.read(buf, sizeof(buf));
         // error or peer close connection
@@ -39,7 +34,6 @@ auto process(TcpStream stream) -> Task<void> {
             console.error(ok.error().message());
             break;
         }
-        LOG_DEBUG("process {} end", stream.get_fd());
     }
 }
 
@@ -59,8 +53,8 @@ auto accept() -> Task<void> {
     while (true) {
         auto has_stream = co_await listener.accept();
         if (has_stream) {
-            console.info("Accept a connection from {}",
-                         has_stream.value().peer_address().value().to_string());
+            LOG_INFO("Accept a connection from {}",
+                     has_stream.value().peer_address().value().to_string());
             spwan(process(std::move(has_stream.value())));
         } else {
             console.error(has_stream.error().message());

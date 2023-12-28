@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/debug.hpp"
 // C++
 #include <algorithm>
 #include <atomic>
@@ -13,7 +14,7 @@ namespace zed::async::detail {
 class IdleState {
 public:
     IdleState(std::size_t num_workers)
-        : state_{num_workers} {}
+        : state_{num_workers << WORKING_SHIFT} {}
 
     [[nodiscard]]
     auto num_searching(std::memory_order order) -> std::size_t {

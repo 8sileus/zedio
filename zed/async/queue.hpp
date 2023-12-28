@@ -11,6 +11,7 @@
 #include <coroutine>
 #include <expected>
 #include <format>
+#include <list>
 #include <memory>
 #include <utility>
 
@@ -188,7 +189,7 @@ public:
             auto next = steal == real ? pack(next_real, next_real) : pack(steal, next_real);
             if (head_.compare_exchange_strong(head, next, std::memory_order::acq_rel,
                                               std::memory_order::acquire)) {
-                idx = static_cast<std::size_t>(real);
+                idx = static_cast<std::size_t>(real) & MASK;
                 break;
             }
         }
@@ -211,7 +212,6 @@ public:
         if (n == 0) {
             return result;
         }
-        LOG_TRACE("steal {} tasks", n);
         /// Take the final task for result
         n -= 1;
         auto dst_new_tail = dst_tail + n;

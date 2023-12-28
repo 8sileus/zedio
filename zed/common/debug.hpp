@@ -17,13 +17,13 @@ auto &debug_logger = zed::log::console;
 
 #else
 
-#define SET_LOG_LEVEL(level) (level)
+#define SET_LOG_LEVEL(level)
 
-#define LOG_TRACE(...) (__VA_ARGS__)
-#define LOG_INFO(...) (__VA_ARGS__)
-#define LOG_DEBUG(...) (__VA_ARGS__)
-#define LOG_WARN(...) (__VA_ARGS__)
-#define LOG_ERROR(...) (__VA_ARGS__)
-#define LOG_FATAL(...) (__VA_ARGS__)
+#define LOG_TRACE(...) 
+#define LOG_INFO(...) 
+#define LOG_DEBUG(...)
+#define LOG_WARN(...) 
+#define LOG_ERROR(...)
+#define LOG_FATAL(...) 
 
 #endif
