@@ -8,12 +8,13 @@ using namespace zed::async;
 using namespace zed::net;
 using namespace zed::log;
 
-std::string_view response =
-    R"(HTTP/1.1 200 OK
-Content-Type: text/html; charset=UTF-8
-Content-Length: 40
+std::string_view response = R"(
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Content-Length: 13
 
-<html><body><h1>TEST</h1></body></html>)";
+Hello, World!
+)";
 
 auto process(TcpStream stream) -> Task<void> {
 

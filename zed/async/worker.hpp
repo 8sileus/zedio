@@ -48,7 +48,6 @@ public:
 
         void wake_up_one() {
             if (auto index = idle_.worker_to_notify(); index) {
-                LOG_DEBUG("Wake up index");
                 workers_[index.value()]->waker().wake_up();
             }
         }
@@ -346,7 +345,7 @@ private:
         check_shutdown();
 
         if (!is_shutdown_ && transition_to_sleeping()) {
-            LOG_TRACE("Worker-{}: sleep", index_);
+            LOG_TRACE("Worker-{}: sleep tick {}", index_, tick_);
             while (!is_shutdown_) {
                 poller_.wait();
                 check_shutdown();
@@ -361,12 +360,12 @@ private:
 private:
     Shared                                &shared_;
     std::size_t                            index_;
+    uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     Poller                                 poller_{};
     Waker                                  waker_{};
     Timer                                  timer_{};
     LocalQueue                             local_queue_{};
-    uint32_t                               tick_{0};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};
     bool                                   is_main{false};
