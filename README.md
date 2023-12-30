@@ -84,6 +84,21 @@ int main() {
     ```
 - 实现定时器，支持延迟调用 //已完成定时器，细节待定。
 
-# 5.依赖
+# 5.性能对比tokio
+测试环境：  
+VM虚拟机   
+操作系统：Ubuntu23.04  
+核心：4    
+内存：4G 
+处理器：AMD Ryzen 5 3600 6-Core Processor  				
+测试指令：./wrk -t4 -c1000 -d90s --latency http://192.168.15.33:7777/   
+ZEDIO:
+![](./png/zedio_benchmark.png)
+TOKIO:
+![](./png/tokio_benchmark.png)
+
+
+# 6.依赖
 boost: https://github.com/boostorg/boost   
 liburing: https://github.com/axboe/liburing
+
