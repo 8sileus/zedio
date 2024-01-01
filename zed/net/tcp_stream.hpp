@@ -56,23 +56,23 @@ public:
     }
 
     [[nodiscard]]
-    auto shutdown(SHUTDOWN_OPTION opition) -> async::Shutdown<> {
-        return async::Shutdown(fd_, static_cast<int>(opition));
+    auto shutdown(SHUTDOWN_OPTION opition) {
+        return async::shutdown(fd_, static_cast<int>(opition));
     }
 
     [[nodiscard]]
-    auto read(void *buf, std::size_t len) -> async::Read<> {
-        return async::Read(fd_, buf, len);
+    auto read(void *buf, std::size_t len) {
+        return async::read(fd_, buf, len, 0);
     }
 
     [[nodiscard]]
-    auto readv(const iovec *iovecs, int nr_vecs) -> async::Readv<> {
-        return async::Readv(fd_, iovecs, nr_vecs);
+    auto readv(const iovec *iovecs, int nr_vecs) {
+        return async::readv(fd_, iovecs, nr_vecs, 0);
     }
 
     [[nodiscard]]
-    auto write(const void *buf, std::size_t len) -> async::Write<> {
-        return async::Write(fd_, buf, len);
+    auto write(const void *buf, std::size_t len) {
+        return async::write(fd_, buf, len, 0);
     }
 
     [[nodiscard]]
@@ -186,7 +186,7 @@ public:
                 std::error_code{errno, std::system_category()}
             };
         }
-        auto ex = co_await async::Connect(fd, address.sockaddr(), address.length());
+        auto ex = co_await async::connect(fd, address.sockaddr(), address.length());
         if (!ex.has_value()) [[unlikely]] {
             co_return std::unexpected{ex.error()};
         }

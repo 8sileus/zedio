@@ -1,5 +1,6 @@
 #pragma once
 
+#include "async/operations.hpp"
 #include "async/worker.hpp"
 
 namespace zed::async {
@@ -32,7 +33,8 @@ private:
 namespace detail {
     template <typename T, typename... F>
         requires std::is_same_v<T, Task<void>>
-    void spwan_helper(std::vector<Task<void>> &tasks, T &&first_task, F &&...chain_tasks) {
+    constexpr void spwan_helper(std::vector<Task<void>> &tasks, T &&first_task,
+                                F &&...chain_tasks) {
         tasks.push_back(std::move(first_task));
         if constexpr (sizeof...(F) > 0) {
             spwan_helper(tasks, std::forward<F>(chain_tasks)...);
@@ -53,7 +55,7 @@ void spwan(std::vector<Task<void>> &&tasks) {
 
 template <typename T, typename... F>
     requires std::is_same_v<T, Task<void>>
-void spwan(T &&first_task, F &&...chain_tasks) {
+constexpr void spwan(T &&first_task, F &&...chain_tasks) {
     if constexpr (sizeof...(F) == 0) {
         detail::t_worker->schedule_task(std::move(first_task.take()));
     } else {
@@ -67,8 +69,7 @@ void spwan(T &&first_task, F &&...chain_tasks) {
 
 auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
                      const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {
-    return detail::t_worker->timer().add_timer_event(cb, std::chrono::steady_clock::now() + delay,
-                                                     period);
+    return detail::t_worker->timer().add_timer_event(cb, delay, period);
 }
 
 } // namespace zed::async

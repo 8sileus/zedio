@@ -105,7 +105,7 @@ public:
         auto [steal, _] = unpack(head_.load(std::memory_order::acquire));
         std::atomic_ref<uint32_t> atoimc_tail{tail_};
         auto                      tail = atoimc_tail.load(std::memory_order::acquire);
-        assert(zed::config::LOCAL_QUEUE_CAPACITY > static_cast<std::size_t>(tail - steal));
+        assert(zed::config::LOCAL_QUEUE_CAPACITY >= static_cast<std::size_t>(tail - steal));
         return zed::config::LOCAL_QUEUE_CAPACITY - static_cast<std::size_t>(tail - steal);
     }
 
@@ -151,6 +151,7 @@ public:
     }
 
     void push_back_or_overflow(std::coroutine_handle<> &&task, GlobalQueue &global_queue) {
+        // LOG_TRACE("push a task");
         uint32_t tail{0};
         while (true) {
             auto head = head_.load(std::memory_order::acquire);
@@ -212,6 +213,7 @@ public:
         if (n == 0) {
             return result;
         }
+        // LOG_TRACE("steal {} works", n);
         /// Take the final task for result
         n -= 1;
         auto dst_new_tail = dst_tail + n;

@@ -13,7 +13,7 @@ static constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};
 static constexpr std::size_t EVENT_INTERVAL{61};
 // How many ticks before taking a task from global queue?
 static constexpr std::size_t CHECK_GLOBAL_QUEUE_INTERVAL{61};
-static constexpr std::size_t IOURING_QUEUE_SIZE{256};
+static constexpr std::size_t IOURING_QUEUE_SIZE{4096};
 
 /// net
 static constexpr std::size_t STREAM_BUFFER_DEFAULT_SIZE{1024};

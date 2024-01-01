@@ -69,20 +69,74 @@ int main() {
     runtime.block_on(accept());
 }
 ```
-# 4.当前特性
-- 实现多线程工作窃取并发模型 基于rust的tokio
-- 封装IOURING,使用co_await异步执行IO
-- 使用std::expected和std::opitional做错误处理
-- 异步日志库，编译时指定ZED_LOG，获取ZEDIO的运行日志
-- 支持协程链式执行
-    ``` C++
-    auto test_spwan_chain(std::string_view str) -> Task<void> {
-        LOG_INFO("test spwan chain {}", str);
-        co_return;
+# 4.使用手册
+## 4.1.如何创建一个异步任务
+```C++
+    using zed::async::Task;
+    auto f() -> Task<void>{}
+```
+## 4.2.如何启动一个异步任务
+```C++
+    // 第一种方式，当前线程or协程不会阻塞。
+    spwan(f());
+
+    //第二种方式 在一个协程里，co_await语法调用，当前协程会阻塞，直到f()执行完毕。
+    auto t()->Task<void>{
+        co_await f();
     }
-    spwan(test_spwan_chain("hello"), test_spwan_chain("world"));
-    ```
-- 实现定时器，支持延迟调用 //已完成定时器，细节待定。
+```
+## 4.3.如何启动一个定时任务
+```C++
+    auto cb=[](){};
+    // 意思是延迟0s第一次执行cb，然后每隔1s执行一次。
+    // handle可以用来关闭定时任务。
+    auto handle=add_timer_event(cb,0s,1s);
+    handle.cancel();
+```
+## 4.4.链式执行异步任务
+```C++
+    auto a()->Task<void>{}
+
+    auto b()->Task<void>{}
+
+    auto c()->Task<void>{}
+
+    //第一种方式 可变参数模板调用
+    spwan(a(),b(),c());
+
+    //第二种方式 先存进vector再调用
+    std::vector<Task<void>>tasks;
+    tasks.push_back(a());
+    tasks.push_back(b());
+    tasks.push_back(c());
+    spwan(std::move(tasks));
+
+    //第三种方式 直接协程里co_await
+    auto a()->Task<void>{
+        co_await b;
+    }
+    auto b()->Task<void>{
+        co_await c;
+    }
+    auto c()->Task<void>{
+        // do something
+    }
+```
+## 4.5.对IO操作进行限时
+```C++
+    using zed::async::timeout;
+    auto ok = co_await timeout(stream.read(buf, sizeof(buf)), 5s);
+    if (ok) {
+        // ok!
+    } else {
+        // timeout!
+    }
+```
+## 4.6.协程级睡眠
+```C++
+    using zed::async::sleep;
+    co_await sleep(3s);
+```
 
 # 5.性能对比tokio
 测试环境：  
@@ -93,9 +147,9 @@ VM虚拟机
 处理器：AMD Ryzen 5 3600 6-Core Processor  
 测试指令：./wrk -t4 -c1000 -d90s --latency http://192.168.15.33:7777/   
 ZEDIO:  
-![](./png/zedio_benchmark.png)
+![](./png/zedio_benchmark.png)  
 TOKIO:  
-![](./png/tokio_benchmark.png)
+![](./png/tokio_benchmark.png)  
 
 
 # 6.依赖

@@ -13,18 +13,21 @@
 namespace zed::net {
 
 namespace detail {
-    struct AcceptStream : public async::Accept<async::AL::shared> {
+    struct AcceptStream
+        : public async::detail::AcceptAwaiter<async::detail::AccessLevel::distributive> {
         AcceptStream(int fd)
-            : Accept{fd, nullptr, nullptr} {}
+            : AcceptAwaiter{fd, reinterpret_cast<sockaddr *>(&addr), &addrlen} {}
 
         auto await_resume() const noexcept -> std::expected<TcpStream, std::error_code> {
-            if (BaseIOAwaiter::res_ >= 0) [[likely]] {
-                return TcpStream{res_};
+            if (result_ >= 0) [[likely]] {
+                return TcpStream{result_};
             }
             return std::unexpected{
-                std::error_code{-res_, std::system_category()}
+                std::error_code{-result_, std::system_category()}
             };
         }
+        sockaddr_in6 addr;
+        socklen_t    addrlen;
     };
 } // namespace detail
 

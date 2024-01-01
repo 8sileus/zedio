@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/io_awaiter.hpp"
+#include "async/awaiter_io.hpp"
 #include "async/queue.hpp"
 #include "common/config.hpp"
 #include "common/debug.hpp"
@@ -38,8 +38,8 @@ public:
 
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
-    auto wait() {
-        handle_waiting_awatiers();
+    auto wait(LocalQueue &queue, GlobalQueue &global_queue) {
+        // handle_waiting_awatiers();
 
         io_uring_cqe *cqe{nullptr};
         while (true) {
@@ -52,8 +52,14 @@ public:
             }
         }
         auto awaiter = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
-        awaiter->res_ = cqe->res;
-        awaiter->handle_.resume();
+        if (awaiter != nullptr) [[likely]] {
+            awaiter->set_result(cqe->res);
+            if (awaiter->is_distributable()) {
+                queue.push_back_or_overflow(std::move(awaiter->handle()), global_queue);
+            } else {
+                awaiter->handle().resume();
+            }
+        }
         io_uring_cqe_seen(&ring_, cqe);
     }
 
@@ -75,29 +81,32 @@ public:
         std::size_t cnt = 0;
         io_uring_for_each_cqe(&ring_, head, cqe) {
             auto awaiter = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
-            awaiter->res_ = cqe->res;
-            if (awaiter->level_ == AL::privated) {
-                awaiter->handle_.resume();
-            } else {
-                queue.push_back_or_overflow(std::move(awaiter->handle_), global_queue);
+            // if is a cancel cqe, data will be nullptr
+            if (awaiter != nullptr) {
+                awaiter->set_result(cqe->res);
+                if (awaiter->is_distributable()) {
+                    queue.push_back_or_overflow(std::move(awaiter->handle()), global_queue);
+                } else {
+                    awaiter->handle().resume();
+                }
+                cnt += 1;
             }
-            cnt += 1;
         }
         io_uring_cq_advance(&ring_, cnt);
         return true;
     }
 
-    void handle_waiting_awatiers() {
-        while (!waiting_awaiters_.empty()) {
-            auto sqe = io_uring_get_sqe(&ring_);
-            if (sqe == nullptr) {
-                break;
-            }
-            auto awaiter = waiting_awaiters_.front();
-            waiting_awaiters_.pop();
-            awaiter->cb_(sqe);
-        }
-    }
+    // void handle_waiting_awatiers() {
+    //     while (!waiting_awaiters_.empty()) {
+    //         auto sqe = io_uring_get_sqe(&ring_);
+    //         if (sqe == nullptr) {
+    //             break;
+    //         }
+    //         auto awaiter = waiting_awaiters_.front();
+    //         waiting_awaiters_.pop();
+    //         awaiter->cb_(sqe);
+    //     }
+    // }
 
     [[nodiscard]]
     auto ring() -> io_uring * {
@@ -113,16 +122,19 @@ private:
     std::queue<detail::BaseIOAwaiter *> waiting_awaiters_;
 };
 
-void BaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
-    handle_ = std::move(handle);
-    auto sqe = io_uring_get_sqe(t_poller->ring());
-    if (sqe == nullptr) [[unlikely]] {
-        t_poller->push_awaiter(this);
-    } else {
-        cb_(sqe);
-        io_uring_sqe_set_data64(sqe, reinterpret_cast<unsigned long long>(this));
-        io_uring_submit(t_poller->ring());
+BaseIOAwaiter::BaseIOAwaiter(uint32_t state)
+    : sqe_{io_uring_get_sqe(t_poller->ring())}
+    , state_{state} {
+    if (sqe_ == nullptr) [[unlikely]] {
+        state_ |= NOSQE | READY;
     }
+}
+
+void BaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
+    assert(sqe_ != nullptr);
+    handle_ = std::move(handle);
+    io_uring_sqe_set_data(sqe_, this);
+    io_uring_submit(t_poller->ring());
 }
 
 } // namespace zed::async::detail

@@ -21,7 +21,6 @@ auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
         auto ok = co_await stream.read(buf, sizeof(buf));
-        // error or peer close connection
         if (!ok) {
             console.error(ok.error().message());
             break;
@@ -29,7 +28,7 @@ auto process(TcpStream stream) -> Task<void> {
         if (ok.value() == 0) {
             break;
         }
-        LOG_TRACE("{}", std::string_view{buf, static_cast<std::size_t>(ok.value())});
+        // LOG_TRACE("{}", std::string_view{buf, static_cast<std::size_t>(ok.value())});
         ok = co_await stream.write(response.data(), response.size());
         if (!ok) {
             console.error(ok.error().message());
@@ -38,7 +37,7 @@ auto process(TcpStream stream) -> Task<void> {
     }
 }
 
-auto accept() -> Task<void> {
+auto accept_handle() -> Task<void> {
     auto has_addr = SocketAddr::parse("192.168.15.33", 8888);
     if (!has_addr) {
         console.error(has_addr.error().message());
@@ -64,8 +63,14 @@ auto accept() -> Task<void> {
     }
 }
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::cerr << "usage: benchmark thread_num\n";
+        return -1;
+    }
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
-    Runtime runtime;
-    runtime.block_on(accept());
+    auto thread_num = std::stoi(argv[1]);
+    Runtime runtime(thread_num);
+    runtime.block_on(accept_handle());
+    return 0;
 }

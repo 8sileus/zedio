@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/async_io.hpp"
+#include "async/awaiter_io.hpp"
 #include "async/task.hpp"
 #include "common/debug.hpp"
 #include "common/util/noncopyable.hpp"
@@ -23,11 +23,10 @@ namespace zed::async::detail {
 
 class TimerEvent : util::Noncopyable {
 public:
-    TimerEvent(const std::function<void()>                 &cb,
-               const std::chrono::steady_clock::time_point &expired_time,
-               const std::chrono::nanoseconds              &period)
+    TimerEvent(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
+               const std::chrono::nanoseconds &period)
         : cb_(cb)
-        , expired_time_{expired_time}
+        , expired_time_{std::chrono::steady_clock::now() + delay}
         , period_{period} {}
 
     void cancel() {
@@ -97,10 +96,10 @@ public:
         ::close(fd_);
     }
 
-    auto add_timer_event(const std::function<void()>                 &work,
-                         const std::chrono::steady_clock::time_point &expired_time,
-                         const std::chrono::nanoseconds &period) -> std::shared_ptr<TimerEvent> {
-        auto event = std::make_shared<TimerEvent>(work, expired_time, period);
+    auto add_timer_event(const std::function<void()> &work, const std::chrono::nanoseconds &delay,
+                         const std::chrono::nanoseconds &period = 0us)
+        -> std::shared_ptr<TimerEvent> {
+        auto event = std::make_shared<TimerEvent>(work, delay, period);
         bool need_update
             = events_.empty() || (*events_.begin())->expired_time() > event->expired_time();
         events_.emplace(event);
@@ -144,7 +143,8 @@ private:
     auto loop() -> Task<void> {
         char buf[8]{};
         while (true) {
-            if (auto result = co_await Read<AL::privated>(fd_, buf, sizeof(buf));
+            if (auto result
+                = co_await ReadAwaiter<AccessLevel::exclusive>(fd_, buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }

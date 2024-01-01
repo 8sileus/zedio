@@ -9,7 +9,7 @@ using namespace zed::log;
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
-        auto ok = co_await stream.read(buf, sizeof(buf));
+        auto ok = co_await timeout(stream.read(buf, sizeof(buf)), 5s);
         // error or peer close connection
         if (!ok) {
             console.error(ok.error().message());
@@ -31,7 +31,7 @@ auto process(TcpStream stream) -> Task<void> {
     LOG_DEBUG("process {} end", stream.get_fd());
 }
 
-auto accept() -> Task<void> {
+auto accept_handle() -> Task<void> {
     auto has_addr = SocketAddr::parse("localhost", 9898);
     if (!has_addr) {
         console.error(has_addr.error().message());
@@ -45,14 +45,14 @@ auto accept() -> Task<void> {
     auto listener = std::move(has_listener.value());
     auto _ = listener.set_reuse_address(true);
     while (true) {
-        auto has_stream = co_await listener.accept();
+        auto has_stream = co_await timeout(listener.accept(), 5s);
         if (has_stream) {
             console.info("Accept a connection from {}",
                          has_stream.value().peer_address().value().to_string());
             spwan(process(std::move(has_stream.value())));
         } else {
             console.error(has_stream.error().message());
-            break;
+            continue;
         }
     }
 }
@@ -60,5 +60,5 @@ auto accept() -> Task<void> {
 int main(int args, char **argv) {
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
     Runtime runtime;
-    runtime.block_on(accept());
+    runtime.block_on(accept_handle());
 }

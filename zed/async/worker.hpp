@@ -26,6 +26,7 @@ public:
     struct Shared {
         Shared(std::size_t num_worker)
             : idle_{num_worker} {
+            LOG_TRACE("runtime with {} threads", num_worker);
             workers_.emplace_back(std::make_unique<Worker>(*this, 0));
             for (std::size_t i = 1; i < num_worker; ++i) {
                 // Make sure all threads have started
@@ -153,7 +154,7 @@ public:
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {
-        // TODO RAND a value
+        // TODO check rand
         if (run_next_.has_value()) {
             local_queue_.push_back_or_overflow(std::move(run_next_.value()), shared_.global_queue_);
             run_next_.emplace(std::move(task));
@@ -171,7 +172,6 @@ private:
 
     [[nodiscard]]
     auto transition_to_sleeping() -> bool {
-        // TODO check
         if (has_tasks()) {
             return false;
         }
@@ -233,7 +233,7 @@ private:
         if (is_searching_) {
             return false;
         }
-        return (static_cast<uint32_t>(run_next_.has_value()) + local_queue_.size()) > 1;
+        return (static_cast<std::size_t>(run_next_.has_value()) + local_queue_.size()) > 1;
     }
 
     void tick() {
@@ -347,7 +347,7 @@ private:
         if (!is_shutdown_ && transition_to_sleeping()) {
             LOG_TRACE("Worker-{}: sleep tick {}", index_, tick_);
             while (!is_shutdown_) {
-                poller_.wait();
+                poller_.wait(local_queue_, shared_.global_queue_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
                     LOG_TRACE("Worker-{}: awaken", index_);
@@ -368,7 +368,6 @@ private:
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};
-    bool                                   is_main{false};
 };
 
 } // namespace zed::async::detail

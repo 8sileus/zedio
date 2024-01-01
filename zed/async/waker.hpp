@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/async_io.hpp"
+#include "async/awaiter_io.hpp"
 #include "async/task.hpp"
 #include "common/debug.hpp"
 #include "common/util/noncopyable.hpp"
@@ -48,7 +48,8 @@ private:
     auto loop() -> Task<void> {
         uint64_t buf{0};
         while (true) {
-            if (auto result = co_await async::Read<AL::privated>(this->fd_, &buf, sizeof(buf));
+            if (auto result
+                = co_await ReadAwaiter<AccessLevel::exclusive>(this->fd_, &buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }

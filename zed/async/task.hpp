@@ -17,7 +17,9 @@ namespace detail {
 
     struct TaskPromiseBase {
         struct TaskFinalAwaiter {
-            constexpr auto await_ready() const noexcept -> bool { return false; }
+            constexpr auto await_ready() const noexcept -> bool {
+                return false;
+            }
 
             template <typename T>
             auto await_suspend(std::coroutine_handle<T> callee) const noexcept
@@ -35,9 +37,13 @@ namespace detail {
         };
         virtual ~TaskPromiseBase() = default;
 
-        constexpr auto initial_suspend() const noexcept -> std::suspend_always { return {}; }
+        constexpr auto initial_suspend() const noexcept -> std::suspend_always {
+            return {};
+        }
 
-        constexpr auto final_suspend() const noexcept -> TaskFinalAwaiter { return {}; }
+        constexpr auto final_suspend() const noexcept -> TaskFinalAwaiter {
+            return {};
+        }
 
         std::coroutine_handle<> m_caller{nullptr};
     };
@@ -83,7 +89,9 @@ namespace detail {
 
         constexpr void return_void() const noexcept {};
 
-        void unhandled_exception() noexcept { m_exception = std::move(std::current_exception()); }
+        void unhandled_exception() noexcept {
+            m_exception = std::move(std::current_exception());
+        }
 
         void result() const {
             if (m_exception != nullptr) [[unlikely]] {
@@ -109,7 +117,9 @@ private:
         AwaitableBase(std::coroutine_handle<promise_type> handle) noexcept
             : m_handle{handle} {}
 
-        auto await_ready() const noexcept -> bool { return !m_handle || m_handle.done(); }
+        auto await_ready() const noexcept -> bool {
+            return !m_handle || m_handle.done();
+        }
 
         auto await_suspend(std::coroutine_handle<> caller) -> std::coroutine_handle<> {
             m_handle.promise().m_caller = caller;
