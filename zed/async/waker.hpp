@@ -49,7 +49,7 @@ private:
         uint64_t buf{0};
         while (true) {
             if (auto result
-                = co_await ReadAwaiter<AccessLevel::exclusive>(this->fd_, &buf, sizeof(buf), 0);
+                = co_await ReadAwaiter<AccessLevel::Exclusive>(this->fd_, &buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }

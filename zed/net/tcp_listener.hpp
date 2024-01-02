@@ -14,7 +14,7 @@ namespace zed::net {
 
 namespace detail {
     struct AcceptStream
-        : public async::detail::AcceptAwaiter<async::detail::AccessLevel::distributive> {
+        : public async::detail::AcceptAwaiter<async::detail::AccessLevel::Distributive> {
         AcceptStream(int fd)
             : AcceptAwaiter{fd, reinterpret_cast<sockaddr *>(&addr), &addrlen} {}
 

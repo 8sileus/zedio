@@ -65,8 +65,8 @@ protected:
 };
 
 enum class AccessLevel {
-    exclusive = 0,
-    distributive = 1 << 1,
+    Exclusive = 0,
+    Distributive = 1 << 1,
 };
 
 template <AccessLevel level>

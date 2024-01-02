@@ -144,7 +144,7 @@ private:
         char buf[8]{};
         while (true) {
             if (auto result
-                = co_await ReadAwaiter<AccessLevel::exclusive>(fd_, buf, sizeof(buf), 0);
+                = co_await ReadAwaiter<AccessLevel::Exclusive>(fd_, buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }
