@@ -18,30 +18,30 @@ enum class LogLevel {
     FATAL,
 };
 
-[[nodiscard]]
-constexpr auto level_to_string(LogLevel level) noexcept -> std::string_view {
-    switch (level) {
-    case LogLevel::TRACE:
-        return "TRACE";
-    case LogLevel::DEBUG:
-        return "DEBUG";
-    case LogLevel::INFO:
-        return "INFO ";
-    case LogLevel::WARN:
-        return "WARN ";
-    case LogLevel::ERROR:
-        return "ERROR";
-    case LogLevel::FATAL:
-        return "FATAL";
-    default:
-        return "UNKNOWN";
-    }
-}
-
 namespace detail {
 
     static thread_local char   t_time_buffer[64]{};
     static thread_local time_t t_last_second{0};
+
+    [[nodiscard]]
+    consteval auto level_to_string(LogLevel level) noexcept -> std::string_view {
+        switch (level) {
+        case LogLevel::TRACE:
+            return "TRACE";
+        case LogLevel::DEBUG:
+            return "DEBUG";
+        case LogLevel::INFO:
+            return "INFO ";
+        case LogLevel::WARN:
+            return "WARN ";
+        case LogLevel::ERROR:
+            return "ERROR";
+        case LogLevel::FATAL:
+            return "FATAL";
+        default:
+            return "Remenber implement for LogLevel";
+        }
+    }
 
     [[nodiscard]]
     consteval auto level_to_color(LogLevel level) noexcept -> std::string_view {

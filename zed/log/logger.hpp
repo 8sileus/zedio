@@ -24,22 +24,25 @@ public:
         : fmt_(std::forward<T>(fmt))
         , sl_(std::move(sl)) {}
 
-    constexpr auto fmt() const -> const std::string_view & { return fmt_; }
+    constexpr auto fmt() const -> const std::string_view & {
+        return fmt_;
+    }
 
-    constexpr auto source_location() const -> const std::source_location & { return sl_; }
+    constexpr auto source_location() const -> const std::source_location & {
+        return sl_;
+    }
 
 private:
     std::string_view     fmt_;
     std::source_location sl_;
 };
 
+template <class DeriverLogger>
 class BaseLogger : util::Noncopyable {
 public:
-    virtual ~BaseLogger() = default;
-
-    virtual void log(std::string &&msg, const std::string_view &color) = 0;
-
-    void setLevel(LogLevel level) noexcept { level_ = level; }
+    void setLevel(LogLevel level) noexcept {
+        level_ = level;
+    }
 
     [[nodiscard]]
     auto getLevel() const noexcept -> LogLevel {
@@ -95,25 +98,25 @@ private:
         }
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
-        this->log(std::format(
-                      "{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond,
-                      level_to_string(level), current_thread::get_tid(), sl.file_name(), sl.line(),
-                      std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))),
-                  level_to_color(level));
+        static_cast<DeriverLogger *>(this)->template log<level>(std::format(
+            "{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond, level_to_string(level),
+            current_thread::get_tid(), sl.file_name(), sl.line(),
+            std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))));
     }
 
 private:
     LogLevel level_{LogLevel::DEBUG};
 };
 
-class ConsoleLogger : public BaseLogger {
+class ConsoleLogger : public BaseLogger<ConsoleLogger> {
 public:
-    void log(std::string &&msg, const std::string_view &color) override {
-        std::cout << std::format("{}{}", color, msg);
+    template <LogLevel level>
+    void log(std::string &&msg) {
+        std::cout << std::format("{}{}", level_to_color(level), msg);
     }
 };
 
-class FileLogger : public BaseLogger {
+class FileLogger : public BaseLogger<FileLogger> {
 public:
     FileLogger(const std::string_view &file_base_name)
         : file_{file_base_name}
@@ -130,7 +133,8 @@ public:
         thread_.join();
     }
 
-    void log(std::string &&msg, [[maybe_unused]] const std::string_view &color) override {
+    template <LogLevel level>
+    void log(std::string &&msg) {
         if (!ruinning_) [[unlikely]] {
             return;
         }
@@ -150,7 +154,9 @@ public:
         }
     }
 
-    void set_max_file_size(off_t roll_size) noexcept { file_.set_max_file_size(roll_size); }
+    void set_max_file_size(off_t roll_size) noexcept {
+        file_.set_max_file_size(roll_size);
+    }
 
 private:
     void work() {
