@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/error.hpp"
 #include "common/macros.hpp"
 // Linux
 #include <liburing.h>
@@ -26,13 +27,11 @@ struct [[NODISCARD_CO_AWAIT]] BaseIOAwaiter {
         if (result_ >= 0) [[likely]] {
             return result_;
         }
-        // if ((state_ & NOSQE) != 0) [[unlikely]] {
-        //     // TODO
-        //     return std::unexpected{
-        //         std::error_code{, std::system_category()}
-        //     };
-        // }
-
+        if (sqe_ == nullptr) [[unlikely]] {
+            return std::unexpected{
+                std::error_code{static_cast<int>(Error::Nosqe), zed_category()}
+            };
+        }
         return std::unexpected{
             std::error_code{-result_, std::system_category()}
         };
@@ -55,7 +54,6 @@ struct [[NODISCARD_CO_AWAIT]] BaseIOAwaiter {
 protected:
     static constexpr uint32_t READY{1};
     static constexpr uint32_t DISTRIBUTABLE{1 << 1};
-    static constexpr uint32_t NOSQE{1 << 2};
 
 protected:
     io_uring_sqe           *sqe_;

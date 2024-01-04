@@ -1,6 +1,7 @@
 #pragma once
 
 #include "async/worker.hpp"
+#include "common/error.hpp"
 #include "common/macros.hpp"
 // C++
 #include <chrono>
@@ -44,10 +45,12 @@ public:
         , event_handle_{
               detail::t_worker->timer().add_timer_event([this]() { cancel_op(); }, timeout)} {}
 
-    auto await_resume() {
+    auto await_resume() -> decltype(IOAwaiter::await_resume()) {
         event_handle_->cancel();
         if (IOAwaiter::result_ == -ECANCELED || IOAwaiter::result_ == -EINTR) {
-            IOAwaiter::result_ = -ETIMEDOUT;
+            return std::unexpected{
+                std::error_code{static_cast<int>(Error::IOtimeout), zed_category()}
+            };
         }
         return IOAwaiter::await_resume();
     }

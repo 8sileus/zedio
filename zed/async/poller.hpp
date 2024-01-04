@@ -126,7 +126,7 @@ BaseIOAwaiter::BaseIOAwaiter(uint32_t state)
     : sqe_{io_uring_get_sqe(t_poller->ring())}
     , state_{state} {
     if (sqe_ == nullptr) [[unlikely]] {
-        state_ |= NOSQE | READY;
+        state_ |= READY;
     }
 }
 

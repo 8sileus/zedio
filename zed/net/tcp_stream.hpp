@@ -34,8 +34,9 @@ private:
 public:
     ~TcpStream() {
         if (fd_ >= 0) [[likely]] {
-            ::close(fd_);
+            async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
         }
+        fd_ = -1;
     }
 
     TcpStream(TcpStream &&other)
