@@ -28,7 +28,7 @@ public:
     }
 
     ~Waker() {
-        t_poller->unregister_file(idx_);
+        // t_poller->unregister_file(idx_);
         ::close(this->fd_);
     }
 

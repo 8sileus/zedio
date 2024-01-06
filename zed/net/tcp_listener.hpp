@@ -40,8 +40,9 @@ private:
 public:
     ~TcpListener() {
         if (this->fd_ >= 0) [[likely]] {
-            async::detail::t_poller->unregister_file(idx_);
+            // async::detail::t_poller->unregister_file(idx_);
             ::close(this->fd_);
+            // TODO why using this way to close fd will memory leak
             // async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
         }
         this->fd_ = -1;

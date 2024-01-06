@@ -29,14 +29,10 @@ public:
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
-        if (auto ret = io_uring_register_ring_fd(&ring_); ret < 0) [[unlikely]] {
+        if (auto ret = io_uring_register_files(&ring_, files_.data(), files_.size()); ret < 0)
+            [[unlikely]] {
             throw std::runtime_error(
-                std::format("Call io_uring_register_ring_fd failed, error: {}.", strerror(-ret)));
-        }
-        if (auto ret = io_uring_register_files_sparse(&ring_, zed::config::IOURING_QUEUE_SIZE);
-            ret < 0) [[unlikely]] {
-            throw std::runtime_error(std::format(
-                "Call io_uring_register_files_sparse failed, error: {}.", strerror(-ret)));
+                std::format("Call io_uring_register_files failed, error: {}.", strerror(-ret)));
         }
 
         assert(t_poller == nullptr);
@@ -44,6 +40,7 @@ public:
     }
 
     ~Poller() {
+        io_uring_unregister_files(&ring_);
         io_uring_queue_exit(&ring_);
     }
 
@@ -124,8 +121,9 @@ public:
 
     [[nodiscard]]
     auto register_file(int fd) -> std::expected<int, std::error_code> {
-        if (auto ret = io_uring_register_files_update(&ring_, offset_, &fd, 1); ret < 0)
-            [[unlikely]] {
+        files_[offset_] = fd;
+        if (auto ret = io_uring_register_files_update(&ring_, offset_, &files_[offset_], 1);
+            ret < 0) [[unlikely]] {
             return std::unexpected{
                 std::error_code{-ret, std::system_category()}
             };
@@ -133,17 +131,18 @@ public:
         return offset_++;
     }
 
-    void unregister_file(int offset) {
-        int fd = -1;
-        if (auto ret = io_uring_register_files_update(&ring_, offset, &fd, 1); ret < 0)
-            [[unlikely]] {
-            LOG_ERROR("Unregister file offset {} failed ,error {}", offset, strerror(-ret));
-        };
-    }
+    // void unregister_file(int offset) {
+    //     int fd = -1;
+    //     if (auto ret = io_uring_register_files_update(&ring_, offset, &fd, 1); ret < 0)
+    //         [[unlikely]] {
+    //         LOG_ERROR("Unregister file offset {} failed ,error {}", offset, strerror(-ret));
+    //     };
+    // }
 
 private:
-    io_uring ring_{};
-    int      offset_{0};
+    io_uring                                             ring_{};
+    std::array<int, zed::config::IOURING_QUEUE_SIZE>     files_{-1};
+    int                                                  offset_{0};
     // std::queue<detail::BaseIOAwaiter *> waiting_awaiters_;
 };
 

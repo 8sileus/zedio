@@ -94,7 +94,7 @@ public:
     }
 
     ~Timer() {
-        t_poller->unregister_file(idx_);
+        // t_poller->unregister_file(idx_);
         ::close(fd_);
     }
 
