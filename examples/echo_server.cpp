@@ -45,7 +45,7 @@ auto accept_handle() -> Task<void> {
     auto listener = std::move(has_listener.value());
     auto _ = listener.set_reuse_address(true);
     while (true) {
-        auto has_stream = co_await timeout(listener.accept(), 5s);
+        auto has_stream = co_await timeout(listener.accept(), 3s);
         if (has_stream) {
             console.info("Accept a connection from {}",
                          has_stream.value().peer_address().value().to_string());

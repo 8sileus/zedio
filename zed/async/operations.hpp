@@ -14,54 +14,54 @@ using timeout = detail::TimeoutAwaiter<IOAwaiter>;
 
 // async i/o
 
-using detail::AccessLevel;
+using detail::OPFlag;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using socket = detail::SocketAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using socket = detail::SocketAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using accept = detail::AcceptAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using accept = detail::AcceptAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using connect = detail::ConnectAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using connect = detail::ConnectAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using shutdown = detail::ShutdownAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using shutdown = detail::ShutdownAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using close = detail::CloseAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using close = detail::CloseAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using recv = detail::RecvAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using recv = detail::RecvAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using recvmsg = detail::RecvMsgAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using recvmsg = detail::RecvMsgAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using send = detail::SendAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using send = detail::SendAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using sendmsg = detail::SendMsgAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using sendmsg = detail::SendMsgAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using sendto = detail::SendToAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using sendto = detail::SendToAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using read = detail::ReadAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using read = detail::ReadAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using readv = detail::ReadvAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using readv = detail::ReadvAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using readv2 = detail::Readv2Awaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using readv2 = detail::Readv2Awaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using write = detail::WriteAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using write = detail::WriteAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using writev = detail::WritevAwaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using writev = detail::WritevAwaiter<flag>;
 
-template <AccessLevel level = AccessLevel::Distributive>
-using writev2 = detail::Writev2Awaiter<level>;
+template <OPFlag flag = OPFlag::Distributive>
+using writev2 = detail::Writev2Awaiter<flag>;
 
 } // namespace zed::async

@@ -47,11 +47,11 @@ public:
 
     auto await_resume() -> decltype(IOAwaiter::await_resume()) {
         event_handle_->cancel();
-        if (IOAwaiter::result_ == -ECANCELED || IOAwaiter::result_ == -EINTR) {
-            return std::unexpected{
-                std::error_code{static_cast<int>(Error::IOtimeout), zed_category()}
-            };
-        }
+        // if (IOAwaiter::data_.result_ == -ECANCELED || IOAwaiter::data_.result_ == -EINTR) {
+        //     return std::unexpected{
+        //         std::error_code{static_cast<int>(Error::IOtimeout), zed_category()}
+        //     };
+        // }
         return IOAwaiter::await_resume();
     }
 
@@ -59,7 +59,7 @@ private:
     void cancel_op() {
         auto sqe = io_uring_get_sqe(t_poller->ring());
         if (sqe != nullptr) [[likely]] {
-            io_uring_prep_cancel(sqe, this, 0);
+            io_uring_prep_cancel(sqe, &this->data_, 0);
             io_uring_sqe_set_data(sqe, nullptr);
             io_uring_submit(t_poller->ring());
         }

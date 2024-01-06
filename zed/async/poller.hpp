@@ -1,6 +1,6 @@
 #pragma once
 
-#include "async/awaiter_io.hpp"
+#include "async/awaiter_data.hpp"
 #include "async/queue.hpp"
 #include "common/config.hpp"
 #include "common/debug.hpp"
@@ -10,6 +10,7 @@
 #include <cstring>
 // C++
 #include <chrono>
+#include <expected>
 #include <format>
 #include <queue>
 // Dependencies
@@ -23,11 +24,21 @@ thread_local Poller *t_poller{nullptr};
 class Poller : util::Noncopyable {
 public:
     Poller() {
-        if (auto ret = io_uring_queue_init(zed::config::IOURING_QUEUE_SIZE, &ring_, 0); ret != 0)
+        if (auto ret = io_uring_queue_init(zed::config::IOURING_QUEUE_SIZE, &ring_, 0); ret < 0)
             [[unlikely]] {
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
+        if (auto ret = io_uring_register_ring_fd(&ring_); ret < 0) [[unlikely]] {
+            throw std::runtime_error(
+                std::format("Call io_uring_register_ring_fd failed, error: {}.", strerror(-ret)));
+        }
+        if (auto ret = io_uring_register_files_sparse(&ring_, zed::config::IOURING_QUEUE_SIZE);
+            ret < 0) [[unlikely]] {
+            throw std::runtime_error(std::format(
+                "Call io_uring_register_files_sparse failed, error: {}.", strerror(-ret)));
+        }
+
         assert(t_poller == nullptr);
         t_poller = this;
     }
@@ -43,21 +54,21 @@ public:
 
         io_uring_cqe *cqe{nullptr};
         while (true) {
-            if (auto err = io_uring_wait_cqe(&ring_, &cqe); err != 0) [[unlikely]] {
-                LOG_DEBUG("io_uring_wait_cqe failed {}", strerror(-err));
+            if (auto ret = io_uring_wait_cqe(&ring_, &cqe); ret < 0) [[unlikely]] {
+                LOG_DEBUG("io_uring_wait_cqe failed {}", strerror(-ret));
                 break;
             }
             if (cqe != nullptr) {
                 break;
             }
         }
-        auto awaiter = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
-        if (awaiter != nullptr) [[likely]] {
-            awaiter->set_result(cqe->res);
-            if (awaiter->is_distributable()) {
-                queue.push_back_or_overflow(std::move(awaiter->handle()), global_queue);
+        auto data = reinterpret_cast<BaseIOAwaiterData *>(io_uring_cqe_get_data64(cqe));
+        if (data != nullptr) [[likely]] {
+            data->result_ = cqe->res;
+            if (data->is_distributable()) {
+                queue.push_back_or_overflow(std::move(data->handle_), global_queue);
             } else {
-                awaiter->handle().resume();
+                data->handle_.resume();
             }
         }
         io_uring_cqe_seen(&ring_, cqe);
@@ -68,31 +79,29 @@ public:
         io_uring_cqe     *cqe{nullptr};
         __kernel_timespec ts{.tv_sec{0}, .tv_nsec{0}};
 
-        if (auto res
+        if (auto ret
             = io_uring_wait_cqes(&ring_, &cqe, zed::config::LOCAL_QUEUE_CAPACITY, &ts, nullptr);
-            res < 0) [[unlikely]] {
-            if (res != -ETIME) {
-                LOG_ERROR("io_uring_wait_cqes failed error: {}", strerror(-res));
+            ret < 0) [[unlikely]] {
+            if (ret != -ETIME) {
+                LOG_ERROR("io_uring_wait_cqes failed error: {}", strerror(-ret));
             }
             return false;
         }
 
         unsigned    head;
-        std::size_t cnt = 0;
         io_uring_for_each_cqe(&ring_, head, cqe) {
-            auto awaiter = reinterpret_cast<detail::BaseIOAwaiter *>(io_uring_cqe_get_data64(cqe));
+            auto data = reinterpret_cast<BaseIOAwaiterData *>(io_uring_cqe_get_data64(cqe));
             // if is a cancel cqe, data will be nullptr
-            if (awaiter != nullptr) {
-                awaiter->set_result(cqe->res);
-                if (awaiter->is_distributable()) {
-                    queue.push_back_or_overflow(std::move(awaiter->handle()), global_queue);
+            if (data != nullptr) {
+                data->result_ = cqe->res;
+                if (data->is_distributable()) {
+                    queue.push_back_or_overflow(std::move(data->handle_), global_queue);
                 } else {
-                    awaiter->handle().resume();
+                    data->handle_.resume();
                 }
-                cnt += 1;
             }
+            io_uring_cqe_seen(&ring_, cqe);
         }
-        io_uring_cq_advance(&ring_, cnt);
         return true;
     }
 
@@ -113,28 +122,29 @@ public:
         return &ring_;
     }
 
-    void push_awaiter(detail::BaseIOAwaiter *awaiter) {
-        waiting_awaiters_.push(awaiter);
+    [[nodiscard]]
+    auto register_file(int fd) -> std::expected<int, std::error_code> {
+        if (auto ret = io_uring_register_files_update(&ring_, offset_, &fd, 1); ret < 0)
+            [[unlikely]] {
+            return std::unexpected{
+                std::error_code{-ret, std::system_category()}
+            };
+        }
+        return offset_++;
+    }
+
+    void unregister_file(int offset) {
+        int fd = -1;
+        if (auto ret = io_uring_register_files_update(&ring_, offset, &fd, 1); ret < 0)
+            [[unlikely]] {
+            LOG_ERROR("Unregister file offset {} failed ,error {}", offset, strerror(-ret));
+        };
     }
 
 private:
-    io_uring                            ring_{};
-    std::queue<detail::BaseIOAwaiter *> waiting_awaiters_;
+    io_uring ring_{};
+    int      offset_{0};
+    // std::queue<detail::BaseIOAwaiter *> waiting_awaiters_;
 };
-
-BaseIOAwaiter::BaseIOAwaiter(uint32_t state)
-    : sqe_{io_uring_get_sqe(t_poller->ring())}
-    , state_{state} {
-    if (sqe_ == nullptr) [[unlikely]] {
-        state_ |= READY;
-    }
-}
-
-void BaseIOAwaiter::await_suspend(std::coroutine_handle<> handle) {
-    assert(sqe_ != nullptr);
-    handle_ = std::move(handle);
-    io_uring_sqe_set_data(sqe_, this);
-    io_uring_submit(t_poller->ring());
-}
 
 } // namespace zed::async::detail

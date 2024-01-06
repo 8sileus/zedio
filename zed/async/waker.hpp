@@ -18,7 +18,8 @@ class Waker : util::Noncopyable {
 public:
     Waker()
         : loop_{loop()}
-        , fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
+        , fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)}
+        , idx_{t_poller->register_file(fd_).value()} {
         if (this->fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
                                                  this->fd_, strerror(errno)));
@@ -49,7 +50,7 @@ private:
         uint64_t buf{0};
         while (true) {
             if (auto result
-                = co_await ReadAwaiter<AccessLevel::Exclusive>(this->fd_, &buf, sizeof(buf), 0);
+                = co_await ReadAwaiter<OPFlag::Registered>(this->idx_, &buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }
@@ -60,6 +61,7 @@ private:
     Task<void> loop_;
     std::mutex mutex_;
     int        fd_;
+    int        idx_;
 };
 
 } // namespace zed::async::detail

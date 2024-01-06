@@ -84,7 +84,8 @@ class Timer : util::Noncopyable {
 public:
     Timer()
         : loop_{loop()}
-        , fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)} {
+        , fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)}
+        , idx_{t_poller->register_file(fd_).value()} {
         if (fd_ < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("call timer_create failed, error: {}", strerror(errno)));
@@ -143,8 +144,7 @@ private:
     auto loop() -> Task<void> {
         char buf[8]{};
         while (true) {
-            if (auto result
-                = co_await ReadAwaiter<AccessLevel::Exclusive>(fd_, buf, sizeof(buf), 0);
+            if (auto result = co_await ReadAwaiter<OPFlag::Registered>(idx_, buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }
@@ -175,6 +175,7 @@ private:
     Task<void>                                 loop_;
     std::multiset<std::shared_ptr<TimerEvent>> events_{};
     int                                        fd_;
+    int                                        idx_;
 };
 
 } // namespace zed::async::detail

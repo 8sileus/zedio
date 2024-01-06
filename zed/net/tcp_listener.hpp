@@ -13,18 +13,16 @@
 namespace zed::net {
 
 namespace detail {
-    struct AcceptStream
-        : public async::detail::AcceptAwaiter<async::detail::AccessLevel::Distributive> {
+    struct AcceptStream : public async::detail::AcceptAwaiter<async::detail::OPFlag::Registered> {
         AcceptStream(int fd)
             : AcceptAwaiter{fd, reinterpret_cast<sockaddr *>(&addr), &addrlen} {}
 
         auto await_resume() const noexcept -> std::expected<TcpStream, std::error_code> {
-            if (result_ >= 0) [[likely]] {
-                return TcpStream{result_};
+            auto result = AcceptAwaiter::await_resume();
+            if (result.has_value()) [[likely]] {
+                return TcpStream(result.value());
             }
-            return std::unexpected{
-                std::error_code{-result_, std::system_category()}
-            };
+            return std::unexpected{result.error()};
         }
         sockaddr_in6 addr;
         socklen_t    addrlen;
@@ -34,7 +32,8 @@ namespace detail {
 class TcpListener : util::Noncopyable {
 private:
     TcpListener(int fd)
-        : fd_{fd} {
+        : fd_{fd}
+        , idx_{async::detail::t_poller->register_file(fd_).value()} {
         LOG_TRACE("Build a tcp listener fd {}", fd_);
     }
 
@@ -47,8 +46,10 @@ public:
     }
 
     TcpListener(TcpListener &&other)
-        : fd_(other.fd_) {
+        : fd_{other.fd_}
+        , idx_{other.idx_} {
         other.fd_ = -1;
+        other.idx_ = -1;
     }
 
     auto operator=(TcpListener &&other) -> TcpListener & {
@@ -59,13 +60,15 @@ public:
             ::close(this->fd_);
         }
         this->fd_ = other.fd_;
+        this->idx_ = other.idx_;
         other.fd_ = -1;
+        other.idx_ = -1;
         return *this;
     }
 
     [[nodiscard]]
     auto accept() -> detail::AcceptStream {
-        return detail::AcceptStream{this->fd_};
+        return detail::AcceptStream{this->idx_};
     }
 
     [[nodiscard]]
@@ -121,6 +124,7 @@ public:
 
 private:
     int fd_;
+    int idx_{-1};
 };
 
 } // namespace zed::net
