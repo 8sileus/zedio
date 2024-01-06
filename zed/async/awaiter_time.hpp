@@ -47,11 +47,11 @@ public:
 
     auto await_resume() -> decltype(IOAwaiter::await_resume()) {
         event_handle_->cancel();
-        // if (IOAwaiter::data_.result_ == -ECANCELED || IOAwaiter::data_.result_ == -EINTR) {
-        //     return std::unexpected{
-        //         std::error_code{static_cast<int>(Error::IOtimeout), zed_category()}
-        //     };
-        // }
+        if (IOAwaiter::data_.result_ == -ECANCELED || IOAwaiter::data_.result_ == -EINTR) {
+            return std::unexpected{
+                std::error_code{static_cast<int>(Error::IOtimeout), zed_category()}
+            };
+        }
         return IOAwaiter::await_resume();
     }
 

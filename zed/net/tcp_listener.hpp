@@ -40,7 +40,9 @@ private:
 public:
     ~TcpListener() {
         if (this->fd_ >= 0) [[likely]] {
-            async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
+            async::detail::t_poller->unregister_file(idx_);
+            ::close(this->fd_);
+            // async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
         }
         this->fd_ = -1;
     }
