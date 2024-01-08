@@ -1,7 +1,7 @@
 #pragma once
 
-#include "async/awaiter_io.hpp"
-#include "async/awaiter_time.hpp"
+#include "zed/async/awaiter_io.hpp"
+#include "zed/async/awaiter_time.hpp"
 
 namespace zed::async {
 

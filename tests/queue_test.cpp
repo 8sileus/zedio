@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE ring_buffer_test
 
-#include "async/queue.hpp"
+#include "zed/async/queue.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/util/singleton.hpp"
+#include "zed/common/util/singleton.hpp"
 // C++
 #include <system_error>
 

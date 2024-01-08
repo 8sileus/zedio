@@ -1,10 +1,10 @@
 #pragma once
 
-#include "async/awaiter_data.hpp"
-#include "async/queue.hpp"
-#include "common/config.hpp"
-#include "common/debug.hpp"
-#include "common/util/noncopyable.hpp"
+#include "zed/async/awaiter_data.hpp"
+#include "zed/async/queue.hpp"
+#include "zed/common/config.hpp"
+#include "zed/common/debug.hpp"
+#include "zed/common/util/noncopyable.hpp"
 // C
 #include <cassert>
 #include <cstring>

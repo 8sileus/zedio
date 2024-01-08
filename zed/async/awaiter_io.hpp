@@ -1,8 +1,8 @@
 #pragma once
 
-#include "async/poller.hpp"
-#include "common/error.hpp"
-#include "common/macros.hpp"
+#include "zed/async/poller.hpp"
+#include "zed/common/error.hpp"
+#include "zed/common/macros.hpp"
 // Linux
 #include <liburing.h>
 // C

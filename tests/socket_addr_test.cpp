@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE address_test
 
-#include "net/socket_addr.hpp"
+#include "zed/net/socket_addr.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 

@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE task_test
 
-#include "async/task.hpp"
+#include "zed/async/task.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 

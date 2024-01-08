@@ -1,6 +1,6 @@
-#include "async.hpp"
-#include "log.hpp"
-#include "net.hpp"
+#include "zed/async.hpp"
+#include "zed/log.hpp"
+#include "zed/net.hpp"
 
 using namespace zed::async;
 using namespace zed::net;

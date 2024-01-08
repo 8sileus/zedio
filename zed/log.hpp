@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/util/singleton.hpp"
-#include "log/manager.hpp"
+#include "zed/common/util/singleton.hpp"
+#include "zed/log/manager.hpp"
 
 namespace zed::log {
     

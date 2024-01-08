@@ -1,10 +1,10 @@
 #pragma once
 
-#include "common/util/noncopyable.hpp"
-#include "common/util/thread.hpp"
-#include "log/buffer.hpp"
-#include "log/def.hpp"
-#include "log/file.hpp"
+#include "zed/common/util/noncopyable.hpp"
+#include "zed/common/util/thread.hpp"
+#include "zed/log/buffer.hpp"
+#include "zed/log/def.hpp"
+#include "zed/log/file.hpp"
 
 // C++
 #include <condition_variable>

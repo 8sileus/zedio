@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/config.hpp"
-#include "common/debug.hpp"
+#include "zed/common/config.hpp"
+#include "zed/common/debug.hpp"
 
 // C
 #include <cassert>

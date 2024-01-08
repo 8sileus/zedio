@@ -1,5 +1,5 @@
-#include "common/util/time.hpp"
-#include "log.hpp"
+#include "zed/common/util/time.hpp"
+#include "zed/log.hpp"
 // Linux
 #include <sys/resource.h>
 // C++

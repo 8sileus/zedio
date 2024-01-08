@@ -1,6 +1,6 @@
 #pragma once
 
-#include "log/logger.hpp"
+#include "zed/log/logger.hpp"
 
 // C++
 #include <unordered_map>

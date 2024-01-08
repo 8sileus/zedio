@@ -1,8 +1,8 @@
 #pragma once
 
-#include "async/worker.hpp"
-#include "common/error.hpp"
-#include "common/macros.hpp"
+#include "zed/async/worker.hpp"
+#include "zed/common/error.hpp"
+#include "zed/common/macros.hpp"
 // C++
 #include <chrono>
 #include <coroutine>

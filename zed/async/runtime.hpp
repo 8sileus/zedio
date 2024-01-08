@@ -1,11 +1,11 @@
 #pragma once
 
-#include "async/operations.hpp"
-#include "async/worker.hpp"
+#include "zed/async/operations.hpp"
+#include "zed/async/worker.hpp"
 
 namespace zed::async {
 
-class Runtime {
+class Runtime : util::Noncopyable {
 public:
     Runtime(std::size_t num_worker = std::thread::hardware_concurrency())
         : shared_{num_worker} {}

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "util/thread.hpp"
+#include "zed/util/thread.hpp"
 // C++
 #include <mutex>
 #include <optional>

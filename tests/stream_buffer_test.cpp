@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE tcp_buffer_test
 
-#include "net/detail/stream_buffer.hpp"
+#include "zed/net/detail/stream_buffer.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 

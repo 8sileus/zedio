@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common/debug.hpp"
 // C++
 #include <algorithm>
 #include <atomic>

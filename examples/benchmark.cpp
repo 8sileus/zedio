@@ -1,6 +1,6 @@
-#include "async.hpp"
-#include "log.hpp"
-#include "net.hpp"
+#include "zed/async.hpp"
+#include "zed/log.hpp"
+#include "zed/net.hpp"
 
 #include <string_view>
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
-    auto thread_num = std::stoi(argv[1]);
+    auto    thread_num = std::stoi(argv[1]);
     Runtime runtime(thread_num);
     runtime.block_on(accept_handle());
     return 0;

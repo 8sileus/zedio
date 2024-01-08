@@ -23,7 +23,7 @@ pthread
 uring
 )
 
-include_directories("${PROJECT_SOURCE_DIR}/zed")
+include_directories("${PROJECT_SOURCE_DIR}")
 
 
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/zed" 

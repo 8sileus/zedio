@@ -1,13 +1,12 @@
 #pragma once
 
-#include "async/idle.hpp"
-#include "async/poller.hpp"
-#include "async/queue.hpp"
-#include "async/shared.hpp"
-#include "async/timer.hpp"
-#include "async/waker.hpp"
-#include "common/debug.hpp"
-#include "common/util/thread.hpp"
+#include "zed/async/idle.hpp"
+#include "zed/async/poller.hpp"
+#include "zed/async/queue.hpp"
+#include "zed/async/timer.hpp"
+#include "zed/async/waker.hpp"
+#include "zed/common/debug.hpp"
+#include "zed/common/util/thread.hpp"
 // C++
 #include <barrier>
 // #include <random>

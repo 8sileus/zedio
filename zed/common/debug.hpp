@@ -2,7 +2,7 @@
 
 #ifdef ZED_LOG
 
-#include "log.hpp"
+#include "zed/log.hpp"
 
 auto &debug_logger = zed::log::console;
 

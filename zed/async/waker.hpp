@@ -1,9 +1,9 @@
 #pragma once
 
-#include "async/awaiter_io.hpp"
-#include "async/task.hpp"
-#include "common/debug.hpp"
-#include "common/util/noncopyable.hpp"
+#include "zed/async/awaiter_io.hpp"
+#include "zed/async/task.hpp"
+#include "zed/common/debug.hpp"
+#include "zed/common/util/noncopyable.hpp"
 // Linux
 #include <sys/eventfd.h>
 // C

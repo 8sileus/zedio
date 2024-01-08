@@ -1,7 +1,6 @@
 #pragma once
 
-#include "common/config.hpp"
-
+#include "zed/common/config.hpp"
 // C
 #include <cassert>
 #include <cstring> //memcpy

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "common/debug.hpp"
-#include "common/util/noncopyable.hpp"
-#include "net/socket_addr.hpp"
-#include "net/tcp_stream.hpp"
+#include "zed/common/debug.hpp"
+#include "zed/common/util/noncopyable.hpp"
+#include "zed/net/socket_addr.hpp"
+#include "zed/net/tcp_stream.hpp"
 // C
 #include <cstring>
 // C++
