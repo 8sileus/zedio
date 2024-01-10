@@ -24,16 +24,20 @@ class Worker : util::Noncopyable {
 public:
     struct Shared {
         Shared(std::size_t num_worker)
-            : idle_{num_worker} {
+            : idle_{num_worker}
+            , main_worker{std::make_unique<Worker>(*this, 0)} {
             LOG_TRACE("runtime with {} threads", num_worker);
-            workers_.emplace_back(std::make_unique<Worker>(*this, 0));
+            workers_.emplace_back(main_worker.get());
             for (std::size_t i = 1; i < num_worker; ++i) {
                 // Make sure all threads have started
                 std::barrier sync(2);
                 threads_.emplace_back([this, i, &sync]() {
-                    workers_.emplace_back(std::make_unique<Worker>(*this, i));
+                    Worker worker(*this, i);
+                    workers_.emplace_back(&worker);
+                    // workers_.emplace_back(std::make_unique<Worker>(*this, i));
                     sync.arrive_and_drop();
-                    workers_[i]->run();
+                    worker.run();
+                    // workers_[i]->run();
                 });
                 sync.arrive_and_wait();
             }
@@ -91,7 +95,8 @@ public:
         GlobalQueue global_queue_{};
         /// Coordinates idle workers
         Idle                                 idle_;
-        std::vector<std::unique_ptr<Worker>> workers_{};
+        std::vector<Worker *>                workers_{};
+        std::unique_ptr<Worker>              main_worker;
         // TODO config
 
     private:
