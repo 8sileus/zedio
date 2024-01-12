@@ -99,8 +99,8 @@ private:
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
         static_cast<DeriverLogger *>(this)->template log<level>(std::format(
-            "{}.{:03} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond, level_to_string(level),
-            current_thread::get_tid(), sl.file_name(), sl.line(),
+            "{}.{:03} {} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond, level_to_string(level),
+            current_thread::get_tid(), current_thread::get_thread_name(), sl.file_name(), sl.line(),
             std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))));
     }
 

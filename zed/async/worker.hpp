@@ -107,14 +107,19 @@ public:
     Worker(Shared &shared, std::size_t index)
         : shared_{shared}
         , index_{index} {
-        LOG_TRACE("Worker-{}: build in thread {} ,waker fd {}, timer fd {}", index_,
-                  current_thread::get_tid(), waker_.fd(), timer_.fd());
+        current_thread::set_thread_name("ZED_WORKER_" + std::to_string(index));
+        LOG_TRACE("build in thread {} ,waker fd {}, timer fd {}", index_, current_thread::get_tid(),
+                  waker_.fd(), timer_.fd());
         assert(t_worker == nullptr);
         t_worker = this;
     }
 
+    ~Worker() {
+        LOG_DEBUG("tick num : {}", tick_);
+    }
+
     void run() {
-        LOG_TRACE("Worker-{}: start", index_);
+        LOG_TRACE("start");
         while (!is_shutdown_) [[likely]] {
             tick();
 
@@ -122,21 +127,18 @@ public:
             maintenance();
 
             // step 1: take task from local queue or global queue
-            // LOG_DEBUG("Worker-{}: try to take a tasks from local or global", index_);
             if (auto task = next_task(); task) {
                 run_task(std::move(task.value()));
                 continue;
             }
 
             // step 2: try to steal work from other worker
-            // LOG_DEBUG("Worker-{}: try to steal tasks", index_);
             if (auto task = steal_work(); task) {
                 run_task(std::move(task.value()));
                 continue;
             }
 
             // step 3: try to poll happend I/O events
-            // LOG_DEBUG("Worker-{}: try poll io", index_);
             if (poll()) {
                 continue;
             }
@@ -144,7 +146,7 @@ public:
             // step 4: be sleeping
             sleep();
         }
-        LOG_TRACE("Worker-{}: stop", index_);
+        LOG_TRACE("stop");
     }
 
     [[nodiscard]]
@@ -349,12 +351,11 @@ private:
         check_shutdown();
 
         if (!is_shutdown_ && transition_to_sleeping()) {
-            LOG_TRACE("Worker-{}: sleep tick {}", index_, tick_);
             while (!is_shutdown_) {
                 poller_.wait(local_queue_, shared_.global_queue_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
-                    LOG_TRACE("Worker-{}: awaken", index_);
+                    LOG_TRACE("awaken");
                     break;
                 }
             }

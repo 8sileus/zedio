@@ -4,15 +4,29 @@
 // Linux
 #include <pthread.h>
 #include <unistd.h>
+// C
+#include <cstring>
 // C++
+#include <string_view>
 #include <thread>
 
 namespace zed::current_thread {
 
 auto get_tid() noexcept -> pid_t {
-    static thread_local pid_t t_tid = ::gettid();
-    return t_tid;
+    static thread_local pid_t t_id = ::gettid();
+    return t_id;
 }
+
+static thread_local char t_name[64]{};
+
+auto set_thread_name(const std::string_view &str) {
+    memcpy(t_name, str.data(), std::min(sizeof(t_name), str.length()));
+}
+
+auto get_thread_name() -> std::string_view {
+    return t_name;
+}
+
 } // namespace zed::current_thread
 
 namespace zed::util {
