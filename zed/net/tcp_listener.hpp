@@ -13,14 +13,18 @@
 namespace zed::net {
 
 namespace detail {
-    struct AcceptStream : public async::detail::AcceptAwaiter<async::detail::OPFlag::Registered> {
+    struct [[REMEMBER_CO_AWAIT]] AcceptStream
+        : public async::detail::AcceptAwaiter<async::detail::OPFlag::Registered> {
         AcceptStream(int fd)
             : AcceptAwaiter{fd, reinterpret_cast<sockaddr *>(&addr), &addrlen} {}
 
-        auto await_resume() const noexcept -> std::expected<TcpStream, std::error_code> {
+        auto await_resume() const noexcept
+            -> std::expected<std::pair<TcpStream, SocketAddr>, std::error_code> {
             auto result = AcceptAwaiter::await_resume();
             if (result.has_value()) [[likely]] {
-                return TcpStream(result.value());
+                return std::make_pair(
+                    TcpStream{result.value()},
+                    SocketAddr{reinterpret_cast<const sockaddr *>(&addr), addrlen});
             }
             return std::unexpected{result.error()};
         }

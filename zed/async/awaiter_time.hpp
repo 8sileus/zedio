@@ -16,7 +16,7 @@ concept is_awaiter = requires(IOAwaiter awaiter) {
     { awaiter.await_suspend(std::noop_coroutine()) };
 };
 
-class [[NODISCARD_CO_AWAIT]] SleepAwaiter {
+class [[REMEMBER_CO_AWAIT]] SleepAwaiter {
 public:
     SleepAwaiter(const std::chrono::nanoseconds &timeout)
         : timeout_(timeout) {}
@@ -38,7 +38,7 @@ private:
 };
 
 template <is_awaiter IOAwaiter>
-class [[NODISCARD_CO_AWAIT]] TimeoutAwaiter : public IOAwaiter {
+class [[REMEMBER_CO_AWAIT]] TimeoutAwaiter : public IOAwaiter {
 public:
     TimeoutAwaiter(IOAwaiter &&op, const std::chrono::nanoseconds &timeout)
         : IOAwaiter{op}

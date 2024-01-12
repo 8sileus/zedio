@@ -16,7 +16,7 @@
 namespace zed::async::detail {
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] BaseIOAwaiter {
+struct [[REMEMBER_CO_AWAIT]] BaseIOAwaiter {
     BaseIOAwaiter()
         : sqe_{io_uring_get_sqe(t_poller->ring())}
         , data_{static_cast<int>(flag)} {}
@@ -61,7 +61,7 @@ protected:
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] SocketAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] SocketAwaiter : public BaseIOAwaiter<flag> {
     SocketAwaiter(int domain, int type, int protocol, unsigned int flags) {
         if (this->sqe_) [[likely]] {
             type |= SOCK_NONBLOCK;
@@ -71,7 +71,7 @@ struct [[NODISCARD_CO_AWAIT]] SocketAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] AcceptAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] AcceptAwaiter : public BaseIOAwaiter<flag> {
     AcceptAwaiter(int fd, sockaddr *addr, socklen_t *addrlen) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_accept(this->sqe_, fd, addr, addrlen, SOCK_NONBLOCK);
@@ -80,7 +80,7 @@ struct [[NODISCARD_CO_AWAIT]] AcceptAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] ConnectAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] ConnectAwaiter : public BaseIOAwaiter<flag> {
     ConnectAwaiter(int fd, const sockaddr *addr, socklen_t addrlen) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_connect(this->sqe_, fd, addr, addrlen);
@@ -89,7 +89,7 @@ struct [[NODISCARD_CO_AWAIT]] ConnectAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] ShutdownAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] ShutdownAwaiter : public BaseIOAwaiter<flag> {
     ShutdownAwaiter(int fd, int how) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_shutdown(this->sqe_, fd, how);
@@ -98,7 +98,7 @@ struct [[NODISCARD_CO_AWAIT]] ShutdownAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] CloseAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] CloseAwaiter : public BaseIOAwaiter<flag> {
     CloseAwaiter(int fd) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_close(this->sqe_, fd);
@@ -107,7 +107,7 @@ struct [[NODISCARD_CO_AWAIT]] CloseAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] RecvAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] RecvAwaiter : public BaseIOAwaiter<flag> {
     RecvAwaiter(int sockfd, void *buf, std::size_t len, int flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_recv(this->sqe_, sockfd, buf, len, flags);
@@ -116,7 +116,7 @@ struct [[NODISCARD_CO_AWAIT]] RecvAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] RecvMsgAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] RecvMsgAwaiter : public BaseIOAwaiter<flag> {
     RecvMsgAwaiter(int fd, msghdr *msg, unsigned flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_recvmsg(this->sqe_, fd, msg, flags);
@@ -125,7 +125,7 @@ struct [[NODISCARD_CO_AWAIT]] RecvMsgAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] SendAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] SendAwaiter : public BaseIOAwaiter<flag> {
     SendAwaiter(int sockfd, const void *buf, std::size_t len, int flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_send(this->sqe_, sockfd, buf, len, flags);
@@ -134,7 +134,7 @@ struct [[NODISCARD_CO_AWAIT]] SendAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] SendMsgAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] SendMsgAwaiter : public BaseIOAwaiter<flag> {
     SendMsgAwaiter(int fd, const msghdr *msg, unsigned flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_sendmsg(this->sqe_, fd, msg, flags);
@@ -143,7 +143,7 @@ struct [[NODISCARD_CO_AWAIT]] SendMsgAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] SendToAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] SendToAwaiter : public BaseIOAwaiter<flag> {
     SendToAwaiter(int sockfd, const void *buf, size_t len, int flags, const sockaddr *addr,
                   socklen_t addrlen) {
         if (this->sqe_) [[likely]] {
@@ -153,7 +153,7 @@ struct [[NODISCARD_CO_AWAIT]] SendToAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] ReadAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] ReadAwaiter : public BaseIOAwaiter<flag> {
     ReadAwaiter(int fd, void *buf, std::size_t nbytes, uint64_t offset) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_read(this->sqe_, fd, buf, nbytes, offset);
@@ -162,7 +162,7 @@ struct [[NODISCARD_CO_AWAIT]] ReadAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] ReadvAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] ReadvAwaiter : public BaseIOAwaiter<flag> {
     ReadvAwaiter(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_readv(this->sqe_, fd, iovecs, nr_vecs, offset);
@@ -171,7 +171,7 @@ struct [[NODISCARD_CO_AWAIT]] ReadvAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] Readv2Awaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] Readv2Awaiter : public BaseIOAwaiter<flag> {
     Readv2Awaiter(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset, int flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_readv2(this->sqe_, fd, iovecs, nr_vecs, offset, flags);
@@ -180,7 +180,7 @@ struct [[NODISCARD_CO_AWAIT]] Readv2Awaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] WriteAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] WriteAwaiter : public BaseIOAwaiter<flag> {
     WriteAwaiter(int fd, const void *buf, unsigned nbytes, uint64_t offset) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_write(this->sqe_, fd, buf, nbytes, offset);
@@ -189,7 +189,7 @@ struct [[NODISCARD_CO_AWAIT]] WriteAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] WritevAwaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] WritevAwaiter : public BaseIOAwaiter<flag> {
     WritevAwaiter(int fd, const iovec *iovecs, unsigned nr_vecs, uint64_t offset) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_writev(this->sqe_, fd, iovecs, nr_vecs, offset);
@@ -198,7 +198,7 @@ struct [[NODISCARD_CO_AWAIT]] WritevAwaiter : public BaseIOAwaiter<flag> {
 };
 
 template <OPFlag flag>
-struct [[NODISCARD_CO_AWAIT]] Writev2Awaiter : public BaseIOAwaiter<flag> {
+struct [[REMEMBER_CO_AWAIT]] Writev2Awaiter : public BaseIOAwaiter<flag> {
     Writev2Awaiter(int fd, const iovec *iovecs, unsigned nr_vecs, uint64_t offset, int flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_writev2(this->sqe_, fd, iovecs, nr_vecs, offset, flags);
