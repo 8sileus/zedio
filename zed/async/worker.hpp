@@ -52,6 +52,7 @@ public:
 
         void wake_up_one() {
             if (auto index = idle_.worker_to_notify(); index) {
+                LOG_TRACE("wake up ZED_WORKER_{}", index.value());
                 workers_[index.value()]->waker().wake_up();
             }
         }
@@ -115,7 +116,7 @@ public:
     }
 
     ~Worker() {
-        LOG_DEBUG("tick num : {}", tick_);
+        LOG_DEBUG("total tick {}", tick_);
     }
 
     void run() {

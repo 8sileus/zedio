@@ -20,7 +20,7 @@ auto process(TcpStream stream) -> Task<void> {
 
     char buf[1024];
     while (true) {
-        auto ok = co_await stream.read(buf, sizeof(buf));
+        auto ok = co_await stream.read(buf);
         if (!ok) {
             console.error(ok.error().message());
             break;
@@ -29,7 +29,7 @@ auto process(TcpStream stream) -> Task<void> {
             break;
         }
         // LOG_TRACE("{}", std::string_view{buf, static_cast<std::size_t>(ok.value())});
-        ok = co_await stream.write(response.data(), response.size());
+        ok = co_await stream.write(response);
         if (!ok) {
             console.error(ok.error().message());
             break;

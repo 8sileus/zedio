@@ -37,6 +37,16 @@ auto zed_category() noexcept -> const ZedCategory & {
     return util::Singleton<ZedCategory>::Instance();
 }
 
+[[nodiscard]]
+static inline auto make_zed_error(Error err) -> std::error_code {
+    return std::error_code{static_cast<int>(err), zed_category()};
+}
+
+[[nodiscard]]
+static inline auto make_sys_error(int err) -> std::error_code {
+    return std::error_code{err, std::system_category()};
+}
+
 } // namespace zed
 
 namespace std {

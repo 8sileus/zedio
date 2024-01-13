@@ -9,7 +9,7 @@ using namespace zed::log;
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
-        auto ok = co_await timeout(stream.read(buf, sizeof(buf)), 5s);
+        auto ok = co_await timeout(stream.read(buf), 5s);
         // error or peer close connection
         if (!ok) {
             console.error(ok.error().message());

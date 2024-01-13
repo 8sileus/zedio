@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE ring_buffer_test
 
-#include "zed/container/ring_buffer.hpp"
+#include "zed/common/container/ring_buffer.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 

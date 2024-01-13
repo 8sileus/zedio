@@ -92,26 +92,35 @@ public:
         return set_sock_opt(this->fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
     }
 
+    [[nodiscard]]
+    auto set_ttl(uint32_t ttl) -> std::expected<void, std::error_code> {
+        return set_sock_opt(fd_, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+    }
+
+    [[nodiscard]]
+    auto ttl() -> std::expected<uint32_t, std::error_code> {
+        uint32_t result = 0;
+        auto     ret = get_sock_opt(fd_, IPPROTO_IP, IP_TTL, &result, sizeof(result));
+        if (ret.has_value()) [[likely]] {
+            return result;
+        }
+        return std::unexpected{ret.error()};
+    }
+
 public:
     [[nodiscard]]
     static auto bind(const SocketAddr &addresses) -> std::expected<TcpListener, std::error_code> {
         auto fd = ::socket(addresses.family(), SOCK_STREAM | SOCK_NONBLOCK, 0);
         if (fd == -1) [[unlikely]] {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         if (::bind(fd, addresses.sockaddr(), addresses.length()) != 0) [[unlikely]] {
             ::close(fd);
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         if (::listen(fd, SOMAXCONN) != 0) [[unlikely]] {
             ::close(fd);
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         return TcpListener{fd};
     }

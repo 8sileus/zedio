@@ -4,6 +4,7 @@
 #include "zed/async/queue.hpp"
 #include "zed/common/config.hpp"
 #include "zed/common/debug.hpp"
+#include "zed/common/error.hpp"
 #include "zed/common/util/noncopyable.hpp"
 // C
 #include <cassert>
@@ -149,9 +150,7 @@ public:
         file_indexes_.pop_back();
         if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
             [[unlikely]] {
-            return std::unexpected{
-                std::error_code{-ret, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(-ret)};
         }
         return index;
     }

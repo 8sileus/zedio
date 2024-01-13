@@ -61,9 +61,17 @@ public:
         return async::shutdown(fd_, static_cast<int>(opition));
     }
 
+    // support ptr
     [[nodiscard]]
     auto read(void *buf, std::size_t len) {
-        return async::read(fd_, buf, len, 0);
+        return async::recv(fd_, buf, len, 0);
+    }
+
+    // support arr&
+    template <typename T, std::size_t len>
+    [[nodiscard]]
+    auto read(T (&buf)[len]) {
+        return this->read(buf, len);
     }
 
     [[nodiscard]]
@@ -71,55 +79,16 @@ public:
         return async::readv(fd_, iovecs, nr_vecs, 0);
     }
 
+    // ptr
     [[nodiscard]]
     auto write(const void *buf, std::size_t len) {
-        return async::write(fd_, buf, len, 0);
+        return async::send(fd_, buf, len, 0);
     }
 
+    // str
     [[nodiscard]]
-    auto set_read_timeout(const std::chrono::microseconds &timeout = std::chrono::microseconds{0})
-        -> std::expected<void, std::error_code> {
-        struct timeval tv {
-            .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
-        };
-        return set_sock_opt(this->fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    }
-
-    [[nodiscard]]
-    auto set_write_timeout(const std::chrono::microseconds &timeout = std::chrono::microseconds{0})
-        -> std::expected<void, std::error_code> {
-        struct timeval tv {
-            .tv_sec = timeout.count() / 1000'000, .tv_usec = timeout.count() % 1000'000
-        };
-        return set_sock_opt(this->fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-    }
-
-    [[nodiscard]]
-    auto get_read_timeout() -> std::expected<std::chrono::microseconds, std::error_code> {
-        struct timeval tv;
-        ::memset(&tv, 0, sizeof(tv));
-        socklen_t len = sizeof(tv);
-        auto      ret = ::getsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, &len);
-        if (ret != 0 || len != sizeof(tv)) [[unlikely]] {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
-        }
-        return std::chrono::microseconds{tv.tv_sec * 1000'000 + tv.tv_usec};
-    }
-
-    [[nodiscard]]
-    auto get_write_timeout() -> std::expected<std::chrono::microseconds, std::error_code> {
-        struct timeval tv;
-        ::memset(&tv, 0, sizeof(tv));
-        socklen_t len = sizeof(tv);
-        auto      ret = ::getsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &tv, &len);
-        if (ret != 0 || len != sizeof(tv)) [[unlikely]] {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
-        }
-        return std::chrono::microseconds{tv.tv_sec * 1000'000 + tv.tv_usec};
+    auto write(const std::string_view &buf) {
+        return this->write(buf.data(), buf.length());
     }
 
     [[nodiscard]]
@@ -138,7 +107,7 @@ public:
     }
 
     [[nodiscard]]
-    auto set_nodelay(bool need_delay) -> std::error_code {
+    auto set_nodelay(bool need_delay) -> std::expected<void, std::error_code> {
         auto flags = ::fcntl(fd_, F_GETFL, 0);
         if (need_delay) {
             flags |= O_NDELAY;
@@ -146,50 +115,74 @@ public:
             flags &= ~O_NDELAY;
         }
         if (::fcntl(fd_, F_SETFL, flags) == -1) [[unlikely]] {
-            return std::error_code{errno, std::system_category()};
+            return std::unexpected{make_sys_error(errno)};
         }
-        return std::error_code{};
     }
 
     [[nodiscard]]
-    auto is_nodelay() -> bool {
+    auto nodelay() -> std::expected<bool, std::error_code> {
         auto flags = ::fcntl(fd_, F_GETFL, 0);
+        if (flags == -1) [[unlikely]] {
+            return std::unexpected{make_sys_error(errno)};
+        }
         return flags & O_NDELAY;
     }
 
     [[nodiscard]]
-    auto set_nonblocking(bool nonblocking) -> std::error_code {
-        auto flags = ::fcntl(fd_, F_GETFL, 0);
-        if (nonblocking) {
-            flags |= O_NONBLOCK;
-        } else {
-            flags &= ~O_NONBLOCK;
+    auto set_linger(std::optional<std::chrono::seconds> duration)
+        -> std::expected<void, std::error_code> {
+        struct linger lin {
+            .l_onoff{0}, .l_linger{0},
+        };
+        if (duration.has_value()) {
+            lin.l_onoff = 1;
+            lin.l_linger = duration.value().count();
         }
-        if (::fcntl(fd_, F_SETFL, flags) == -1) {
-            return std::error_code{errno, std::system_category()};
-        }
-        return std::error_code{};
+        return set_sock_opt(fd_, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
     }
 
     [[nodiscard]]
-    auto is_nonblocking() -> bool {
-        auto flags = ::fcntl(fd_, F_GETFL, 0);
-        return flags & O_NONBLOCK;
+    auto linger() -> std::expected<std::optional<std::chrono::seconds>, std::error_code> {
+        struct linger lin;
+        auto          ret = get_sock_opt(fd_, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
+        if (ret.has_value()) [[likely]] {
+            if (lin.l_onoff == 0) {
+                return std::nullopt;
+            } else {
+                return std::chrono::seconds(lin.l_linger);
+            }
+        }
+        return std::unexpected{ret.error()};
+    }
+
+    [[nodiscard]]
+    auto set_ttl(uint32_t ttl) -> std::expected<void, std::error_code> {
+        return set_sock_opt(fd_, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+    }
+
+    [[nodiscard]]
+    auto ttl() -> std::expected<uint32_t, std::error_code> {
+        uint32_t result = 0;
+        auto     ret = get_sock_opt(fd_, IPPROTO_IP, IP_TTL, &result, sizeof(result));
+        if (ret.has_value()) [[likely]] {
+            return result;
+        }
+        return std::unexpected{ret.error()};
     }
 
 public:
     [[nodiscard]]
     static auto connect(const SocketAddr &address)
         -> async::Task<std::expected<TcpStream, std::error_code>> {
-        int fd = ::socket(address.family(), SOCK_STREAM, 0);
-        if (fd < 0) [[unlikely]] {
-            co_return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+        auto ret = co_await async::socket(address.family(), SOCK_STREAM | SOCK_NONBLOCK, 0, 0);
+        if (!ret.has_value()) [[unlikely]] {
+            co_return std::unexpected{ret.error()};
         }
-        auto ex = co_await async::connect(fd, address.sockaddr(), address.length());
-        if (!ex.has_value()) [[unlikely]] {
-            co_return std::unexpected{ex.error()};
+        auto fd = ret.value();
+        ret = co_await async::connect(fd, address.sockaddr(), address.length());
+        if (!ret.has_value()) [[unlikely]] {
+            ::close(fd);
+            co_return std::unexpected{ret.error()};
         }
         LOG_DEBUG("Build a connection to {}, fd: {}", address.to_string(), fd);
         co_return TcpStream{fd};
