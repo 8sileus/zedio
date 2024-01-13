@@ -30,40 +30,23 @@ private:
     detail::Worker::Shared shared_;
 };
 
-namespace detail {
-    template <typename T, typename... F>
-        requires std::is_same_v<T, Task<void>>
-    constexpr void spwan_helper(std::vector<Task<void>> &tasks, T &&first_task,
-                                F &&...chain_tasks) {
-        tasks.push_back(std::move(first_task));
-        if constexpr (sizeof...(F) > 0) {
-            spwan_helper(tasks, std::forward<F>(chain_tasks)...);
-        }
-    }
-} // namespace detail
-
-void spwan(std::vector<Task<void>> &&tasks) {
-    auto handle = [](std::vector<Task<void>> tasks) -> Task<void> {
-        for (auto &task : tasks) {
-            co_await task;
-        }
-        co_return;
-    }(std::move(tasks))
-                                                           .take();
-    detail::t_worker->schedule_task(std::move(handle));
-}
-
-template <typename T, typename... F>
-    requires std::is_same_v<T, Task<void>>
-constexpr void spwan(T &&first_task, F &&...chain_tasks) {
-    if constexpr (sizeof...(F) == 0) {
+template <typename T, typename... Ts>
+    requires std::conjunction_v<std::is_same<T, Ts>...>
+constexpr void spwan(T &&first_task, Ts &&...chain_tasks) {
+    if constexpr (sizeof...(Ts) == 0) {
         detail::t_worker->schedule_task(std::move(first_task.take()));
     } else {
         std::vector<Task<void>> tasks;
-        tasks.reserve(1 + sizeof...(F));
+        tasks.reserve(1 + sizeof...(Ts));
         tasks.push_back(std::move(first_task));
-        detail::spwan_helper(tasks, std::forward<F>(chain_tasks)...);
-        spwan(std::move(tasks));
+        (tasks.push_back(std::move(chain_tasks)), ...);
+        auto task = [](std::vector<Task<void>> tasks) -> Task<void> {
+            for (auto &task : tasks) {
+                co_await task;
+            }
+            co_return;
+        }(std::move(tasks));
+        detail::t_worker->schedule_task(std::move(task.take()));
     }
 }
 

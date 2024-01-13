@@ -28,10 +28,24 @@ auto process(TcpStream stream) -> Task<void> {
             break;
         }
     }
-    LOG_DEBUG("process {} end", stream.get_fd());
+    LOG_DEBUG("process {} end", stream.fd());
 }
 
+// Task<void> t1() {
+//     LOG_DEBUG("1");
+//     co_return;
+// }
+// Task<void> t2() {
+//     LOG_DEBUG("2");
+//     co_return;
+// }
+// Task<void> t3() {
+//     LOG_DEBUG("3");
+//     co_return;
+// }
+
 auto accept_handle() -> Task<void> {
+    // spwan(t1(), t2(), t3());
     auto has_addr = SocketAddr::parse("localhost", 9898);
     if (!has_addr) {
         console.error(has_addr.error().message());

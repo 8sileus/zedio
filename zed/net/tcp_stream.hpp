@@ -102,7 +102,7 @@ public:
     }
 
     [[nodiscard]]
-    auto get_fd() const -> int {
+    auto fd() const -> int {
         return fd_;
     }
 
