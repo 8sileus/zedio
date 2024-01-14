@@ -157,7 +157,7 @@ struct [[REMEMBER_CO_AWAIT]] ReadAwaiter : public BaseIOAwaiter<flag> {
 
 template <OPFlag flag>
 struct [[REMEMBER_CO_AWAIT]] ReadvAwaiter : public BaseIOAwaiter<flag> {
-    ReadvAwaiter(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset) {
+    ReadvAwaiter(int fd, iovec *iovecs, int nr_vecs, uint64_t offset) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_readv(this->sqe_, fd, iovecs, nr_vecs, offset);
         }
@@ -166,7 +166,7 @@ struct [[REMEMBER_CO_AWAIT]] ReadvAwaiter : public BaseIOAwaiter<flag> {
 
 template <OPFlag flag>
 struct [[REMEMBER_CO_AWAIT]] Readv2Awaiter : public BaseIOAwaiter<flag> {
-    Readv2Awaiter(int fd, const iovec *iovecs, int nr_vecs, uint64_t offset, int flags) {
+    Readv2Awaiter(int fd, iovec *iovecs, int nr_vecs, uint64_t offset, int flags) {
         if (this->sqe_) [[likely]] {
             io_uring_prep_readv2(this->sqe_, fd, iovecs, nr_vecs, offset, flags);
         }

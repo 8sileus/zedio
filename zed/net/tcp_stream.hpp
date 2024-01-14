@@ -7,6 +7,7 @@
 // C++
 #include <chrono>
 #include <optional>
+#include <span>
 // Linux
 #include <sys/socket.h>
 
@@ -61,34 +62,62 @@ public:
         return async::shutdown(fd_, static_cast<int>(opition));
     }
 
-    // support ptr
     [[nodiscard]]
     auto read(void *buf, std::size_t len) {
         return async::recv(fd_, buf, len, 0);
     }
-
-    // support arr&
-    template <typename T, std::size_t len>
+    
     [[nodiscard]]
-    auto read(T (&buf)[len]) {
-        return this->read(buf, len);
+    auto read(std::span<char> buf) {
+        return this->read(buf.data(), buf.size_bytes());
     }
 
     [[nodiscard]]
-    auto readv(const iovec *iovecs, int nr_vecs) {
+    auto read_vectored(struct iovec *iovecs, int nr_vecs) {
         return async::readv(fd_, iovecs, nr_vecs, 0);
     }
 
-    // ptr
+    template <typename... Ts>
+    [[nodiscard]]
+    auto read_vectored(Ts &...bufs) -> async::Task<std::expected<int, std::error_code>> {
+        constexpr auto                          N = sizeof...(Ts);
+        std::array<struct iovec, N>             iovecs{
+            iovec{
+                  .iov_base = std::span<char>(bufs).data(),
+                  .iov_len = std::span<char>(bufs).size_bytes(),
+                  }
+            ...
+        };
+        co_return co_await read_vectored(iovecs.data(), iovecs.size());
+    }
+
     [[nodiscard]]
     auto write(const void *buf, std::size_t len) {
         return async::send(fd_, buf, len, 0);
     }
 
-    // str
     [[nodiscard]]
-    auto write(const std::string_view &buf) {
-        return this->write(buf.data(), buf.length());
+    auto write(std::span<const char> buf) {
+        return this->write(buf.data(), buf.size_bytes());
+    }
+
+    [[nodiscard]]
+    auto write_vectored(const struct iovec *iovecs, int nr_vecs) {
+        return async::writev(this->fd_, iovecs, nr_vecs, 0);
+    }
+
+    template <typename... Ts>
+    [[nodiscard]]
+    auto write_vectored(Ts &...bufs) -> async::Task<std::expected<int, std::error_code>> {
+        constexpr auto                          N = sizeof...(Ts);
+        std::array<const struct iovec, N>       iovecs{
+            iovec{
+                  .iov_base = std::span<char>(bufs).data(),
+                  .iov_len = std::span<char>(bufs).size_bytes(),
+                  }
+            ...
+        };
+        co_return co_await write_vectored(iovecs.data(), iovecs.size());
     }
 
     [[nodiscard]]

@@ -8,8 +8,11 @@ using namespace zed::log;
 
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
+    // char buf1[5];
+    // char buf2[1024];
     while (true) {
-        auto ok = co_await timeout(stream.read(buf), 5s);
+        // auto ok = co_await stream.read_vectored(buf1, buf2);
+        auto ok = co_await stream.read(buf);
         // error or peer close connection
         if (!ok) {
             console.error(ok.error().message());
@@ -23,6 +26,7 @@ auto process(TcpStream stream) -> Task<void> {
         console.info("read: {}", std::string_view{buf, static_cast<std::size_t>(len)});
 
         ok = co_await stream.write(buf, len);
+        // ok = co_await stream.write_vectored(buf1, buf2);
         if (!ok) {
             console.error(ok.error().message());
             break;
@@ -59,7 +63,8 @@ auto accept_handle() -> Task<void> {
     auto listener = std::move(has_listener.value());
     auto _ = listener.set_reuse_address(true);
     while (true) {
-        auto has_stream = co_await timeout(listener.accept(), 3s);
+        // auto has_stream = co_await timeout(listener.accept(), 3s);
+        auto has_stream = co_await listener.accept();
         if (has_stream) {
             auto [stream, peer_addr] = std::move(has_stream.value());
             console.info("Accept a connection from {}", peer_addr.to_string());

@@ -8,7 +8,7 @@ using namespace zed::async;
 using namespace zed::net;
 using namespace zed::log;
 
-std::string_view response = R"(
+constexpr std::string_view response = R"(
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Content-Length: 13
@@ -29,7 +29,7 @@ auto process(TcpStream stream) -> Task<void> {
             break;
         }
         // LOG_TRACE("{}", std::string_view{buf, static_cast<std::size_t>(ok.value())});
-        ok = co_await stream.write(response);
+        ok = co_await stream.write({response.data(), response.size()});
         if (!ok) {
             console.error(ok.error().message());
             break;
