@@ -35,21 +35,21 @@ auto process(TcpStream stream) -> Task<void> {
     LOG_DEBUG("process {} end", stream.fd());
 }
 
-// Task<void> t1() {
-//     LOG_DEBUG("1");
-//     co_return;
-// }
-// Task<void> t2() {
-//     LOG_DEBUG("2");
-//     co_return;
-// }
-// Task<void> t3() {
-//     LOG_DEBUG("3");
-//     co_return;
-// }
+Task<void> t1() {
+    LOG_DEBUG("1");
+    co_return;
+}
+Task<void> t2() {
+    LOG_DEBUG("2");
+    co_return;
+}
+Task<void> t3() {
+    LOG_DEBUG("3");
+    co_return;
+}
 
-auto accept_handle() -> Task<void> {
-    // spwan(t1(), t2(), t3());
+auto server() -> Task<void> {
+    spwan(t1(), t2(), t3());
     auto has_addr = SocketAddr::parse("localhost", 9898);
     if (!has_addr) {
         console.error(has_addr.error().message());
@@ -79,5 +79,5 @@ auto accept_handle() -> Task<void> {
 int main(int args, char **argv) {
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
     Runtime runtime;
-    runtime.block_on(accept_handle());
+    runtime.block_on(server());
 }

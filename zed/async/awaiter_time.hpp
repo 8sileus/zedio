@@ -21,7 +21,7 @@ public:
     SleepAwaiter(const std::chrono::nanoseconds &timeout)
         : timeout_(timeout) {}
 
-    consteval auto await_ready() const noexcept -> bool {
+    constexpr auto await_ready() const noexcept -> bool {
         return false;
     }
 
@@ -31,7 +31,7 @@ public:
         detail::t_worker->timer().add_timer_event(cb, timeout_);
     }
 
-    consteval void await_resume() const noexcept {};
+    constexpr void await_resume() const noexcept {};
 
 private:
     std::chrono::nanoseconds timeout_{};

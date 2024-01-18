@@ -161,7 +161,6 @@ public:
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {
-        // TODO check rand
         if (run_next_.has_value()) {
             local_queue_.push_back_or_overflow(std::move(run_next_.value()), shared_.global_queue_);
             run_next_.emplace(std::move(task));
@@ -240,7 +239,8 @@ private:
         if (is_searching_) {
             return false;
         }
-        return (static_cast<std::size_t>(run_next_.has_value()) + local_queue_.size()) > 1;
+        // return (static_cast<std::size_t>(run_next_.has_value()) + local_queue_.size()) > 1;
+        return local_queue_.size() > 1;
     }
 
     void tick() {
@@ -350,9 +350,9 @@ private:
     // Let current worker sleep
     void sleep() {
         check_shutdown();
-
-        if (!is_shutdown_ && transition_to_sleeping()) {
+        if (transition_to_sleeping()) {
             while (!is_shutdown_) {
+                // LOG_TRACE("sleep {}",tick_);
                 poller_.wait(local_queue_, shared_.global_queue_);
                 check_shutdown();
                 if (transition_from_sleeping()) {

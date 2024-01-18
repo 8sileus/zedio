@@ -104,14 +104,7 @@ int main() {
     //第一种方式 可变参数模板调用
     spwan(a(),b(),c());
 
-    //第二种方式 先存进vector再调用
-    std::vector<Task<void>>tasks;
-    tasks.push_back(a());
-    tasks.push_back(b());
-    tasks.push_back(c());
-    spwan(std::move(tasks));
-
-    //第三种方式 直接协程里co_await
+    //第二种方式 直接协程里co_await
     auto a()->Task<void>{
         co_await b;
     }

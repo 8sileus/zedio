@@ -30,28 +30,23 @@ private:
     detail::Worker::Shared shared_;
 };
 
-template <typename T, typename... Ts>
-    requires std::conjunction_v<std::is_same<T, Ts>...>
-constexpr void spwan(T &&first_task, Ts &&...chain_tasks) {
-    if constexpr (sizeof...(Ts) == 0) {
-        detail::t_worker->schedule_task(std::move(first_task.take()));
+template <typename... Ts>
+    requires std::conjunction_v<std::is_same<Task<void>, Ts>...> && (sizeof...(Ts) > 0)
+static inline void spwan(Ts &&...tasks) {
+    if constexpr (sizeof...(Ts) == 1) {
+        (detail::t_worker->schedule_task(std::move(tasks.take())), ...);
     } else {
-        std::vector<Task<void>> tasks;
-        tasks.reserve(1 + sizeof...(Ts));
-        tasks.push_back(std::move(first_task));
-        (tasks.push_back(std::move(chain_tasks)), ...);
-        auto task = [](std::vector<Task<void>> tasks) -> Task<void> {
-            for (auto &task : tasks) {
-                co_await task;
-            }
+        auto task = [](Ts... tasks) -> Task<void> {
+            ((co_await tasks), ...);
             co_return;
-        }(std::move(tasks));
+        }(std::move(tasks)...);
         detail::t_worker->schedule_task(std::move(task.take()));
     }
 }
 
-auto add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
-                     const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {
+static inline auto
+add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
+                const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {
     return detail::t_worker->timer().add_timer_event(cb, delay, period);
 }
 
