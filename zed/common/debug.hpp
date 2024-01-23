@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef ZED_LOG
+#ifdef NEED_ZED_LOG
 
 #include "zed/log.hpp"
 

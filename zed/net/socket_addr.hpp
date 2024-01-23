@@ -191,7 +191,8 @@ public:
 public:
     static auto parse(const std::string_view &host_name, uint16_t port)
         -> std::expected<SocketAddr, std::error_code> {
-        addrinfo  hints{.ai_flags{AI_NUMERICSERV}};
+        addrinfo hints{};
+        hints.ai_flags = AI_NUMERICSERV;
         addrinfo *result{nullptr};
         if (::getaddrinfo(host_name.data(), std::to_string(port).data(), &hints, &result) != 0)
             [[unlikely]] {

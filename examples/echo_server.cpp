@@ -23,10 +23,10 @@ auto process(TcpStream stream) -> Task<void> {
         }
 
         auto len = ok.value();
-        console.info("read: {}", std::string_view{buf, static_cast<std::size_t>(len)});
+        // console.info("read: {}", std::string_view{buf, static_cast<std::size_t>(len)});
 
-        ok = co_await stream.write(buf, len);
         // ok = co_await stream.write_vectored(buf1, buf2);
+        ok = co_await stream.write(buf, len);
         if (!ok) {
             console.error(ok.error().message());
             break;
@@ -76,8 +76,9 @@ auto server() -> Task<void> {
     }
 }
 
-int main(int args, char **argv) {
+int main() {
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
     Runtime runtime;
     runtime.block_on(server());
+    return 0;
 }

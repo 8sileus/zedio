@@ -66,7 +66,7 @@ public:
     auto read(void *buf, std::size_t len) {
         return async::recv(fd_, buf, len, 0);
     }
-    
+
     [[nodiscard]]
     auto read(std::span<char> buf) {
         return this->read(buf.data(), buf.size_bytes());
@@ -80,8 +80,8 @@ public:
     template <typename... Ts>
     [[nodiscard]]
     auto read_vectored(Ts &...bufs) -> async::Task<std::expected<int, std::error_code>> {
-        constexpr auto                          N = sizeof...(Ts);
-        std::array<struct iovec, N>             iovecs{
+        constexpr auto              N = sizeof...(Ts);
+        std::array<struct iovec, N> iovecs{
             iovec{
                   .iov_base = std::span<char>(bufs).data(),
                   .iov_len = std::span<char>(bufs).size_bytes(),
@@ -110,7 +110,7 @@ public:
     [[nodiscard]]
     auto write_vectored(Ts &...bufs) -> async::Task<std::expected<int, std::error_code>> {
         constexpr auto                          N = sizeof...(Ts);
-        std::array<const struct iovec, N>       iovecs{
+        const std::array<const struct iovec, N> iovecs{
             iovec{
                   .iov_base = std::span<char>(bufs).data(),
                   .iov_len = std::span<char>(bufs).size_bytes(),
@@ -118,6 +118,60 @@ public:
             ...
         };
         co_return co_await write_vectored(iovecs.data(), iovecs.size());
+    }
+
+    [[nodiscard]]
+    auto try_read(std::span<char> buf) -> std::expected<int, std::error_code> {
+        auto ret = ::read(this->fd_, buf.data(), buf.size_bytes());
+        if (ret < 0) {
+            return std::unexpected{make_sys_error(ret)};
+        }
+        return ret;
+    }
+
+    template <typename... Ts>
+    [[nodiscard]]
+    auto try_read_vectored(Ts &...bufs) -> std::expected<int, std::error_code> {
+        constexpr auto              N = sizeof...(Ts);
+        std::array<struct iovec, N> iovecs{
+            iovec{
+                  .iov_base = std::span<char>(bufs).data(),
+                  .iov_len = std::span<char>(bufs).size_bytes(),
+                  }
+            ...
+        };
+        auto ret = ::readv(this->fd_, iovecs.data(), iovecs.size());
+        if (ret < 0) {
+            return std::unexpected{make_sys_error(ret)};
+        }
+        return ret;
+    }
+
+    [[nodiscard]]
+    auto try_write(std::span<const char> buf) -> std::expected<int, std::error_code> {
+        auto ret = ::write(this->fd_, buf.data(), buf.size_bytes());
+        if (ret < 0) {
+            return std::unexpected{make_sys_error(ret)};
+        }
+        return ret;
+    }
+
+    template <typename... Ts>
+    [[nodiscard]]
+    auto try_write_vectored(Ts &...bufs) -> std::expected<int, std::error_code> {
+        constexpr auto              N = sizeof...(Ts);
+        std::array<struct iovec, N> iovecs{
+            iovec{
+                  .iov_base = std::span<char>(bufs).data(),
+                  .iov_len = std::span<char>(bufs).size_bytes(),
+                  }
+            ...
+        };
+        auto ret = ::writev(this->fd_, iovecs.data(), iovecs.size());
+        if (ret < 0) {
+            return std::unexpected{make_sys_error(ret)};
+        }
+        return ret;
     }
 
     [[nodiscard]]

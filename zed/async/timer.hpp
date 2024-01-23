@@ -20,7 +20,6 @@ using namespace std::literals::chrono_literals;
 
 namespace zed::async::detail {
 
-
 class TimerEvent : util::Noncopyable {
 public:
     TimerEvent(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
@@ -53,6 +52,7 @@ public:
     }
 
     void execute() {
+        assert(cb_ != nullptr);
         cb_();
     }
 
@@ -74,11 +74,10 @@ public:
     }
 
 private:
-    std::function<void()>                                           cb_;
-    std::chrono::steady_clock::time_point                           expired_time_;
-    std::chrono::nanoseconds                                        period_;
+    std::function<void()>                 cb_;
+    std::chrono::steady_clock::time_point expired_time_;
+    std::chrono::nanoseconds              period_;
 };
-
 
 class Timer : util::Noncopyable {
 public:
@@ -121,8 +120,8 @@ private:
         if (events_.empty()) {
             return;
         }
-        auto first_expired_time = (*events_.begin())->expired_time();
-        auto now = std::chrono::steady_clock::now();
+        auto   first_expired_time = (*events_.begin())->expired_time();
+        auto   now = std::chrono::steady_clock::now();
         time_t internal = 1;
         if (first_expired_time < now) {
             // do nothing

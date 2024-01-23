@@ -140,9 +140,9 @@ VM虚拟机
 处理器：AMD Ryzen 5 3600 6-Core Processor  
 测试指令：./wrk -t4 -c1000 -d90s --latency http://192.168.15.33:7777/   
 ZEDIO:  
-![](./png/zedio_benchmark.png)  
+![](./doc/png/zedio_benchmark.png)  
 TOKIO:  
-![](./png/tokio_benchmark.png)  
+![](./doc/png/tokio_benchmark.png)  
 
 
 # 6.依赖

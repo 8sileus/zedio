@@ -3,14 +3,19 @@ cmake_minimum_required(VERSION 3.24.2)
 project (ZED  VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED 23)
 set(CMAKE_CXX_EXTENSIONS ON)
+
 add_compile_options("-Wall")
+add_compile_options("-Wextra")
+add_compile_options("-Werror")
 add_compile_options("-Wundef")
 add_compile_options("-Wsign-compare")
 
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
-    add_compile_definitions(ZED_LOG)
+    add_compile_definitions(NEED_ZED_LOG)
 endif()
 
 message(STATUS "Version: " "${CMAKE_PROJECT_VERSION}")
@@ -32,4 +37,8 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/zed"
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/examples")
 enable_testing()
-add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+find_package(Boost)
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+endif()
