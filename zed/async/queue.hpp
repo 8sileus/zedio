@@ -282,7 +282,7 @@ private:
         atomic_tail.store(tail + 1, std::memory_order::release);
     }
 
-    auto push_overflow(std::coroutine_handle<> &task, uint32_t head, uint32_t tail,
+    auto push_overflow(std::coroutine_handle<> &task, uint32_t head, [[maybe_unused]] uint32_t tail,
                        GlobalQueue &global_queue) -> bool {
         static constexpr auto NUM_TASKS_TAKEN{
             static_cast<uint32_t>(zed::config::LOCAL_QUEUE_CAPACITY / 2)};

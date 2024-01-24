@@ -28,7 +28,9 @@ namespace detail {
                 if (callee.promise().caller_) {
                     return callee.promise().caller_;
                 } else {
-                    // callee.destroy();
+#ifndef NEED_ZED_LOG
+                    callee.destroy();
+#endif
                     return std::noop_coroutine();
                 }
             }
@@ -111,6 +113,7 @@ namespace detail {
     // 2: Check whether the first caller of handle has done
     // 3: Processes exception and release memory resource,if 2 is true
     static inline void execute_handle(std::coroutine_handle<> &&handle) {
+#ifdef NEED_ZED_LOG
         auto first_caller
             = std::coroutine_handle<detail::TaskPromiseBase>::from_address(handle.address())
                   .promise()
@@ -129,6 +132,9 @@ namespace detail {
             first_caller.destroy();
             LOG_TRACE("destroy a handle");
         }
+#else
+        handle.resume();
+#endif
     }
 
 } // namespace detail
