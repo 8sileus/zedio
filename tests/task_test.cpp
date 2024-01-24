@@ -1,46 +1,46 @@
 #include "zed/async/task.hpp"
+#include "zed/common/debug.hpp"
 
 #include <iostream>
 
 int n;
 
-zed::async::Task<int> f2() { co_return 2; }
+using namespace zed::async;
 
-zed::async::Task<void> f1() { n = co_await f2(); }
-
-zed::async::Task<void> throw_ex() {
-    std::cout << "1\n";
-    co_await std::suspend_always{};
-    std::cout << "3\n";
-    throw std::runtime_error("test");
+zed::async::Task<int> normal_test_2() {
+    co_return 2;
 }
 
-zed::async::Task<void> throw_ex2() {
-    throw std::runtime_error("123");
+zed::async::Task<void> normal_test_1() {
+    assert(co_await normal_test_2() == 2);
 }
 
-void call_throw_ex(std::coroutine_handle<> handle) {
-    std::cout << "3" << std::endl;
-    try {
-        handle.resume();
-    } catch (std ::exception &ex) {
-        throw ex;
-    }
+zed::async::Task<void> check_exception_2(){
+    LOG_DEBUG("2");
+    // throw std::runtime_error("test_check_catch_exception");
+    throw "test_check_catch_exception";
+}
+
+zed::async::Task<void> check_exception_1() {
+    LOG_DEBUG("1");
+    // try{
+    co_await check_exception_2();
+    // } catch (const std::exception&ex) {
+    // LOG_DEBUG("{}", ex.what());
+    // }
+    LOG_DEBUG("3");
+}
+
+void test_check_catch_exception() {
+    detail::execute_handle(check_exception_1().take());
 }
 
 int main() {
-    auto task = throw_ex();
-    auto handle = task.take();
-    std::cout << handle.done() << std::endl;
-    try {
-        handle.resume();
-        std::cout << "2\n";
-        handle.resume();
-        std::cout << "4\n";
-    } catch (...) {
-        std::cout << "get ex";
-        // std::cout << "ex: " << ex.what() << std::endl;
+    {
+        auto task = normal_test_1();
+        task.resume();
     }
-    std::cout << "end" << std::endl;
+    std::cout << "check exeception\n";
+    test_check_catch_exception();
     return 0;
 }

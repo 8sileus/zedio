@@ -45,7 +45,7 @@ Task<void> t2() {
 Task<void> t3() {
     LOG_DEBUG("3");
     // check exception
-    //  LOG_DEBUG("{} {}", 3);
+    LOG_DEBUG("{} {}", 3);
     co_return;
 }
 
@@ -77,9 +77,14 @@ auto server() -> Task<void> {
     }
 }
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::cerr << "usage: echo_server thread_num\n";
+        return -1;
+    }
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
-    Runtime runtime;
+    auto    thread_num = std::stoi(argv[1]);
+    Runtime runtime(thread_num);
     runtime.block_on(server());
     return 0;
 }

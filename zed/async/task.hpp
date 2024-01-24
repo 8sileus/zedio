@@ -46,6 +46,7 @@ namespace detail {
         }
 
         void unhandled_exception() noexcept {
+            LOG_DEBUG("catch a ex");
             ex_ = std::move(std::current_exception());
             assert(ex_ != nullptr);
         }
@@ -120,11 +121,13 @@ namespace detail {
                 std::coroutine_handle<detail::TaskPromiseBase>::from_address(first_caller.address())
                     .promise()
                     .throw_exception_if_needed();
-                first_caller.destroy();
-                LOG_TRACE("destroy a handle");
             } catch (const std::exception &ex) {
-                LOG_ERROR("fetch a exception: {}", ex.what());
+                LOG_ERROR("catch a exception: {}", ex.what());
+            } catch(...){
+                LOG_ERROR("catch a unknown exception");
             }
+            first_caller.destroy();
+            LOG_TRACE("destroy a handle");
         }
     }
 

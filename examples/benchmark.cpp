@@ -51,7 +51,9 @@ auto server() -> Task<void> {
     auto listener = std::move(has_listener.value());
     auto _ = listener.set_reuse_address(true);
     while (true) {
-        auto has_stream = co_await timeout(listener.accept(), 40s);
+        // check memory leaking
+        // auto has_stream = co_await timeout(listener.accept(), 40s);
+        auto has_stream = co_await listener.accept();
         if (has_stream) {
             auto &[stream, peer_addr] = has_stream.value();
             LOG_INFO("Accept a connection from {}", peer_addr.to_string());
