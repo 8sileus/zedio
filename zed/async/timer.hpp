@@ -128,8 +128,8 @@ private:
         } else {
             internal = static_cast<std::chrono::nanoseconds>(first_expired_time - now).count();
         }
-        itimerspec new_value;
-        ::memset(&new_value, 0, sizeof(new_value));
+        itimerspec new_value{};
+        // ::memset(&new_value, 0, sizeof(new_value));
         new_value.it_value.tv_sec = internal / 1000'000'000;
         new_value.it_value.tv_nsec = internal % 1000'000'000;
         if (::timerfd_settime(fd_, 0, &new_value, nullptr) != 0) [[unlikely]] {

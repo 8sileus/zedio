@@ -109,7 +109,7 @@ public:
         : shared_{shared}
         , index_{index} {
         current_thread::set_thread_name("ZED_WORKER_" + std::to_string(index));
-        LOG_TRACE("build in thread {} ,waker fd {}, timer fd {}", index_, current_thread::get_tid(),
+        LOG_TRACE("build in thread {} ,waker fd {}, timer fd {}", current_thread::get_tid(),
                   waker_.fd(), timer_.fd());
         assert(t_worker == nullptr);
         t_worker = this;
@@ -129,13 +129,13 @@ public:
 
             // step 1: take task from local queue or global queue
             if (auto task = next_task(); task) {
-                run_task(std::move(task.value()));
+                execute_task(std::move(task.value()));
                 continue;
             }
 
             // step 2: try to steal work from other worker
             if (auto task = steal_work(); task) {
-                run_task(std::move(task.value()));
+                execute_task(std::move(task.value()));
                 continue;
             }
 
@@ -171,9 +171,9 @@ public:
     }
 
 private:
-    void run_task(std::coroutine_handle<> &&task) {
-        transition_from_searching();
-        task.resume();
+    void execute_task(std::coroutine_handle<> &&task) {
+        this->transition_from_searching();
+        execute_handle(std::move(task));
     }
 
     [[nodiscard]]

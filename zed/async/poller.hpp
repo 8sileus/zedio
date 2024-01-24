@@ -2,6 +2,7 @@
 
 #include "zed/async/awaiter_data.hpp"
 #include "zed/async/queue.hpp"
+#include "zed/async/task.hpp"
 #include "zed/common/config.hpp"
 #include "zed/common/debug.hpp"
 #include "zed/common/error.hpp"
@@ -89,7 +90,7 @@ public:
             if (data->is_distributable()) {
                 queue.push_back_or_overflow(std::move(data->handle_), global_queue);
             } else {
-                data->handle_.resume();
+                execute_handle(std::move(data->handle_));
             }
         }
         io_uring_cqe_seen(&ring_, cqe);
@@ -113,12 +114,12 @@ public:
         io_uring_for_each_cqe(&ring_, head, cqe) {
             auto data = reinterpret_cast<BaseIOAwaiterData *>(io_uring_cqe_get_data64(cqe));
             // if is a cancel cqe, data will be nullptr
-            if (data != nullptr) {
+            if (data != nullptr) [[likely]] {
                 data->result_ = cqe->res;
                 if (data->is_distributable()) {
                     queue.push_back_or_overflow(std::move(data->handle_), global_queue);
                 } else {
-                    data->handle_.resume();
+                    execute_handle(std::move(data->handle_));
                 }
             }
             io_uring_cqe_seen(&ring_, cqe);

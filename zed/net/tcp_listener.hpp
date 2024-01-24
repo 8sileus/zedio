@@ -38,7 +38,7 @@ private:
     TcpListener(int fd)
         : fd_{fd}
         , idx_{async::detail::t_poller->register_file(fd_).value()} {
-        LOG_TRACE("Build a tcp listener fd {}", fd_);
+        LOG_TRACE("Build a TcpListener{{fd: {}}}", fd_);
     }
 
 public:

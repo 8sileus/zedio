@@ -30,12 +30,15 @@ class TcpStream : util::Noncopyable {
 
 private:
     explicit TcpStream(int fd)
-        : fd_{fd} {}
+        : fd_{fd} {
+        LOG_TRACE("Build a TcpStream{{fd: {}}}", fd_);
+    }
 
 public:
     ~TcpStream() {
         if (fd_ >= 0) [[likely]] {
-            async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
+            ::close(fd_);
+            // async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
         }
         fd_ = -1;
     }

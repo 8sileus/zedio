@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zed/common/debug.hpp"
 #include "zed/common/util/noncopyable.hpp"
 // C
 #include <cassert>
@@ -24,10 +25,10 @@ namespace detail {
             template <typename T>
             auto await_suspend(std::coroutine_handle<T> callee) const noexcept
                 -> std::coroutine_handle<> {
-                if (callee.promise().m_caller) {
-                    return callee.promise().m_caller;
+                if (callee.promise().caller_) {
+                    return callee.promise().caller_;
                 } else {
-                    callee.destroy();
+                    // callee.destroy();
                     return std::noop_coroutine();
                 }
             }
@@ -35,7 +36,6 @@ namespace detail {
             // this function never be called
             constexpr void await_resume() const noexcept {}
         };
-        virtual ~TaskPromiseBase() = default;
 
         constexpr auto initial_suspend() const noexcept -> std::suspend_always {
             return {};
@@ -45,42 +45,52 @@ namespace detail {
             return {};
         }
 
-        std::coroutine_handle<> m_caller{nullptr};
+        void unhandled_exception() noexcept {
+            ex_ = std::move(std::current_exception());
+            assert(ex_ != nullptr);
+        }
+
+        void throw_exception_if_needed() {
+            if (ex_ != nullptr) [[unlikely]] {
+                std::rethrow_exception(ex_);
+            }
+        }
+
+        // Record the first caller
+        std::coroutine_handle<> first_caller_{nullptr};
+        // Record who call me
+        std::coroutine_handle<> caller_{nullptr};
+        // Record exception
+        std::exception_ptr ex_{nullptr};
     };
 
     template <typename T>
     struct TaskPromise final : public TaskPromiseBase {
         auto get_return_object() noexcept -> Task<T>;
 
-        void unhandled_exception() noexcept {
-            m_value.template emplace<std::exception_ptr>(std::current_exception());
-        }
-
         template <typename F>
             requires std::is_convertible_v<F &&, T> && std::is_constructible_v<T, F &&>
         //&& std::is_nothrow_constructible_v<T, F &&>
         void return_value(F &&value) {
-            m_value.template emplace<T>(std::forward<F>(value));
+            value_ = std::forward<F>(value);
         }
 
         auto result() & -> T & {
-            if (std::holds_alternative<std::exception_ptr>(m_value)) [[unlikely]] {
-                std::rethrow_exception(std::get<std::exception_ptr>(m_value));
+            if (ex_ != nullptr) [[unlikely]] {
+                std::rethrow_exception(ex_);
             }
-            assert(std::holds_alternative<T>(m_value));
-            return std::get<T>(m_value);
+            return value_.value();
         }
 
         auto result() && -> T && {
-            if (std::holds_alternative<std::exception_ptr>(m_value)) [[unlikely]] {
-                std::rethrow_exception(std::get<std::exception_ptr>(m_value));
+            if (ex_ != nullptr) [[unlikely]] {
+                std::rethrow_exception(ex_);
             }
-            assert(std::holds_alternative<T>(m_value));
-            return std::move(std::get<T>(m_value));
+            return std::move(value_.value());
         }
 
     private:
-        std::variant<std::monostate, T, std::exception_ptr> m_value{};
+        std::optional<T> value_{std::nullopt};
     };
 
     template <>
@@ -89,19 +99,34 @@ namespace detail {
 
         constexpr void return_void() const noexcept {};
 
-        void unhandled_exception() noexcept {
-            m_exception = std::move(std::current_exception());
-        }
-
         void result() const {
-            if (m_exception != nullptr) [[unlikely]] {
-                std::rethrow_exception(m_exception);
+            if (ex_ != nullptr) [[unlikely]] {
+                std::rethrow_exception(ex_);
             }
         }
-
-    private:
-        std::exception_ptr m_exception{nullptr};
     };
+
+    // 1: Resume the handle
+    // 2: Check whether the first caller of handle has done
+    // 3: Processes exception and release memory resource,if 2 is true
+    static inline void execute_handle(std::coroutine_handle<> &&handle) {
+        auto first_caller
+            = std::coroutine_handle<detail::TaskPromiseBase>::from_address(handle.address())
+                  .promise()
+                  .first_caller_;
+        handle.resume();
+        if (first_caller.done()) {
+            try {
+                std::coroutine_handle<detail::TaskPromiseBase>::from_address(first_caller.address())
+                    .promise()
+                    .throw_exception_if_needed();
+                first_caller.destroy();
+                LOG_TRACE("destroy a handle");
+            } catch (const std::exception &ex) {
+                LOG_ERROR("fetch a exception: {}", ex.what());
+            }
+        }
+    }
 
 } // namespace detail
 
@@ -112,18 +137,20 @@ public:
 
 private:
     struct AwaitableBase {
-        std::coroutine_handle<promise_type> m_handle;
+        std::coroutine_handle<promise_type> callee_;
 
-        AwaitableBase(std::coroutine_handle<promise_type> handle) noexcept
-            : m_handle{handle} {}
+        AwaitableBase(std::coroutine_handle<promise_type> callee) noexcept
+            : callee_{callee} {}
 
         auto await_ready() const noexcept -> bool {
-            return !m_handle || m_handle.done();
+            return !callee_ || callee_.done();
         }
 
-        auto await_suspend(std::coroutine_handle<> caller) -> std::coroutine_handle<> {
-            m_handle.promise().m_caller = caller;
-            return m_handle;
+        template <typename PromiseType>
+        auto await_suspend(std::coroutine_handle<PromiseType> caller) -> std::coroutine_handle<> {
+            callee_.promise().caller_ = caller;
+            callee_.promise().first_caller_ = caller.promise().first_caller_;
+            return callee_;
         }
     };
 
@@ -131,27 +158,28 @@ public:
     Task() noexcept = default;
 
     explicit Task(std::coroutine_handle<promise_type> handle)
-        : m_handle(handle) {}
+        : handle_(handle) {
+        handle_.promise().first_caller_ = handle_;
+    }
 
     ~Task() {
-        if (m_handle) {
-            m_handle.destroy();
-            m_handle = nullptr;
+        if (handle_) {
+            handle_.destroy();
         }
     }
 
     Task(Task &&other) noexcept
-        : m_handle(std::move(other.m_handle)) {
-        other.m_handle = nullptr;
+        : handle_(std::move(other.handle_)) {
+        other.handle_ = nullptr;
     }
 
     Task &operator=(Task &&other) noexcept {
         if (std::addressof(other) != this) [[likely]] {
-            if (m_handle) {
-                m_handle.destroy();
+            if (handle_) {
+                handle_.destroy();
             }
-            m_handle = std::move(other.m_handle);
-            other.m_handle = nullptr;
+            handle_ = std::move(other.handle_);
+            other.handle_ = nullptr;
         }
         return *this;
     }
@@ -159,46 +187,46 @@ public:
     auto operator co_await() const & noexcept {
         struct Awaitable final : public AwaitableBase {
             decltype(auto) await_resume() {
-                if (!this->m_handle) [[unlikely]] {
+                if (!this->callee_) [[unlikely]] {
                     throw std::logic_error("m_handle is nullptr");
                 }
-                return this->m_handle.promise().result();
+                return this->callee_.promise().result();
             }
         };
-        return Awaitable{m_handle};
+        return Awaitable{handle_};
     }
 
     auto operator co_await() && noexcept {
         struct Awaitable final : public AwaitableBase {
             decltype(auto) await_resume() {
-                if (!this->m_handle) [[unlikely]] {
+                if (!this->callee_) [[unlikely]] {
                     throw std::logic_error("m_handle is nullptr");
                 }
                 if constexpr (std::is_same_v<T, void>) {
-                    return this->m_handle.promise().result();
+                    return this->callee_.promise().result();
                 } else {
-                    return std::move(this->m_handle.promise().result());
+                    return std::move(this->callee_.promise().result());
                 }
             }
         };
-        return Awaitable{m_handle};
+        return Awaitable{handle_};
     }
 
     auto take() -> std::coroutine_handle<promise_type> {
-        if (m_handle == nullptr) [[unlikely]] {
+        if (handle_ == nullptr) [[unlikely]] {
             throw std::logic_error("m_hanlde is nullptr");
         }
-        auto res = std::move(m_handle);
-        m_handle = nullptr;
+        auto res = std::move(handle_);
+        handle_ = nullptr;
         return res;
     }
 
     void resume() const {
-        m_handle.resume();
+        handle_.resume();
     }
 
 private:
-    std::coroutine_handle<promise_type> m_handle{nullptr};
+    std::coroutine_handle<promise_type> handle_{nullptr};
 };
 
 template <typename T>

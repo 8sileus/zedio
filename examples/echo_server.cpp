@@ -32,7 +32,6 @@ auto process(TcpStream stream) -> Task<void> {
             break;
         }
     }
-    LOG_DEBUG("process {} end", stream.fd());
 }
 
 Task<void> t1() {
@@ -45,6 +44,8 @@ Task<void> t2() {
 }
 Task<void> t3() {
     LOG_DEBUG("3");
+    // check exception
+    //  LOG_DEBUG("{} {}", 3);
     co_return;
 }
 
