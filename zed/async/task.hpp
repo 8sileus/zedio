@@ -28,9 +28,18 @@ namespace detail {
                 if (callee.promise().caller_) {
                     return callee.promise().caller_;
                 } else {
-#ifndef NEED_ZED_LOG
-                    callee.destroy();
+#ifdef NEED_ZED_LOG
+                    if (callee.promise().ex_ != nullptr) [[unlikely]] {
+                        try {
+                            std::rethrow_exception(callee.promise().ex_);
+                        } catch (const std::exception &ex) {
+                            LOG_ERROR("catch a exception {}", ex.what());
+                        } catch (...) {
+                            LOG_ERROR("catch a unknown exception");
+                        }
+                    }
 #endif
+                    callee.destroy();
                     return std::noop_coroutine();
                 }
             }
@@ -48,19 +57,10 @@ namespace detail {
         }
 
         void unhandled_exception() noexcept {
-            LOG_DEBUG("catch a ex");
             ex_ = std::move(std::current_exception());
             assert(ex_ != nullptr);
         }
 
-        void throw_exception_if_needed() {
-            if (ex_ != nullptr) [[unlikely]] {
-                std::rethrow_exception(ex_);
-            }
-        }
-
-        // Record the first caller
-        std::coroutine_handle<> first_caller_{nullptr};
         // Record who call me
         std::coroutine_handle<> caller_{nullptr};
         // Record exception
@@ -109,34 +109,6 @@ namespace detail {
         }
     };
 
-    // 1: Resume the handle
-    // 2: Check whether the first caller of handle has done
-    // 3: Processes exception and release memory resource,if 2 is true
-    static inline void execute_handle(std::coroutine_handle<> &&handle) {
-#ifdef NEED_ZED_LOG
-        auto first_caller
-            = std::coroutine_handle<detail::TaskPromiseBase>::from_address(handle.address())
-                  .promise()
-                  .first_caller_;
-        handle.resume();
-        if (first_caller.done()) {
-            try {
-                std::coroutine_handle<detail::TaskPromiseBase>::from_address(first_caller.address())
-                    .promise()
-                    .throw_exception_if_needed();
-            } catch (const std::exception &ex) {
-                LOG_ERROR("catch a exception: {}", ex.what());
-            } catch(...){
-                LOG_ERROR("catch a unknown exception");
-            }
-            first_caller.destroy();
-            LOG_TRACE("destroy a handle");
-        }
-#else
-        handle.resume();
-#endif
-    }
-
 } // namespace detail
 
 template <typename T = void>
@@ -158,7 +130,6 @@ private:
         template <typename PromiseType>
         auto await_suspend(std::coroutine_handle<PromiseType> caller) -> std::coroutine_handle<> {
             callee_.promise().caller_ = caller;
-            callee_.promise().first_caller_ = caller.promise().first_caller_;
             return callee_;
         }
     };
@@ -167,9 +138,7 @@ public:
     Task() noexcept = default;
 
     explicit Task(std::coroutine_handle<promise_type> handle)
-        : handle_(handle) {
-        handle_.promise().first_caller_ = handle_;
-    }
+        : handle_(handle) {}
 
     ~Task() {
         if (handle_) {

@@ -71,7 +71,7 @@ public:
 
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
-    auto wait(LocalQueue &queue, GlobalQueue &global_queue) {
+    auto wait(std::optional<std::coroutine_handle<>> &run_next) {
         // handle_waiting_awatiers();
 
         io_uring_cqe *cqe{nullptr};
@@ -86,11 +86,11 @@ public:
         }
         auto data = reinterpret_cast<BaseIOAwaiterData *>(io_uring_cqe_get_data64(cqe));
         if (data != nullptr) [[likely]] {
-            data->result_ = cqe->res;
-            if (data->is_distributable()) {
-                queue.push_back_or_overflow(std::move(data->handle_), global_queue);
+            data->set_result(cqe->res);
+            if(data->is_distributable()){
+                run_next = data->handle_;
             } else {
-                execute_handle(std::move(data->handle_));
+                data->handle_.resume();
             }
         }
         io_uring_cqe_seen(&ring_, cqe);
@@ -98,31 +98,22 @@ public:
 
     [[nodiscard]]
     auto poll(LocalQueue &queue, GlobalQueue &global_queue) -> bool {
-        io_uring_cqe     *cqe{nullptr};
-        __kernel_timespec ts{.tv_sec{0}, .tv_nsec{0}};
-
-        if (auto ret
-            = io_uring_wait_cqes(&ring_, &cqe, zed::config::LOCAL_QUEUE_CAPACITY, &ts, nullptr);
-            ret < 0) [[unlikely]] {
-            if (ret != -ETIME) {
-                LOG_ERROR("io_uring_wait_cqes failed error: {}", strerror(-ret));
-            }
+        std::array<io_uring_cqe *, zed::config::LOCAL_QUEUE_CAPACITY> cqes;
+        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), zed::config::LOCAL_QUEUE_CAPACITY);
+        if (cnt == 0) [[unlikely]] {
             return false;
         }
-
-        unsigned head;
-        io_uring_for_each_cqe(&ring_, head, cqe) {
-            auto data = reinterpret_cast<BaseIOAwaiterData *>(io_uring_cqe_get_data64(cqe));
-            // if is a cancel cqe, data will be nullptr
+        for (auto i = 0uz; i < cnt; i += 1) {
+            auto data = reinterpret_cast<BaseIOAwaiterData *>(cqes[i]->user_data);
             if (data != nullptr) [[likely]] {
-                data->result_ = cqe->res;
+                data->set_result(cqes[i]->res);
                 if (data->is_distributable()) {
                     queue.push_back_or_overflow(std::move(data->handle_), global_queue);
                 } else {
-                    execute_handle(std::move(data->handle_));
+                    data->handle_.resume();
                 }
             }
-            io_uring_cqe_seen(&ring_, cqe);
+            io_uring_cqe_seen(&ring_, cqes[i]);
         }
         return true;
     }

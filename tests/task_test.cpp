@@ -31,9 +31,9 @@ zed::async::Task<void> check_exception_1() {
     LOG_DEBUG("3");
 }
 
-void test_check_catch_exception() {
-    detail::execute_handle(check_exception_1().take());
-}
+// void test_check_catch_exception() {
+//     detail::execute_handle(check_exception_1().take());
+// }
 
 int main() {
     {
@@ -41,6 +41,6 @@ int main() {
         task.resume();
     }
     std::cout << "check exeception\n";
-    test_check_catch_exception();
+    // test_check_catch_exception();
     return 0;
 }

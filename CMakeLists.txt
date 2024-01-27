@@ -16,6 +16,7 @@ add_compile_options("-Wsign-compare")
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
     add_compile_definitions(NEED_ZED_LOG)
+    message(STATUS "need zed log")
 endif()
 
 message(STATUS "Version: " "${CMAKE_PROJECT_VERSION}")

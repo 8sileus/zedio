@@ -39,11 +39,21 @@ static inline void spwan(Ts &&...tasks) {
         auto task = [](Ts... tasks) -> Task<void> {
             ((co_await tasks), ...);
             co_return;
-        }(std::move(tasks)...);
+        }(std::forward<Ts>(tasks)...);
         detail::t_worker->schedule_task(std::move(task.take()));
     }
 }
 
+template <typename... Ts>
+    requires std::conjunction_v<std::is_same<Task<void>, Ts>...> && (sizeof...(Ts) > 0)
+[[nodiscard]] static inline auto join(Ts &&...tasks) -> Task<void> {
+    return [](Ts... tasks) -> Task<void> {
+        ((co_await tasks), ...);
+        co_return;
+    }(std::forward<Ts>(tasks)...);
+}
+
+[[nodiscard]]
 static inline auto
 add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
                 const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {

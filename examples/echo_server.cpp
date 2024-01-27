@@ -15,7 +15,7 @@ auto process(TcpStream stream) -> Task<void> {
         auto ok = co_await stream.read(buf);
         // error or peer close connection
         if (!ok) {
-            console.error(ok.error().message());
+            console.error("{} {}", ok.error().value(), ok.error().message());
             break;
         }
         if (ok.value() == 0) {
@@ -23,7 +23,8 @@ auto process(TcpStream stream) -> Task<void> {
         }
 
         auto len = ok.value();
-        // console.info("read: {}", std::string_view{buf, static_cast<std::size_t>(len)});
+        buf[len] = 0;
+        console.info("read: {}", buf);
 
         // ok = co_await stream.write_vectored(buf1, buf2);
         ok = co_await stream.write(buf, len);

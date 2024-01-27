@@ -28,8 +28,7 @@ auto process(TcpStream stream) -> Task<void> {
         if (ok.value() == 0) {
             break;
         }
-        // LOG_INFO("{}", std::string_view{buf, static_cast<std::size_t>(ok.value())});
-        ok = co_await stream.write({response.data(), response.size()});
+        ok = co_await stream.write(response);
         if (!ok) {
             console.error(ok.error().message());
             break;

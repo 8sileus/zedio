@@ -52,8 +52,8 @@ using read = detail::ReadAwaiter<flag>;
 template <OPFlag flag = OPFlag::Distributive>
 using readv = detail::ReadvAwaiter<flag>;
 
-template <OPFlag flag = OPFlag::Distributive>
-using readv2 = detail::Readv2Awaiter<flag>;
+// template <OPFlag flag = OPFlag::Distributive>
+// using readv2 = detail::Readv2Awaiter<flag>;
 
 template <OPFlag flag = OPFlag::Distributive>
 using write = detail::WriteAwaiter<flag>;
@@ -61,7 +61,7 @@ using write = detail::WriteAwaiter<flag>;
 template <OPFlag flag = OPFlag::Distributive>
 using writev = detail::WritevAwaiter<flag>;
 
-template <OPFlag flag = OPFlag::Distributive>
-using writev2 = detail::Writev2Awaiter<flag>;
+// template <OPFlag flag = OPFlag::Distributive>
+// using writev2 = detail::Writev2Awaiter<flag>;
 
 } // namespace zed::async

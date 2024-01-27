@@ -3,13 +3,13 @@
 #include "zed/async/idle.hpp"
 #include "zed/async/poller.hpp"
 #include "zed/async/queue.hpp"
+#include "zed/async/rand.hpp"
 #include "zed/async/timer.hpp"
 #include "zed/async/waker.hpp"
 #include "zed/common/debug.hpp"
 #include "zed/common/util/thread.hpp"
 // C++
 #include <barrier>
-// #include <random>
 #include <thread>
 
 namespace zed::async::detail {
@@ -95,9 +95,9 @@ public:
 
         GlobalQueue global_queue_{};
         /// Coordinates idle workers
-        Idle                                 idle_;
-        std::vector<Worker *>                workers_{};
-        std::unique_ptr<Worker>              main_worker;
+        Idle                    idle_;
+        std::vector<Worker *>   workers_{};
+        std::unique_ptr<Worker> main_worker;
         // TODO config
 
     private:
@@ -151,7 +151,7 @@ public:
     }
 
     [[nodiscard]]
-    auto timer()->Timer&{
+    auto timer() -> Timer & {
         return timer_;
     }
 
@@ -173,7 +173,7 @@ public:
 private:
     void execute_task(std::coroutine_handle<> &&task) {
         this->transition_from_searching();
-        execute_handle(std::move(task));
+        task.resume();
     }
 
     [[nodiscard]]
@@ -254,8 +254,8 @@ private:
             return std::nullopt;
         }
         auto num = shared_.workers_.size();
-        // TODO update rand
-        auto start = rand() % num;
+        // auto start = rand() % num;
+        auto start = static_cast<std::size_t>(rand_.fastrand_n(static_cast<uint32_t>(num)));
         for (std::size_t i = 0; i < num; ++i) {
             auto idx = (start + i) % num;
             if (idx == index_) {
@@ -352,8 +352,8 @@ private:
         check_shutdown();
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
-                // LOG_TRACE("sleep {}",tick_);
-                poller_.wait(local_queue_, shared_.global_queue_);
+                LOG_TRACE("sleep {}", tick_);
+                poller_.wait(run_next_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
                     LOG_TRACE("awaken");
@@ -366,6 +366,7 @@ private:
 private:
     Shared                                &shared_;
     std::size_t                            index_;
+    FastRand                               rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     Poller                                 poller_{};
