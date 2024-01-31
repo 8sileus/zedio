@@ -6,6 +6,7 @@
 #include <cassert>
 // C++
 #include <coroutine>
+#include <optional>
 #include <stdexcept>
 #include <variant>
 

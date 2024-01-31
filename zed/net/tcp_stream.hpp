@@ -1,9 +1,6 @@
 #pragma once
 
-#include "zed/async.hpp"
-#include "zed/common/util/noncopyable.hpp"
 #include "zed/net/socket.hpp"
-#include "zed/net/socket_addr.hpp"
 // C++
 #include <chrono>
 #include <optional>
@@ -13,269 +10,141 @@
 
 namespace zed::net {
 
-namespace detail {
-    struct AcceptStream;
+class TcpSocket;
 
+namespace detail {
+    class AcceptStream;
 } // namespace detail
 
-/// shutdown option
-enum class SHUTDOWN_OPTION : int {
-    READ = SHUT_RD,
-    WRITE = SHUT_WR,
-    READ_WRITE = SHUT_RDWR,
-};
-
 class TcpStream : util::Noncopyable {
-    friend struct detail::AcceptStream;
+    friend class TcpSocket;
+    friend class detail::AcceptStream;
 
 private:
-    explicit TcpStream(int fd)
-        : fd_{fd} {
-        LOG_TRACE("Build a TcpStream{{fd: {}}}", fd_);
+    explicit TcpStream(Socket &&sock)
+        : socket_{std::move(sock)} {
+        LOG_TRACE("Build a TcpStream{{fd: {}}}", socket_.fd());
     }
 
 public:
-    ~TcpStream() {
-        if (fd_ >= 0) [[likely]] {
-            ::close(fd_);
-            // async::spwan([](int fd) -> async::Task<void> { co_await async::close(fd); }(fd_));
-        }
-        fd_ = -1;
-    }
-
     TcpStream(TcpStream &&other)
-        : fd_(other.fd_) {
-        other.fd_ = -1;
-    }
+        : socket_(std::move(other.socket_)) {}
 
     auto operator=(TcpStream &&other) -> TcpStream & {
-        if (this == std::addressof(other)) [[unlikely]] {
-            return *this;
-        }
-        if (fd_ >= 0) {
-            ::close(fd_);
-        }
-        fd_ = other.fd_;
-        other.fd_ = -1;
+        socket_ = std::move(other.socket_);
         return *this;
     }
 
     [[nodiscard]]
-    auto shutdown(SHUTDOWN_OPTION opition) {
-        return async::shutdown(fd_, static_cast<int>(opition));
+    auto shutdown(SHUTDOWN_OPTION how) const noexcept {
+        return socket_.shutdown(how);
     }
 
     [[nodiscard]]
-    auto read(void *buf, std::size_t len) {
-        return async::recv(fd_, buf, len, 0);
-    }
-
-    [[nodiscard]]
-    auto read(std::span<char> buf) {
-        return this->read(buf.data(), buf.size_bytes());
-    }
-
-    [[nodiscard]]
-    auto read_vectored(struct iovec *iovecs, int nr_vecs) {
-        return async::readv(fd_, iovecs, nr_vecs, 0);
+    auto read(std::span<char> buf) const noexcept {
+        return socket_.read(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
-    auto read_vectored(Ts &...bufs) -> async::Task<std::expected<int, std::error_code>> {
-        constexpr auto              N = sizeof...(Ts);
-        std::array<struct iovec, N> iovecs{
-            iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                  }
-            ...
-        };
-        co_return co_await read_vectored(iovecs.data(), iovecs.size());
+    auto read_vectored(Ts &...bufs) const noexcept {
+        return socket_.read_vectored(bufs...);
     }
 
     [[nodiscard]]
-    auto write(const void *buf, std::size_t len) {
-        return async::send(fd_, buf, len, 0);
-    }
-
-    [[nodiscard]]
-    auto write(std::span<const char> buf) {
-        return this->write(buf.data(), buf.size_bytes());
-    }
-
-    [[nodiscard]]
-    auto write_vectored(const struct iovec *iovecs, int nr_vecs) {
-        return async::writev(this->fd_, iovecs, nr_vecs, 0);
+    auto write(std::span<const char> buf) const noexcept {
+        return socket_.write(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
-    auto write_vectored(Ts &...bufs) -> async::Task<std::expected<int, std::error_code>> {
-        constexpr auto                          N = sizeof...(Ts);
-        const std::array<const struct iovec, N> iovecs{
-            iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                  }
-            ...
-        };
-        co_return co_await write_vectored(iovecs.data(), iovecs.size());
+    auto write_vectored(Ts &...bufs) const noexcept {
+        return socket_.write_vectored(bufs...);
     }
 
     [[nodiscard]]
-    auto try_read(std::span<char> buf) -> std::expected<int, std::error_code> {
-        auto ret = ::read(this->fd_, buf.data(), buf.size_bytes());
-        if (ret < 0) {
-            return std::unexpected{make_sys_error(ret)};
-        }
-        return ret;
+    auto try_read(std::span<char> buf) const noexcept {
+        return socket_.try_read(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
-    auto try_read_vectored(Ts &...bufs) -> std::expected<int, std::error_code> {
-        constexpr auto              N = sizeof...(Ts);
-        std::array<struct iovec, N> iovecs{
-            iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                  }
-            ...
-        };
-        auto ret = ::readv(this->fd_, iovecs.data(), iovecs.size());
-        if (ret < 0) {
-            return std::unexpected{make_sys_error(ret)};
-        }
-        return ret;
+    auto try_read_vectored(Ts &...bufs) const noexcept {
+        return socket_.try_read_vectored(bufs...);
     }
 
     [[nodiscard]]
-    auto try_write(std::span<const char> buf) -> std::expected<int, std::error_code> {
-        auto ret = ::write(this->fd_, buf.data(), buf.size_bytes());
-        if (ret < 0) {
-            return std::unexpected{make_sys_error(ret)};
-        }
-        return ret;
+    auto try_write(std::span<const char> buf) const noexcept {
+        return socket_.try_write(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
-    auto try_write_vectored(Ts &...bufs) -> std::expected<int, std::error_code> {
-        constexpr auto              N = sizeof...(Ts);
-        std::array<struct iovec, N> iovecs{
-            iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                  }
-            ...
-        };
-        auto ret = ::writev(this->fd_, iovecs.data(), iovecs.size());
-        if (ret < 0) {
-            return std::unexpected{make_sys_error(ret)};
-        }
-        return ret;
+    auto try_write_vectored(Ts &...bufs) const noexcept {
+        return socket_.try_write_vectored(bufs...);
     }
 
     [[nodiscard]]
-    auto local_address() -> std::expected<SocketAddr, std::error_code> {
-        return net::get_local_address(this->fd_);
+    auto local_addr() const noexcept {
+        return socket_.local_addr();
     }
 
     [[nodiscard]]
-    auto peer_address() -> std::expected<SocketAddr, std::error_code> {
-        return net::get_peer_address(this->fd_);
+    auto peer_addr() const noexcept {
+        return socket_.peer_addr();
     }
 
     [[nodiscard]]
-    auto fd() const -> int {
-        return fd_;
+    auto fd() const noexcept {
+        return socket_.fd();
     }
 
     [[nodiscard]]
-    auto set_nodelay(bool need_delay) -> std::expected<void, std::error_code> {
-        auto flags = ::fcntl(fd_, F_GETFL, 0);
-        if (need_delay) {
-            flags |= O_NDELAY;
-        } else {
-            flags &= ~O_NDELAY;
-        }
-        if (::fcntl(fd_, F_SETFL, flags) == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
+    auto set_nodelay(bool need_delay) const noexcept {
+        return socket_.set_nodelay(need_delay);
     }
 
     [[nodiscard]]
-    auto nodelay() -> std::expected<bool, std::error_code> {
-        auto flags = ::fcntl(fd_, F_GETFL, 0);
-        if (flags == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return flags & O_NDELAY;
+    auto nodelay() const noexcept {
+        return socket_.nodelay();
     }
 
     [[nodiscard]]
-    auto set_linger(std::optional<std::chrono::seconds> duration)
-        -> std::expected<void, std::error_code> {
-        struct linger lin {
-            .l_onoff{0}, .l_linger{0},
-        };
-        if (duration.has_value()) {
-            lin.l_onoff = 1;
-            lin.l_linger = duration.value().count();
-        }
-        return set_sock_opt(fd_, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
+    auto set_linger(std::optional<std::chrono::seconds> duration) const noexcept {
+        return socket_.set_linger(duration);
     }
 
     [[nodiscard]]
-    auto linger() -> std::expected<std::optional<std::chrono::seconds>, std::error_code> {
-        struct linger lin;
-        auto          ret = get_sock_opt(fd_, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
-        if (ret.has_value()) [[likely]] {
-            if (lin.l_onoff == 0) {
-                return std::nullopt;
-            } else {
-                return std::chrono::seconds(lin.l_linger);
-            }
-        }
-        return std::unexpected{ret.error()};
+    auto linger() const noexcept {
+        return socket_.linger();
     }
 
     [[nodiscard]]
-    auto set_ttl(uint32_t ttl) -> std::expected<void, std::error_code> {
-        return set_sock_opt(fd_, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+    auto set_ttl(uint32_t ttl) const noexcept {
+        return socket_.set_ttl(ttl);
     }
 
     [[nodiscard]]
-    auto ttl() -> std::expected<uint32_t, std::error_code> {
-        uint32_t result = 0;
-        auto     ret = get_sock_opt(fd_, IPPROTO_IP, IP_TTL, &result, sizeof(result));
-        if (ret.has_value()) [[likely]] {
-            return result;
-        }
-        return std::unexpected{ret.error()};
+    auto ttl() const noexcept {
+        return socket_.ttl();
     }
 
 public:
     [[nodiscard]]
     static auto connect(const SocketAddr &address)
         -> async::Task<std::expected<TcpStream, std::error_code>> {
-        auto ret = co_await async::socket(address.family(), SOCK_STREAM | SOCK_NONBLOCK, 0, 0);
-        if (!ret.has_value()) [[unlikely]] {
+        auto sock = Socket::build(address.family(), SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        if (!sock) [[unlikely]] {
+            co_return std::unexpected{sock.error()};
+        }
+        if (auto ret = co_await sock.value().connect(address); !ret) [[unlikely]] {
             co_return std::unexpected{ret.error()};
         }
-        auto fd = ret.value();
-        ret = co_await async::connect(fd, address.sockaddr(), address.length());
-        if (!ret.has_value()) [[unlikely]] {
-            ::close(fd);
-            co_return std::unexpected{ret.error()};
-        }
-        LOG_DEBUG("Build a connection to {}, fd: {}", address.to_string(), fd);
-        co_return TcpStream{fd};
+        co_return TcpStream{std::move(sock.value())};
     };
 
 private:
-    int fd_;
+    Socket socket_;
 };
 
 } // namespace zed::net

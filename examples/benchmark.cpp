@@ -48,7 +48,6 @@ auto server() -> Task<void> {
         co_return;
     }
     auto listener = std::move(has_listener.value());
-    auto _ = listener.set_reuse_address(true);
     while (true) {
         // check memory leaking
         // auto has_stream = co_await timeout(listener.accept(), 40s);

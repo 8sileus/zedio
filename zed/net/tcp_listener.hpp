@@ -18,12 +18,11 @@ namespace detail {
         AcceptStream(int fd)
             : AcceptAwaiter{fd, reinterpret_cast<sockaddr *>(&addr), &addrlen} {}
 
-        auto await_resume() const noexcept
-            -> std::expected<std::pair<TcpStream, SocketAddr>, std::error_code> {
+        auto await_resume() const noexcept -> Result<std::pair<TcpStream, SocketAddr>> {
             auto result = AcceptAwaiter::await_resume();
             if (result.has_value()) [[likely]] {
                 return std::make_pair(
-                    TcpStream{result.value()},
+                    TcpStream{Socket::from_fd(result.value())},
                     SocketAddr{reinterpret_cast<const sockaddr *>(&addr), addrlen});
             }
             return std::unexpected{result.error()};
@@ -33,112 +32,82 @@ namespace detail {
     };
 } // namespace detail
 
+class TcpSocket;
+
 class TcpListener : util::Noncopyable {
+    friend class TcpSocket;
+
 private:
-    TcpListener(int fd)
-        : fd_{fd}
-        , idx_{async::detail::t_poller->register_file(fd_).value()} {
-        LOG_TRACE("Build a TcpListener{{fd: {}}}", fd_);
+    explicit TcpListener(Socket &&sock)
+        : socket_{std::move(sock)}
+        , idx_{async::detail::t_poller->register_file(socket_.fd()).value()} {
+        LOG_TRACE("Build a TcpListener{{fd: {}}}", socket_.fd());
     }
 
 public:
     ~TcpListener() {
-        if (this->fd_ >= 0) [[likely]] {
-            ::close(this->fd_);
+        if (this->socket_.fd() >= 0) [[likely]] {
             async::detail::t_poller->unregister_file(idx_);
         }
-        this->fd_ = -1;
     }
 
     TcpListener(TcpListener &&other)
-        : fd_{other.fd_}
+        : socket_{std::move(other.socket_)}
         , idx_{other.idx_} {
-        other.fd_ = -1;
         other.idx_ = -1;
     }
 
     auto operator=(TcpListener &&other) -> TcpListener & {
-        if (this == std::addressof(other)) [[unlikely]] {
-            return *this;
-        }
-        if (this->fd_ >= 0) {
-            ::close(this->fd_);
-        }
-        this->fd_ = other.fd_;
-        this->idx_ = other.idx_;
-        other.fd_ = -1;
+        socket_ = std::move(other.socket_);
+        idx_ = other.idx_;
         other.idx_ = -1;
         return *this;
     }
 
     [[nodiscard]]
-    auto accept() -> detail::AcceptStream {
-        return detail::AcceptStream{this->idx_};
+    auto accept() const noexcept {
+        return detail::AcceptStream{idx_};
     }
 
     [[nodiscard]]
-    auto local_address() const -> std::expected<SocketAddr, std::error_code> {
-        return get_local_address(this->fd_);
+    auto local_addr() const noexcept {
+        return socket_.local_addr();
     }
 
     [[nodiscard]]
-    auto fd() const noexcept -> int {
-        return this->fd_;
+    auto fd() const noexcept {
+        return socket_.fd();
     }
 
     [[nodiscard]]
-    auto set_reuse_address(bool status) -> std::expected<void, std::error_code> {
-        auto optval = status ? 1 : 0;
-        return set_sock_opt(this->fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+    auto set_ttl(uint32_t ttl) const noexcept {
+        return socket_.set_ttl(ttl);
     }
 
     [[nodiscard]]
-    auto set_ttl(uint32_t ttl) -> std::expected<void, std::error_code> {
-        return set_sock_opt(fd_, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
-    }
-
-    [[nodiscard]]
-    auto ttl() -> std::expected<uint32_t, std::error_code> {
-        uint32_t result = 0;
-        auto     ret = get_sock_opt(fd_, IPPROTO_IP, IP_TTL, &result, sizeof(result));
-        if (ret.has_value()) [[likely]] {
-            return result;
-        }
-        return std::unexpected{ret.error()};
+    auto ttl() const noexcept {
+        return socket_.ttl();
     }
 
 public:
     [[nodiscard]]
-    static auto bind(const SocketAddr &addresses) -> std::expected<TcpListener, std::error_code> {
-        auto fd = ::socket(addresses.family(), SOCK_STREAM | SOCK_NONBLOCK, 0);
-        if (fd == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
+    static auto bind(const SocketAddr &address) -> std::expected<TcpListener, std::error_code> {
+        auto sock = Socket::build(address.family(), SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        if (!sock) [[unlikely]] {
+            return std::unexpected{sock.error()};
         }
-        if (::bind(fd, addresses.sockaddr(), addresses.length()) != 0) [[unlikely]] {
-            ::close(fd);
-            return std::unexpected{make_sys_error(errno)};
+        if (auto ret = sock.value().bind(address); !ret) [[unlikely]] {
+            return std::unexpected{ret.error()};
         }
-        if (::listen(fd, SOMAXCONN) != 0) [[unlikely]] {
-            ::close(fd);
-            return std::unexpected{make_sys_error(errno)};
+        if (auto ret = sock.value().listen(SOMAXCONN); !ret) [[unlikely]] {
+            return std::unexpected{ret.error()};
         }
-        return TcpListener{fd};
-    }
-
-    [[nodiscard]]
-    static auto bind(const std::vector<SocketAddr> &addresses)
-        -> std::expected<TcpListener, std::error_code> {
-        for (const auto &address : addresses) {
-            if (auto result = TcpListener::bind(address); result.has_value()) {
-                return result;
-            }
-        }
-        // TODO return error
+        return TcpListener{std::move(sock.value())};
     }
 
 private:
-    int fd_;
-    int idx_{-1};
+    Socket socket_;
+    int    idx_{-1};
 };
 
 } // namespace zed::net

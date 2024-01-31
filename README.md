@@ -39,34 +39,36 @@ ctest .
 # 3.简单echo server
 ``` C++
 // 去除所有检查
-auto process(TcpStream stream) -> Task<void> {
+#include"zed/async.hpp"
+#include"zed/net.hpp"
+
+using namespace zed::async;
+using namespace zed::net;
+
+auto process(TcpStream stream)->Task<void>{
     char buf[1024];
     while (true) {
-        auto len = co_await stream.read(buf, sizeof(buf)).value();
+        std::size_t len = (co_await stream.read(buf)).value();
         if (len == 0) {
             break;
         }
-        co_await stream.write(buf, len);
+        co_await stream.write({buf, len});
     }
 }
 
-auto accept() -> Task<void> {
-    auto addr = SocketAddr::parse("localhost", 8888).value();
-    auto listener = TcpListener::bind(has_addr).value();
-    while (true) {
-        auto has_stream = co_await listener.accept();
-        if (has_stream) {
-            spwan(process(std::move(has_stream.value())));
-        } else {
-            console.error(has_stream.error().message());
-            break;
-        }
+auto server()->Task<void>{
+    auto addr = SocketAddr::parse("localhost", 9898).value();
+    auto listener = TcpListener::bind(addr).value();
+    while(true){
+        auto [stream, peer_addr] = (co_await listener.accept()).value();
+        spwan(process(std::move(stream)));
     }
 }
 
-int main() {
-    Runtime runtime;
-    runtime.block_on(accept());
+int main(){
+    Runtime r;
+    r.block_on(server());
+    return 0;
 }
 ```
 # 4.使用手册

@@ -2,6 +2,7 @@
 
 #include "zed/common/util/singleton.hpp"
 // C++
+#include <expected>
 #include <system_error>
 
 namespace zed {
@@ -46,6 +47,9 @@ static inline auto make_zed_error(Error err) -> std::error_code {
 static inline auto make_sys_error(int err) -> std::error_code {
     return std::error_code{err, std::system_category()};
 }
+
+template <typename T>
+using Result = std::expected<T, std::error_code>;
 
 } // namespace zed
 

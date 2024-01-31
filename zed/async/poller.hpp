@@ -16,7 +16,7 @@
 #include <format>
 #include <numeric>
 #include <queue>
-// Dependencies
+// Linux
 #include <liburing.h>
 namespace zed::async::detail {
 
@@ -87,7 +87,7 @@ public:
         auto data = reinterpret_cast<BaseIOAwaiterData *>(io_uring_cqe_get_data64(cqe));
         if (data != nullptr) [[likely]] {
             data->set_result(cqe->res);
-            if(data->is_distributable()){
+            if (data->is_distributable()) {
                 run_next = data->handle_;
             } else {
                 data->handle_.resume();

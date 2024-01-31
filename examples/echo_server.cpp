@@ -27,7 +27,7 @@ auto process(TcpStream stream) -> Task<void> {
         console.info("read: {}", buf);
 
         // ok = co_await stream.write_vectored(buf1, buf2);
-        ok = co_await stream.write(buf, len);
+        ok = co_await stream.write({buf, len});
         if (!ok) {
             console.error(ok.error().message());
             break;
@@ -63,7 +63,6 @@ auto server() -> Task<void> {
         co_return;
     }
     auto listener = std::move(has_listener.value());
-    auto _ = listener.set_reuse_address(true);
     while (true) {
         // auto has_stream = co_await timeout(listener.accept(), 3s);
         auto has_stream = co_await listener.accept();
