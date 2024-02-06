@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zed/async/config.hpp"
 #include "zed/async/idle.hpp"
 #include "zed/async/poller.hpp"
 #include "zed/async/queue.hpp"
@@ -14,8 +15,6 @@
 
 namespace zed::async::detail {
 
-struct Config {};
-
 class Worker;
 
 thread_local Worker *t_worker{nullptr};
@@ -23,12 +22,13 @@ thread_local Worker *t_worker{nullptr};
 class Worker : util::Noncopyable {
 public:
     struct Shared {
-        Shared(std::size_t num_worker)
-            : idle_{num_worker}
+        Shared(Config config)
+            : config_{config}
+            , idle_{config.worker_num_}
             , main_worker{std::make_unique<Worker>(*this, 0)} {
-            LOG_TRACE("runtime with {} threads", num_worker);
+            LOG_TRACE("runtime with {} threads", config_.worker_num_);
             workers_.emplace_back(main_worker.get());
-            for (std::size_t i = 1; i < num_worker; ++i) {
+            for (std::size_t i = 1; i < config_.worker_num_; ++i) {
                 // Make sure all threads have started
                 std::barrier sync(2);
                 threads_.emplace_back([this, i, &sync]() {
@@ -93,12 +93,12 @@ public:
             }
         }
 
-        GlobalQueue global_queue_{};
+        const Config config_;
+        GlobalQueue  global_queue_{};
         /// Coordinates idle workers
         Idle                    idle_;
         std::vector<Worker *>   workers_{};
         std::unique_ptr<Worker> main_worker;
-        // TODO config
 
     private:
         std::vector<std::thread> threads_{};
@@ -107,7 +107,8 @@ public:
 public:
     Worker(Shared &shared, std::size_t index)
         : shared_{shared}
-        , index_{index} {
+        , index_{index}
+        , poller_{shared.config_.ring_entries_} {
         current_thread::set_thread_name("ZED_WORKER_" + std::to_string(index));
         LOG_TRACE("build in thread {} ,waker fd {}, timer fd {}", current_thread::get_tid(),
                   waker_.fd(), timer_.fd());
@@ -272,7 +273,7 @@ private:
 
     /// If need, nonblocking poll I/O events and check if the scheduler has been shutdown
     void maintenance() {
-        if (this->tick_ % zed::config::EVENT_INTERVAL == 0) {
+        if (this->tick_ % shared_.config_.check_io_interval_ == 0) {
             // Poll happend I/O events, I don't care if I/O events happen
             // Just a regular checking
             [[maybe_unused]] auto _ = poll();
@@ -289,7 +290,7 @@ private:
 
     [[nodiscard]]
     auto next_task() -> std::optional<std::coroutine_handle<>> {
-        if (tick_ % zed::config::CHECK_GLOBAL_QUEUE_INTERVAL == 0) {
+        if (tick_ % shared_.config_.check_global_interval_ == 0) {
             return shared_.next_global_task().or_else([this] { return next_local_task(); });
         } else {
             if (auto task = next_local_task(); task) {
@@ -369,7 +370,7 @@ private:
     FastRand                               rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
-    Poller                                 poller_{};
+    Poller                                 poller_;
     Waker                                  waker_{};
     Timer                                  timer_{};
     LocalQueue                             local_queue_{};

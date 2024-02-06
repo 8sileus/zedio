@@ -35,7 +35,6 @@ public:
     void wake_up() {
         // debug for 3 hours NOTE:must not be zero
         constexpr uint64_t buf{1};
-        std::lock_guard    lock{mutex_};
         if (auto ret = ::write(this->fd_, &buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
             LOG_ERROR("Waker write failed, error: {}.", strerror(errno));
         }
@@ -60,7 +59,6 @@ private:
 
 private:
     Task<void> loop_;
-    std::mutex mutex_;
     int        fd_;
     int        idx_;
 };

@@ -26,9 +26,8 @@ thread_local Poller *t_poller{nullptr};
 
 class Poller : util::Noncopyable {
 public:
-    Poller() {
-        if (auto ret = io_uring_queue_init(zed::config::IOURING_QUEUE_SIZE, &ring_, 0); ret < 0)
-            [[unlikely]] {
+    Poller(std::size_t entries) {
+        if (auto ret = io_uring_queue_init(entries, &ring_, 0); ret < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
@@ -98,11 +97,12 @@ public:
 
     [[nodiscard]]
     auto poll(LocalQueue &queue, GlobalQueue &global_queue) -> bool {
-        std::array<io_uring_cqe *, zed::config::LOCAL_QUEUE_CAPACITY> cqes;
-        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), zed::config::LOCAL_QUEUE_CAPACITY);
+        std::array<io_uring_cqe *, zed::config::LOCAL_QUEUE_CAPACITY * 2> cqes;
+        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
         if (cnt == 0) [[unlikely]] {
             return false;
         }
+        LOG_TRACE("poll {} events", cnt);
         for (auto i = 0uz; i < cnt; i += 1) {
             auto data = reinterpret_cast<BaseIOAwaiterData *>(cqes[i]->user_data);
             if (data != nullptr) [[likely]] {

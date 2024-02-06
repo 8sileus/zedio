@@ -357,6 +357,36 @@ public:
     }
 
     [[nodiscard]]
+    auto set_recv_buffer_size(int size) const noexcept {
+        return set_sock_opt(SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+    }
+
+    [[nodiscard]]
+    auto recv_buffer_size() const noexcept -> Result<std::size_t> {
+        int size = 0;
+        if (auto ret = get_sock_opt(SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)); ret) [[likely]] {
+            return static_cast<std::size_t>(size);
+        } else {
+            return std::unexpected{ret.error()};
+        }
+    }
+
+    [[nodiscard]]
+    auto set_send_buffer_size(int size) const noexcept {
+        return set_sock_opt(SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
+    }
+
+    [[nodiscard]]
+    auto send_buffer_size() const noexcept -> Result<std::size_t> {
+        int size = 0;
+        if (auto ret = get_sock_opt(SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)); ret) [[likely]] {
+            return static_cast<std::size_t>(size);
+        } else {
+            return std::unexpected{ret.error()};
+        }
+    }
+
+    [[nodiscard]]
     auto set_nodelay(bool on) const noexcept -> Result<void> {
         auto flags = ::fcntl(fd_, F_GETFL, 0);
         if (on) {

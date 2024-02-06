@@ -77,7 +77,7 @@ public:
     [[nodiscard]]
     auto close() -> bool {
         std::lock_guard lock{mutex_};
-        if(is_closed_){
+        if (is_closed_) {
             return false;
         }
         is_closed_ = true;
@@ -96,7 +96,6 @@ private:
     std::mutex                         mutex_{};
     bool                               is_closed_{false};
 };
-
 
 class LocalQueue {
 public:
@@ -216,7 +215,7 @@ public:
         // LOG_TRACE("steal {} works", n);
         /// Take the final task for result
         n -= 1;
-        auto dst_new_tail = dst_tail + n;
+        auto        dst_new_tail = dst_tail + n;
         std::size_t idx = static_cast<std::size_t>(dst_new_tail) & MASK;
         result.emplace(std::move(dst.buffer_[idx]));
         if (n > 0) {
@@ -331,8 +330,8 @@ private:
     }
 
 private:
-    std::atomic<uint64_t>                                                  head_{0};
-    uint32_t                                                               tail_{0};
+    std::atomic<uint64_t> head_{0};
+    uint32_t              tail_{0};
     // std::atomic<uint32_t>                                                  tail_{0};
     std::array<std::coroutine_handle<>, zed::config::LOCAL_QUEUE_CAPACITY> buffer_;
 };

@@ -7,9 +7,43 @@ namespace zed::async {
 
 class Runtime : util::Noncopyable {
 public:
-    Runtime(std::size_t num_worker = std::thread::hardware_concurrency())
-        : shared_{num_worker} {}
+    class Builder {
+    public:
+        [[nodiscard]]
+        auto set_worker_num(std::size_t worker_num) -> Builder & {
+            config.worker_num_ = worker_num;
+            return *this;
+        }
 
+        [[nodiscard]]
+        auto set_ring_entries(std::size_t ring_entries) -> Builder & {
+            config.ring_entries_ = ring_entries;
+            return *this;
+        }
+
+        auto set_check_io_interval(uint32_t interval) -> Builder & {
+            config.check_io_interval_ = interval;
+            return *this;
+        }
+
+        auto set_check_gloabal_interval(uint32_t interval) -> Builder & {
+            config.check_global_interval_ = interval;
+            return *this;
+        }
+
+        auto build() -> Runtime {
+            return Runtime{std::move(config)};
+        }
+
+    private:
+        detail::Config config;
+    };
+
+private:
+    Runtime(detail::Config config)
+        : shared_{config} {}
+
+public:
     // Never stop
     void run() {
         shared_.workers_[0]->run();
