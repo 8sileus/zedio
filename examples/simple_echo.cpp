@@ -1,10 +1,10 @@
-#include"zed/async.hpp"
-#include"zed/net.hpp"
+#include "zed/async.hpp"
+#include "zed/net.hpp"
 
 using namespace zed::async;
 using namespace zed::net;
 
-auto process(TcpStream stream)->Task<void>{
+auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
         std::size_t len = (co_await stream.read(buf)).value();
@@ -15,17 +15,17 @@ auto process(TcpStream stream)->Task<void>{
     }
 }
 
-auto server()->Task<void>{
+auto server() -> Task<void> {
     auto addr = SocketAddr::parse("localhost", 9898).value();
     auto listener = TcpListener::bind(addr).value();
-    while(true){
+    while (true) {
         auto [stream, peer_addr] = (co_await listener.accept()).value();
         spwan(process(std::move(stream)));
     }
 }
 
-int main(){
-    auto    runtime = Runtime::Builder().build();
+auto main() -> int {
+    auto runtime = Runtime::Builder().build();
     runtime.block_on(server());
     return 0;
 }

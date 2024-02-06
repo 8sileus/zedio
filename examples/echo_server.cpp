@@ -77,7 +77,7 @@ auto server() -> Task<void> {
     }
 }
 
-int main(int argc, char **argv) {
+auto main(int argc, char **argv) -> int {
     if (argc != 2) {
         std::cerr << "usage: echo_server thread_num\n";
         return -1;
