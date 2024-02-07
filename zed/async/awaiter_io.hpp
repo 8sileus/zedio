@@ -194,13 +194,13 @@ struct [[REMEMBER_CO_AWAIT]] WritevAwaiter : public BaseIOAwaiter<std::size_t> {
 //     }
 // };
 
-// template <OPFlag flag>
-// struct [[REMEMBER_CO_AWAIT]] OpenAtAwaiter : public BaseIOAwaiter<int> {
-//     OpenAtAwaiter(int dfd, const char *path, struct open_how *how)
-//         : BaseIOAwaiter(static_cast<int>(flag)) {
-//         REGISTER_IO(io_uring_prep_openat2, dfd, path, flags, how)
-//     }
-// };
+template <OPFlag flag>
+struct [[REMEMBER_CO_AWAIT]] OpenAtAwaiter : public BaseIOAwaiter<int> {
+    OpenAtAwaiter(int dfd, const char *path, struct open_how *how)
+        : BaseIOAwaiter(static_cast<int>(flag)) {
+        REGISTER_IO(io_uring_prep_openat2, dfd, path, how)
+    }
+};
 
 } // namespace zed::async::detail
 

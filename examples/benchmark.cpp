@@ -65,7 +65,7 @@ auto main(int argc, char **argv) -> int {
     }
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
     auto    thread_num = std::stoi(argv[1]);
-    auto    runtime = Runtime::Builder().set_worker_num(thread_num).build();
+    auto    runtime = Runtime::options().set_num_worker(thread_num).build();
     runtime.block_on(server());
     return 0;
 }

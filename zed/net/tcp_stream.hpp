@@ -56,6 +56,11 @@ public:
         return socket_.write(buf);
     }
 
+    [[nodiscard]]
+    auto write_all(std::span<const char> buf) const noexcept {
+        return socket_.write_all(buf);
+    }
+
     template <typename... Ts>
     [[nodiscard]]
     auto write_vectored(Ts &...bufs) const noexcept {

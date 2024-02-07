@@ -12,7 +12,7 @@ struct Config {
     auto operator=(const Config &) -> Config & = default;
 
     // num of worker
-    std::size_t worker_num_{std::thread::hardware_concurrency()};
+    std::size_t num_worker_{std::thread::hardware_concurrency()};
     // size of io_uring_queue entries
     std::size_t ring_entries_{1024};
     // How many ticks worker to poll finished I/O operation

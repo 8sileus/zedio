@@ -24,11 +24,11 @@ public:
     struct Shared {
         Shared(Config config)
             : config_{config}
-            , idle_{config.worker_num_}
+            , idle_{config.num_worker_}
             , main_worker{std::make_unique<Worker>(*this, 0)} {
-            LOG_TRACE("runtime with {} threads", config_.worker_num_);
+            LOG_TRACE("runtime with {} threads", config_.num_worker_);
             workers_.emplace_back(main_worker.get());
-            for (std::size_t i = 1; i < config_.worker_num_; ++i) {
+            for (std::size_t i = 1; i < config_.num_worker_; ++i) {
                 // Make sure all threads have started
                 std::barrier sync(2);
                 threads_.emplace_back([this, i, &sync]() {
@@ -129,7 +129,7 @@ public:
             maintenance();
 
             // step 1: take task from local queue or global queue
-            if (auto task = next_task(); task) {
+            if (auto task = get_next_task(); task) {
                 execute_task(std::move(task.value()));
                 continue;
             }
@@ -289,7 +289,7 @@ private:
     }
 
     [[nodiscard]]
-    auto next_task() -> std::optional<std::coroutine_handle<>> {
+    auto get_next_task() -> std::optional<std::coroutine_handle<>> {
         if (tick_ % shared_.config_.check_global_interval_ == 0) {
             return shared_.next_global_task().or_else([this] { return next_local_task(); });
         } else {

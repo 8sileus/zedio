@@ -130,6 +130,21 @@ public:
     }
 
     [[nodiscard]]
+    auto write_all(std::span<const char> buf) const noexcept -> async::Task<Result<void>> {
+        std::size_t has_written_bytes = 0;
+        std::size_t remaining_bytes = buf.size_bytes();
+        while (remaining_bytes > 0) {
+            auto ret = co_await this->write(buf.data() + has_written_bytes, remaining_bytes);
+            if (!ret) [[unlikely]] {
+                co_return std::unexpected{ret.error()};
+            }
+            has_written_bytes += ret.value();
+            remaining_bytes -= ret.value();
+        }
+        co_return Result<void>{};
+    }
+
+    [[nodiscard]]
     auto write_vectored(const struct iovec *iovecs, int nr_vecs) const noexcept {
         return async::writev(this->fd_, iovecs, nr_vecs, 0);
     }

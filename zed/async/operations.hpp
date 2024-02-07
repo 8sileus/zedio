@@ -64,7 +64,7 @@ using writev = detail::WritevAwaiter<flag>;
 // template <OPFlag flag = OPFlag::Distributive>
 // using writev2 = detail::Writev2Awaiter<flag>;
 
-// template <OPFlag flag = OPFlag::Distributive>
-// using openat = detail::OpenAtAwaiter<flag>;
+template <OPFlag flag = OPFlag::Distributive>
+using openat2 = detail::OpenAtAwaiter<flag>;
 
 } // namespace zed::async

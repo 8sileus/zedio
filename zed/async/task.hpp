@@ -83,6 +83,7 @@ namespace detail {
             if (ex_ != nullptr) [[unlikely]] {
                 std::rethrow_exception(ex_);
             }
+            assert(value_.has_value());
             return value_.value();
         }
 
@@ -90,6 +91,7 @@ namespace detail {
             if (ex_ != nullptr) [[unlikely]] {
                 std::rethrow_exception(ex_);
             }
+            assert(value_.has_value());
             return std::move(value_.value());
         }
 

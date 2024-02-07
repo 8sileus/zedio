@@ -6,12 +6,12 @@
 namespace zed::async {
 
 class Runtime : util::Noncopyable {
-public:
+private:
     class Builder {
     public:
         [[nodiscard]]
-        auto set_worker_num(std::size_t worker_num) -> Builder & {
-            config.worker_num_ = worker_num;
+        auto set_num_worker(std::size_t num_worker) -> Builder & {
+            config.num_worker_ = num_worker;
             return *this;
         }
 
@@ -58,6 +58,20 @@ public:
         }(this, std::move(main_task))
                                                                                        .take());
         run();
+    }
+
+public:
+    /// @brief Create runtime with custom options
+    /// @example Runtime::options.set_num_worker(4).build();
+    [[nodiscard]]
+    static auto options() -> Builder {
+        return Builder{};
+    }
+
+    /// @brief Create runtime with default options
+    [[nodiscard]]
+    static auto create() -> Runtime {
+        return Builder{}.build();
     }
 
 private:

@@ -50,7 +50,7 @@ private:
                 co_return std::unexpected{make_sys_error(errno)};
             }
             auto file_name = total_path.filename();
-            auto ret = co_await async::openat(dfd, file_name.c_str(), &how_);
+            auto ret = co_await async::openat2(dfd, file_name.c_str(), &how_);
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             } else {
@@ -62,10 +62,11 @@ private:
         struct open_how how_ {};
     };
 
-public:
+private:
     File(int fd)
         : fd_{fd} {}
 
+public:
     ~File() {
         this->close();
     }
@@ -80,6 +81,7 @@ public:
             this->close();
         }
         fd_ = other.fd_;
+        other.fd_ = -1;
         return *this;
     }
 
@@ -98,7 +100,6 @@ public:
         return options().write(true).create(true).truncate(true).open(path);
     }
 
-private:
     [[nodiscard]] auto static options() -> Builder {
         return Builder{};
     }

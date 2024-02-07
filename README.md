@@ -48,7 +48,7 @@ using namespace zed::net;
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
     while (true) {
-        std::size_t len = (co_await stream.read(buf)).value();
+        auto len = (co_await stream.read(buf)).value();
         if (len == 0) {
             break;
         }
@@ -66,7 +66,7 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    auto runtime = Runtime::Builder().build();
+    auto runtime = Runtime::create();
     runtime.block_on(server());
     return 0;
 }
