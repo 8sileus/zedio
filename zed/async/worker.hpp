@@ -120,7 +120,7 @@ public:
         while (!is_shutdown_) [[likely]] {
             tick();
 
-            // poll io events if needed
+            // Poll completed io events if needed
             maintenance();
 
             // step 1: take task from local queue or global queue
@@ -251,7 +251,7 @@ private:
         auto num = shared_.workers_.size();
         // auto start = rand() % num;
         auto start = static_cast<std::size_t>(rand_.fastrand_n(static_cast<uint32_t>(num)));
-        for (std::size_t i = 0; i < num; ++i) {
+        for (std::size_t i = 0; i < num * 4; ++i) {
             auto idx = (start + i) % num;
             if (idx == index_) {
                 continue;

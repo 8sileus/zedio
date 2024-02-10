@@ -22,6 +22,7 @@ private:
     public:
         AcceptMultishot()
             : data_{static_cast<int>(async::detail::OPFlag::Exclusive)} {}
+
         ~AcceptMultishot() {
             auto sqe = async::detail::t_poller->get_sqe();
             io_uring_prep_cancel(sqe, this, 0);
