@@ -1,5 +1,5 @@
 # ZEDIO 
-Zedio is a runtime for writing asycnhronous applications.It is:
+Zedio is a runtime for writing asycnhronous applications with the C++. It is:
 - **Fast**: You can trust the performance of C++.
 - **Convenient**: It is used like golang.
 - **Rust Style**: Rust is modern C++.
@@ -37,7 +37,7 @@ cmake --build . # -j num_thread
 ctest .
 ```
 
-# Example
+## Example
 Writing an echo server using Zedio
 ``` C++
 // Ignore all errors
@@ -74,7 +74,7 @@ auto main() -> int {
 }
 ```
 
-# Performance comparison Tokio
+## Performance comparison Tokio
 OS：Ubuntu23.04  
 Number of coro：4    
 Memory：4G  
@@ -86,7 +86,7 @@ TOKIO:
 ![](./doc/png/tokio_benchmark.png)  
 
 
-# 6.依赖
-boost: https://github.com/boostorg/boost   
+## Dependencies
+boost: https://github.com/boostorg/boost  
 liburing: https://github.com/axboe/liburing
 
