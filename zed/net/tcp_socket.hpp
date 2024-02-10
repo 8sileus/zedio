@@ -26,7 +26,7 @@ public:
     }
 
     [[nodiscard]]
-    auto set_reuseaddr(bool on)const noexcept  {
+    auto set_reuseaddr(bool on) const noexcept {
         return socket_.set_reuseaddr(on);
     }
 
@@ -81,7 +81,7 @@ public:
         if (auto ret = socket_.listen(n); !ret) [[unlikely]] {
             return std::unexpected{ret.error()};
         }
-        return TcpListener{std::move(socket_)};
+        return TcpListener::build(std::move(socket_));
     }
 
     // Converts the socket into TcpStream
@@ -107,7 +107,7 @@ public:
 
     [[nodiscard]]
     static auto v6() -> Result<TcpSocket> {
-        auto sock = Socket::build(AF_INET6, SOCK_STREAM |SOCK_NONBLOCK, IPPROTO_TCP);
+        auto sock = Socket::build(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
         if (sock) [[likely]] {
             return TcpSocket(std::move(sock.value()));
         } else {

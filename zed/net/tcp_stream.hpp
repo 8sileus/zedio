@@ -11,14 +11,11 @@
 namespace zed::net {
 
 class TcpSocket;
-
-namespace detail {
-    class AcceptStream;
-} // namespace detail
+class TcpListener;
 
 class TcpStream : util::Noncopyable {
     friend class TcpSocket;
-    friend class detail::AcceptStream;
+    friend class TcpListener;
 
 private:
     explicit TcpStream(Socket &&sock)

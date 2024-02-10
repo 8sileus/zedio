@@ -38,6 +38,11 @@ struct BaseIOAwaiterData {
     }
 
     [[nodiscard]]
+    auto result() const noexcept -> int {
+        return result_;
+    }
+
+    [[nodiscard]]
     auto is_ready() const noexcept -> bool {
         return (state_ & FINISHED_IO) != 0;
     }

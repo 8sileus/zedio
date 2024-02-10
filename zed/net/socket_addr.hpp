@@ -109,7 +109,9 @@ private:
 
 class SocketAddr {
 public:
-    SocketAddr(const sockaddr *addr, std::size_t len) { std::memcpy(&addr_, addr, len); }
+    SocketAddr(const sockaddr *addr, std::size_t len) {
+        std::memcpy(&addr_, addr, len);
+    }
 
     SocketAddr(const Ipv4Addr &ip, uint16_t port) {
         addr_.in4.sin_family = AF_INET;
@@ -132,26 +134,33 @@ public:
         }
     }
 
-    void set_ip(Ipv4Addr &ip) { addr_.in4.sin_addr.s_addr = ip.addr(); }
+    void set_ip(Ipv4Addr &ip) {
+        addr_.in4.sin_addr.s_addr = ip.addr();
+    }
 
-    void set_ip(Ipv6Addr &ip) { addr_.in6.sin6_addr = ip.addr(); }
+    void set_ip(Ipv6Addr &ip) {
+        addr_.in6.sin6_addr = ip.addr();
+    }
 
     [[nodiscard]]
     auto port() const -> uint16_t {
         return ::ntohs(addr_.in6.sin6_port);
     }
 
-    void set_port(uint16_t port) { addr_.in6.sin6_port = ::htons(port); }
+    void set_port(uint16_t port) {
+        addr_.in6.sin6_port = ::htons(port);
+    }
 
     [[nodiscard]]
     auto to_string() const -> std::string {
         char buf[128];
+        buf[0] = '[';
         if (is_ipv4()) {
-            ::inet_ntop(AF_INET, &addr_.in4.sin_addr, buf, sizeof(buf));
+            ::inet_ntop(AF_INET, &addr_.in4.sin_addr, buf + 1, sizeof(buf) - 1);
         } else {
-            ::inet_ntop(AF_INET6, &addr_.in6.sin6_addr, buf, sizeof(buf));
+            ::inet_ntop(AF_INET6, &addr_.in6.sin6_addr, buf + 1, sizeof(buf) - 1);
         }
-        return std::string{buf} + "-" + std::to_string(this->port());
+        return std::string{buf} + "]:" + std::to_string(this->port());
     }
 
     [[nodiscard]]
