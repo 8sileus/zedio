@@ -21,13 +21,17 @@ auto process(TcpStream stream) -> Task<void> {
     while (true) {
         auto ok = co_await stream.read(buf);
         if (!ok) {
-            // console.error(ok.error().message());
+            console.error(ok.error().message());
             break;
         }
         if (ok.value() == 0) {
             break;
         }
-        co_await stream.write(response);
+        ok = co_await stream.write(response);
+        if (!ok) {
+            console.error(ok.error().message());
+            break;
+        }
     }
 }
 
@@ -64,8 +68,8 @@ auto main(int argc, char **argv) -> int {
         return -1;
     }
     SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
-    auto    thread_num = std::stoi(argv[1]);
-    auto    runtime = Runtime::options().set_num_worker(thread_num).build();
+    auto thread_num = std::stoi(argv[1]);
+    auto runtime = Runtime::options().set_num_worker(thread_num).build();
     runtime.block_on(server());
     return 0;
 }

@@ -53,13 +53,13 @@ public:
         void wake_up_one() {
             if (auto index = idle_.worker_to_notify(); index) {
                 LOG_TRACE("wake up ZED_WORKER_{}", index.value());
-                workers_[index.value()]->waker().wake_up();
+                workers_[index.value()]->wake_up();
             }
         }
 
         void wake_up_all() {
             for (auto &worker : workers_) {
-                worker->waker().wake_up();
+                worker->wake_up();
             }
         }
 
@@ -110,18 +110,13 @@ public:
         , index_{index}
         , poller_{shared.config_.ring_entries_} {
         current_thread::set_thread_name("ZED_WORKER_" + std::to_string(index));
-        LOG_TRACE("build in thread {} ,waker fd {}, timer fd {}", current_thread::get_tid(),
-                  waker_.fd(), timer_.fd());
+        LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}", current_thread::get_thread_name(),
+                  current_thread::get_tid(), timer_.fd());
         assert(t_worker == nullptr);
         t_worker = this;
     }
 
-    ~Worker() {
-        LOG_DEBUG("total tick {}", tick_);
-    }
-
     void run() {
-        LOG_TRACE("start");
         while (!is_shutdown_) [[likely]] {
             tick();
 
@@ -156,9 +151,8 @@ public:
         return timer_;
     }
 
-    [[nodiscard]]
-    auto waker() -> Waker & {
-        return waker_;
+    void wake_up() {
+        waker_.wake_up();
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {
@@ -371,8 +365,8 @@ private:
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     Poller                                 poller_;
-    Waker                                  waker_{};
     Timer                                  timer_{};
+    Waker                                  waker_{};
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};

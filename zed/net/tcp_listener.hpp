@@ -41,7 +41,7 @@ private:
     explicit TcpListener(Socket &&sock)
         : socket_{std::move(sock)}
         , idx_{async::detail::t_poller->register_file(socket_.fd()).value()} {
-        LOG_TRACE("Build a TcpListener{{fd: {}}}", socket_.fd());
+        LOG_TRACE("Build a TcpListener {{fd: {}}}", socket_.fd());
     }
 
 public:
