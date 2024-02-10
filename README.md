@@ -19,6 +19,9 @@ Zedio is a event-driven platform for writing asynchronous applications with C++,
 - Asynchronous TCP and UDP sockets.
 
 ## Install && Compile Tests
+### Compiler requirements 
+Your compiler must support C++23. My compiler is GCC 13.1.0.
+
 Zedio is header only,and you can copy zedio into your project,or install it via CMake.
 1. clone zedio
 ```
