@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zed/common/error.hpp"
 // Linux
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -9,7 +10,6 @@
 #include <cstdint>
 #include <cstring>
 // C++
-#include <expected>
 #include <format>
 #include <string_view>
 
@@ -38,12 +38,10 @@ public:
 
 public:
     [[nodiscard]]
-    static auto parse(const std::string_view &ip) -> std::expected<Ipv4Addr, std::error_code> {
+    static auto parse(const std::string_view &ip) -> Result<Ipv4Addr> {
         uint32_t addr;
         if (::inet_pton(AF_INET, ip.data(), &addr) != 1) {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         return Ipv4Addr{addr};
     }
@@ -61,14 +59,14 @@ class Ipv6Addr {
 public:
     Ipv6Addr(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e, uint16_t f, uint16_t g,
              uint16_t h) {
-        ip_.__in6_u.__u6_addr16[0] = a >> 8 | a << 8;
-        ip_.__in6_u.__u6_addr16[1] = b >> 8 | b << 8;
-        ip_.__in6_u.__u6_addr16[2] = c >> 8 | c << 8;
-        ip_.__in6_u.__u6_addr16[3] = d >> 8 | d << 8;
-        ip_.__in6_u.__u6_addr16[4] = e >> 8 | e << 8;
-        ip_.__in6_u.__u6_addr16[5] = f >> 8 | f << 8;
-        ip_.__in6_u.__u6_addr16[6] = g >> 8 | g << 8;
-        ip_.__in6_u.__u6_addr16[7] = h >> 8 | h << 8;
+        ip_.__in6_u.__u6_addr16[0] = ::htons(a);
+        ip_.__in6_u.__u6_addr16[1] = ::htons(b);
+        ip_.__in6_u.__u6_addr16[2] = ::htons(c);
+        ip_.__in6_u.__u6_addr16[3] = ::htons(d);
+        ip_.__in6_u.__u6_addr16[4] = ::htons(e);
+        ip_.__in6_u.__u6_addr16[5] = ::htons(f);
+        ip_.__in6_u.__u6_addr16[6] = ::htons(g);
+        ip_.__in6_u.__u6_addr16[7] = ::htons(h);
     }
 
     Ipv6Addr(in6_addr ip)
@@ -93,12 +91,10 @@ public:
 
 public:
     [[nodiscard]]
-    static auto parse(const std::string_view &ip) -> std::expected<Ipv6Addr, std::error_code> {
+    static auto parse(const std::string_view &ip) -> Result<Ipv6Addr> {
         in6_addr addr;
         if (::inet_pton(AF_INET6, ip.data(), &addr) != 1) [[unlikely]] {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         return Ipv6Addr{addr};
     }
@@ -154,13 +150,14 @@ public:
     [[nodiscard]]
     auto to_string() const -> std::string {
         char buf[128];
-        buf[0] = '[';
         if (is_ipv4()) {
-            ::inet_ntop(AF_INET, &addr_.in4.sin_addr, buf + 1, sizeof(buf) - 1);
+            ::inet_ntop(AF_INET, &addr_.in4.sin_addr, buf, sizeof(buf) - 1);
+            return std::string{buf} + ":" + std::to_string(this->port());
         } else {
+            buf[0] = '[';
             ::inet_ntop(AF_INET6, &addr_.in6.sin6_addr, buf + 1, sizeof(buf) - 1);
+            return std::string{buf} + "]:" + std::to_string(this->port());
         }
-        return std::string{buf} + "]:" + std::to_string(this->port());
     }
 
     [[nodiscard]]
@@ -198,21 +195,16 @@ public:
     }
 
 public:
-    static auto parse(const std::string_view &host_name, uint16_t port)
-        -> std::expected<SocketAddr, std::error_code> {
+    static auto parse(const std::string_view &host_name, uint16_t port) -> Result<SocketAddr> {
         addrinfo hints{};
         hints.ai_flags = AI_NUMERICSERV;
         addrinfo *result{nullptr};
         if (::getaddrinfo(host_name.data(), std::to_string(port).data(), &hints, &result) != 0)
             [[unlikely]] {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         if (result == nullptr) [[unlikely]] {
-            return std::unexpected{
-                std::error_code{errno, std::system_category()}
-            };
+            return std::unexpected{make_sys_error(errno)};
         }
         SocketAddr sock{result->ai_addr, result->ai_addrlen};
         ::freeaddrinfo(result);

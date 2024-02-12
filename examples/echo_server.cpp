@@ -35,24 +35,8 @@ auto process(TcpStream stream) -> Task<void> {
     }
 }
 
-Task<void> t1() {
-    LOG_DEBUG("1");
-    co_return;
-}
-Task<void> t2() {
-    LOG_DEBUG("2");
-    co_return;
-}
-Task<void> t3() {
-    LOG_DEBUG("3");
-    // check exception
-    LOG_DEBUG("{} {}", 3);
-    co_return;
-}
-
 auto server() -> Task<void> {
-    spwan(t1(), t2(), t3());
-    auto has_addr = SocketAddr::parse("localhost", 9898);
+    auto has_addr = SocketAddr::parse("127.0.0.1", 9898);
     if (!has_addr) {
         console.error(has_addr.error().message());
         co_return;

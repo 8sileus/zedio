@@ -16,14 +16,14 @@ BOOST_AUTO_TEST_CASE(ipv4_test) {
         BOOST_TEST(!addr.is_ipv6());
         BOOST_REQUIRE_EQUAL(addr.port(), 9999);
         BOOST_REQUIRE_EQUAL(addr.length(), sizeof(sockaddr_in));
-        BOOST_REQUIRE_EQUAL(addr.to_string(), "192.168.15.33-9999");
+        BOOST_REQUIRE_EQUAL(addr.to_string(), "192.168.15.33:9999");
         BOOST_REQUIRE_EQUAL(std::get<0>(addr.ip()).to_string(), "192.168.15.33");
 
         SocketAddr tmp(addr.sockaddr(), addr.length());
         BOOST_TEST(tmp.is_ipv4());
         BOOST_TEST(!tmp.is_ipv6());
         BOOST_REQUIRE_EQUAL(tmp.port(), 9999);
-        BOOST_REQUIRE_EQUAL(tmp.to_string(), "192.168.15.33-9999");
+        BOOST_REQUIRE_EQUAL(tmp.to_string(), "192.168.15.33:9999");
         BOOST_REQUIRE_EQUAL(tmp.length(), sizeof(sockaddr_in));
         BOOST_REQUIRE_EQUAL(std::get<0>(addr.ip()).to_string(), ip.to_string());
     }
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(ipv4_test) {
         BOOST_TEST(!addr.is_ipv6());
         BOOST_REQUIRE_EQUAL(addr.port(), 9999);
         BOOST_REQUIRE_EQUAL(addr.length(), sizeof(sockaddr_in));
-        BOOST_REQUIRE_EQUAL(addr.to_string(), "192.168.15.33-9999");
+        BOOST_REQUIRE_EQUAL(addr.to_string(), "192.168.15.33:9999");
         BOOST_REQUIRE_EQUAL(std::get<0>(addr.ip()).to_string(), "192.168.15.33");
     }
 
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(ipv6_test) {
         BOOST_TEST(addr.is_ipv6());
         BOOST_REQUIRE_EQUAL(addr.port(), 1234);
         BOOST_REQUIRE_EQUAL(std::get<1>(addr.ip()).to_string(), ip.to_string());
-        BOOST_REQUIRE_EQUAL(addr.to_string(), str + "-1234");
+        BOOST_REQUIRE_EQUAL(addr.to_string(), std::string("[") + str + "]:1234");
         BOOST_REQUIRE_EQUAL(addr.length(), sizeof(sockaddr_in6));
 
         SocketAddr tmp(addr.sockaddr(), addr.length());
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(ipv6_test) {
         BOOST_TEST(tmp.is_ipv6());
         BOOST_REQUIRE_EQUAL(tmp.port(), 1234);
         BOOST_REQUIRE_EQUAL(std::get<1>(addr.ip()).to_string(), ip.to_string());
-        BOOST_REQUIRE_EQUAL(tmp.to_string(), str + "-1234");
+        BOOST_REQUIRE_EQUAL(tmp.to_string(), std::string("[") + str + "]:1234");
         BOOST_REQUIRE_EQUAL(tmp.length(), sizeof(sockaddr_in6));
     }
     {
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(ipv6_test) {
         BOOST_TEST(addr.is_ipv6());
         BOOST_REQUIRE_EQUAL(addr.port(), 1234);
         BOOST_REQUIRE_EQUAL(std::get<1>(addr.ip()).to_string(), ip.to_string());
-        BOOST_REQUIRE_EQUAL(addr.to_string(), str + "-1234");
+        BOOST_REQUIRE_EQUAL(addr.to_string(), std::string("[") + str + "]:1234");
         BOOST_REQUIRE_EQUAL(addr.length(), sizeof(sockaddr_in6));
     }
 }
