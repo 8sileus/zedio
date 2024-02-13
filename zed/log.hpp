@@ -4,7 +4,7 @@
 #include "zed/log/manager.hpp"
 
 namespace zed::log {
-    
-auto &console = util::Singleton<detail::ConsoleLogger>::Instance();
+
+auto &console = util::Singleton<detail::ConsoleLogger>::instance();
 
 } // namespace zed::log

@@ -40,12 +40,12 @@ private:
 template <class DeriverLogger>
 class BaseLogger : util::Noncopyable {
 public:
-    void setLevel(LogLevel level) noexcept {
+    void set_level(LogLevel level) noexcept {
         level_ = level;
     }
 
     [[nodiscard]]
-    auto getLevel() const noexcept -> LogLevel {
+    auto level() const noexcept -> LogLevel {
         return level_;
     }
 
@@ -165,9 +165,11 @@ private:
         while (ruinning_) {
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                if (full_buffers_.empty()) {
-                    cond_.wait_for(lock, std::chrono::seconds(3));
-                }
+                cond_.wait_for(lock, std::chrono::milliseconds(3),
+                               [this] -> bool { return !this->full_buffers_.empty(); });
+                // if (full_buffers_.empty()) {
+                // cond_.wait_for(lock, std::chrono::seconds(3));
+                // }
                 full_buffers_.push_back(std::move(current_buffer_));
                 if (!empty_buffers_.empty()) {
                     current_buffer_ = std::move(empty_buffers_.front());
@@ -201,6 +203,7 @@ private:
         for (auto &buffer : full_buffers_) {
             file_.write(buffer->data(), buffer->size());
         }
+        file_.flush();
     }
 
 private:
@@ -208,7 +211,7 @@ private:
     using BufferPtr = std::unique_ptr<Buffer>;
 
     LogFile                 file_;
-    BufferPtr               current_buffer_{};
+    BufferPtr               current_buffer_;
     std::list<BufferPtr>    empty_buffers_{};
     std::list<BufferPtr>    full_buffers_{};
     std::mutex              mutex_{};

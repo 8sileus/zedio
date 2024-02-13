@@ -9,7 +9,7 @@ public:
     ~Singleton() = delete;
 
     [[nodiscard]]
-    static auto Instance() -> T & {
+    static auto instance() -> T & {
         static T instance;
         return instance;
     }

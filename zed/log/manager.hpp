@@ -48,7 +48,7 @@ namespace detail {
 
 } // namespace detail
 
-auto &g_manager = util::Singleton<detail::LogManager>::Instance();
+auto &g_manager = util::Singleton<detail::LogManager>::instance();
 
 static inline auto make_logger(const std::string &logger_name,
                                const std::string &file_base_name = "") -> detail::FileLogger & {

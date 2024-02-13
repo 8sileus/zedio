@@ -38,7 +38,7 @@ private:
 };
 
 auto zed_category() noexcept -> const ZedCategory & {
-    return util::Singleton<ZedCategory>::Instance();
+    return util::Singleton<ZedCategory>::instance();
 }
 
 [[nodiscard]]
