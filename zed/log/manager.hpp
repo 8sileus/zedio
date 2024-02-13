@@ -18,15 +18,17 @@ namespace detail {
 
         void delete_logger(const std::string &logger_name) { loggers_.erase(logger_name); }
 
-        auto get_logger(const std::string &logger_name) -> FileLogger & {
-            try {
-                return loggers_.at(logger_name);
-            } catch (...) {
-                throw std::runtime_error(
-                    std::format("logger:{} is not exist in {}", logger_name, list_all_logger()));
+        /// Remenber to check whether the return value is nullptr
+        [[nodiscard]]
+        auto get_logger(const std::string &logger_name) -> FileLogger * {
+            if (this->contains_logger(logger_name)) {
+                return std::addressof(loggers_.at(logger_name));
+            } else {
+                return nullptr;
             }
         }
 
+        [[nodiscard]]
         auto contains_logger(const std::string &logger_name) const -> bool {
             return loggers_.find(logger_name) != loggers_.end();
         }
@@ -60,10 +62,12 @@ static inline void delete_logger(const std::string &logger_name) {
     g_manager.delete_logger(logger_name);
 }
 
-static inline auto get_logger(const std::string &logger_name) -> detail::FileLogger & {
+[[nodiscard]]
+static inline auto get_logger(const std::string &logger_name) {
     return g_manager.get_logger(logger_name);
 }
 
+[[nodiscard]]
 static inline auto contains_logger(const std::string &logger_name) -> bool {
     return g_manager.contains_logger(logger_name);
 }

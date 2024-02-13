@@ -21,7 +21,7 @@ void bench(bool long_flag) {
         if (long_flag) {
             for (int i = 0; i < kBatch; ++i) {
                 log::get_logger("test_log")
-                    .debug("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ", longStr, ++cnt);
+                    ->debug("Hello 0123456789 abcdefghijklmnopqrstuvwxyz {} {} ", longStr, ++cnt);
             }
         } else {
             for (int i = 0; i < kBatch; ++i) {

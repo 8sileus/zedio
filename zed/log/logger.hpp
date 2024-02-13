@@ -3,8 +3,8 @@
 #include "zed/common/util/noncopyable.hpp"
 #include "zed/common/util/thread.hpp"
 #include "zed/log/buffer.hpp"
-#include "zed/log/def.hpp"
 #include "zed/log/file.hpp"
+#include "zed/log/level.hpp"
 
 // C++
 #include <condition_variable>
@@ -82,6 +82,9 @@ public:
 private:
     template <LogLevel level, typename... Args>
     void format(const FmtWithSourceLocation &fwsl, Args &&...args) {
+        static thread_local char   buffer[64]{};
+        static thread_local time_t last_second{0};
+
         if (level < level_) {
             return;
         }
@@ -90,16 +93,16 @@ private:
         ::gettimeofday(&tv_time, nullptr);
         auto cur_second = tv_time.tv_sec;
         auto cur_millisecond = tv_time.tv_usec / 1000;
-        if (cur_second != t_last_second) {
+        if (cur_second != last_second) {
             struct tm tm_time;
             ::localtime_r(&cur_second, &tm_time);
-            const char *format = "%Y-%m-%d %H:%M:%S";
-            ::strftime(t_time_buffer, sizeof(t_time_buffer), format, &tm_time);
+            constexpr auto format = "%Y-%m-%d %H:%M:%S";
+            ::strftime(buffer, sizeof(buffer), format, &tm_time);
         }
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
         static_cast<DeriverLogger *>(this)->template log<level>(std::format(
-            "{}.{:03} {} {} {} {}:{} {}\n", t_time_buffer, cur_millisecond, level_to_string(level),
+            "{}.{:03} {} {} {} {}:{} {}\n", buffer, cur_millisecond, level_to_string(level),
             current_thread::get_tid(), current_thread::get_thread_name(), sl.file_name(), sl.line(),
             std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))));
     }

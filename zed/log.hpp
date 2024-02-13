@@ -7,4 +7,6 @@ namespace zed::log {
 
 auto &console = util::Singleton<detail::ConsoleLogger>::instance();
 
+using detail::LogLevel;
+
 } // namespace zed::log
