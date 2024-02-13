@@ -48,7 +48,7 @@ public:
     auto await_resume() -> decltype(IOAwaiter::await_resume()) {
         event_handle_->cancel();
         if (IOAwaiter::data_.result_ == -ECANCELED || IOAwaiter::data_.result_ == -EINTR) {
-            return std::unexpected{make_zed_error(Error::IOtimeout)};
+            return std::unexpected{make_zed_error(Error::AsyncTimeout)};
         }
         return IOAwaiter::await_resume();
     }

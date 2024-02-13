@@ -8,8 +8,9 @@
 namespace zed {
 
 enum class Error : int {
-    Nosqe,
-    IOtimeout,
+    NullSeq,
+    AsyncTimeout,
+    InvalidSockAddrs,
 };
 
 class ZedCategory : public std::error_category {
@@ -24,10 +25,12 @@ public:
 private:
     static constexpr auto error_to_string(Error error) -> const char * {
         switch (error) {
-        case Error::Nosqe:
-            return "No sqe is available";
-        case Error::IOtimeout:
-            return "I/O operation timeout";
+        case Error::NullSeq:
+            return "Null io_uring_seq";
+        case Error::AsyncTimeout:
+            return "Asychronous I/O timeout";
+        case Error::InvalidSockAddrs:
+            return "Invalid socket addresses";
         default:
             return "Remeber implement error_to_string for new error";
         }
@@ -54,6 +57,7 @@ using Result = std::expected<T, std::error_code>;
 } // namespace zed
 
 namespace std {
+
 template <>
 struct is_error_condition_enum<zed::Error> : public true_type {};
 

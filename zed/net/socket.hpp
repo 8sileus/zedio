@@ -240,7 +240,7 @@ public:
     auto connect(const SocketAddr &addr) const noexcept {
         return async::connect(fd_, addr.sockaddr(), addr.length());
     }
-    
+
     [[nodiscard]]
     auto bind(const SocketAddr &addr) const noexcept -> Result<void> {
         if (::bind(fd_, addr.sockaddr(), addr.length()) == -1) [[unlikely]] {

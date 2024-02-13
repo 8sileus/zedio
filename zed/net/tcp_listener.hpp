@@ -55,7 +55,7 @@ private:
             auto accept_awaiter = std::make_unique<AcceptMultishot>();
             auto sqe = async::detail::t_poller->get_sqe();
             if (sqe == nullptr) [[unlikely]] {
-                return std::unexpected{make_zed_error(zed::Error::Nosqe)};
+                return std::unexpected{make_zed_error(zed::Error::NullSeq)};
             }
             io_uring_prep_multishot_accept(sqe, fd,
                                            reinterpret_cast<sockaddr *>(&accept_awaiter->addr_),
@@ -131,6 +131,18 @@ public:
             return std::unexpected{ret.error()};
         }
         return build(std::move(sock.value()));
+    }
+
+    [[nodiscard]]
+    static auto bind(const std::span<SocketAddr> &addresses) -> Result<TcpListener> {
+        for (const auto &address : addresses) {
+            if (auto ret = bind(address); ret) [[likely]] {
+                return ret;
+            } else {
+                LOG_ERROR("Bind {} failed, error: {}", address.to_string(), ret.error());
+            }
+        }
+        return std::unexpected{make_zed_error(Error::InvalidSockAddrs)};
     }
 
 private:

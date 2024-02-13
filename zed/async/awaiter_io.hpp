@@ -44,7 +44,7 @@ struct [[REMEMBER_CO_AWAIT]] BaseIOAwaiter {
             return std::unexpected{make_sys_error(-data_.result_)};
         }
         assert(data_.is_null_sqe());
-        return std::unexpected{make_zed_error(Error::Nosqe)};
+        return std::unexpected{make_zed_error(Error::NullSeq)};
     }
 
 protected:
