@@ -28,7 +28,7 @@ auto main(int argc, char **argv) -> int {
     auto runtime = Runtime::create();
     auto client_num = std::stoi(argv[3]);
     for (auto i = 0; i < client_num; i += 1) {
-        spwan(client(addr));
+        spawn(client(addr));
     }
     runtime.run();
     return 0;

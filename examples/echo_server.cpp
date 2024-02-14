@@ -53,7 +53,7 @@ auto server() -> Task<void> {
         if (has_stream) {
             auto [stream, peer_addr] = std::move(has_stream.value());
             console.info("Accept a connection from {}", peer_addr.to_string());
-            spwan(process(std::move(stream)));
+            spawn(process(std::move(stream)));
         } else {
             console.error(has_stream.error().message());
             continue;

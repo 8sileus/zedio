@@ -43,6 +43,7 @@ public:
 
     ~Poller() {
         io_uring_queue_exit(&ring_);
+        t_poller = nullptr;
     }
 
     // Current worker thread will be blocked on io_uring_wait_cqe

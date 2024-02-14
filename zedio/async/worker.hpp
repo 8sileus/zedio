@@ -116,6 +116,10 @@ public:
         t_worker = this;
     }
 
+    ~Worker() {
+        t_worker = nullptr;
+    }
+
     void run() {
         while (!is_shutdown_) [[likely]] {
             tick();

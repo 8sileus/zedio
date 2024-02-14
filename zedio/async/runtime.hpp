@@ -80,7 +80,7 @@ private:
 
 template <typename... Ts>
     requires std::conjunction_v<std::is_same<Task<void>, Ts>...> && (sizeof...(Ts) > 0)
-static inline void spwan(Ts &&...tasks) {
+static inline void spawn(Ts &&...tasks) {
     if constexpr (sizeof...(Ts) == 1) {
         (detail::t_worker->schedule_task(std::move(tasks.take())), ...);
     } else {

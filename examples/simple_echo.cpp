@@ -20,7 +20,7 @@ auto server() -> Task<void> {
     auto listener = TcpListener::bind(addr).value();
     while (true) {
         auto [stream, peer_addr] = (co_await listener.accept()).value();
-        spwan(process(std::move(stream)));
+        spawn(process(std::move(stream)));
     }
 }
 

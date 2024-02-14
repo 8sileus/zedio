@@ -3,22 +3,23 @@
 // C++
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <vector>
 
 namespace zedio {
 
 template <typename T, std::size_t SIZE>
-class FixedRingBuffer {
+class StackRingBuffer {
 public:
 #define RSIZE (SIZE + 1)
 
     [[nodiscard]]
-    auto empty() const -> bool {
+    auto is_empty() const -> bool {
         return start_ == end_;
     }
 
     [[nodiscard]]
-    auto fill() const -> bool {
+    auto is_fill() const -> bool {
         return (end_ + 1) % RSIZE == start_;
     }
 
@@ -40,11 +41,11 @@ public:
     }
 
     [[nodiscard]]
-    auto capacity() const -> std::size_t {
+    constexpr auto capacity() const noexcept -> std::size_t {
         return SIZE;
     }
 
-public:
+private:
     std::size_t          start_{0};
     std::size_t          end_{0};
     std::array<T, RSIZE> data_{};
@@ -52,40 +53,47 @@ public:
 };
 
 template <typename T>
-class FlexRingBuffer {
+class HeapRingBuffer {
 public:
-    explicit FlexRingBuffer(std::size_t size)
+    explicit HeapRingBuffer(std::size_t size)
         : data_(size + 1) {}
 
     [[nodiscard]]
-    auto empty() const -> bool {
+    auto is_empty() const -> bool {
         return start_ == end_;
     }
 
     [[nodiscard]]
-    auto fill() const -> bool {
+    auto is_fill() const -> bool {
         return (end_ + 1) % data_.size() == start_;
     }
 
-    void push(const T &val) {
+    auto push(const T &val) -> bool {
+        if (is_fill()) {
+            return false;
+        }
         data_[end_++] = val;
         end_ %= data_.size();
+        return true;
     }
 
     [[nodiscard]]
-    auto take() -> T {
+    auto pop() -> std::optional<T> {
+        if (is_empty()) {
+            return std::nullopt;
+        }
         auto res = std::move(data_[start_++]);
         start_ %= data_.size();
         return res;
     }
 
     [[nodiscard]]
-    auto size() const -> std::size_t {
+    auto size() const noexcept -> std::size_t {
         return (end_ - start_ + data_.size()) % data_.size();
     }
 
     [[nodiscard]]
-    auto capacity() const -> std::size_t {
+    auto capacity() const noexcept -> std::size_t {
         return data_.size() - 1;
     }
 
