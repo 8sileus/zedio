@@ -1,10 +1,10 @@
-#include "zed/async.hpp"
-#include "zed/log.hpp"
-#include "zed/net.hpp"
+#include "zedio/async.hpp"
+#include "zedio/log.hpp"
+#include "zedio/net.hpp"
 
-using namespace zed::async;
-using namespace zed::net;
-using namespace zed::log;
+using namespace zedio::async;
+using namespace zedio::net;
+using namespace zedio::log;
 
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
@@ -66,7 +66,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: echo_server thread_num\n";
         return -1;
     }
-    SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
     auto thread_num = std::stoi(argv[1]);
     auto runtime = Runtime::options().set_num_worker(thread_num).build();
     runtime.block_on(server());

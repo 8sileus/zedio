@@ -1,10 +1,10 @@
-#include "zed/async.hpp"
-#include "zed/log.hpp"
-#include "zed/net.hpp"
+#include "zedio/async.hpp"
+#include "zedio/log.hpp"
+#include "zedio/net.hpp"
 
-using namespace zed::async;
-using namespace zed::net;
-using namespace zed::log;
+using namespace zedio::async;
+using namespace zedio::net;
+using namespace zedio::log;
 
 auto client(const SocketAddr &addr) -> Task<void> {
     auto        stream = (co_await TcpStream::connect(addr)).value();
@@ -21,7 +21,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: echo_server ip port client_num\n";
         return -1;
     }
-    SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
     auto ip = argv[1];
     auto port = std::stoi(argv[2]);
     auto addr = SocketAddr::parse(ip, port).value();

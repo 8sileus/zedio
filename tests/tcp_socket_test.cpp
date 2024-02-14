@@ -1,12 +1,12 @@
 #define BOOST_TEST_MODULE socket_test
 
-#include "zed/net/tcp_socket.hpp"
+#include "zedio/net/tcp_socket.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 
 BOOST_AUTO_TEST_SUITE(ring_buffer_test)
 
-using namespace zed::net;
+using namespace zedio::net;
 
 #define X_HAS_VAL(F)                                     \
     if (auto ret = F; !ret) {                            \

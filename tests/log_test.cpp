@@ -1,12 +1,12 @@
-#include "zed/common/util/time.hpp"
-#include "zed/log.hpp"
+#include "zedio/common/util/time.hpp"
+#include "zedio/log.hpp"
 // Linux
 #include <sys/resource.h>
 // C++
 #include <iostream>
 #include <vector>
 
-using namespace zed;
+using namespace zedio;
 
 auto &test_logger = log::make_logger("test_log");
 

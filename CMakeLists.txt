@@ -15,8 +15,8 @@ add_compile_options("-Wsign-compare")
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
-    add_compile_definitions(NEED_ZED_LOG)
-    message(STATUS "need zed log")
+    add_compile_definitions(NEED_ZEDIO_LOG)
+    message(STATUS "need zedio log")
 endif()
 
 message(STATUS "Version: " "${CMAKE_PROJECT_VERSION}")
@@ -32,7 +32,7 @@ uring
 include_directories("${PROJECT_SOURCE_DIR}")
 
 
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/zed" 
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/zedio" 
         DESTINATION "include")
 
 

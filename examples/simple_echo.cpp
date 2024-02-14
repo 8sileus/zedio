@@ -1,8 +1,8 @@
-#include "zed/async.hpp"
-#include "zed/net.hpp"
+#include "zedio/async.hpp"
+#include "zedio/net.hpp"
 
-using namespace zed::async;
-using namespace zed::net;
+using namespace zedio::async;
+using namespace zedio::net;
 
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
@@ -25,7 +25,7 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
+    // SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
     auto runtime = Runtime::create();
     runtime.block_on(server());
     return 0;

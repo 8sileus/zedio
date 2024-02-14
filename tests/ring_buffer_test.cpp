@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE ring_buffer_test
 
-#include "zed/common/container/ring_buffer.hpp"
+#include "zedio/common/container/ring_buffer.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 
@@ -9,7 +9,7 @@ BOOST_AUTO_TEST_SUITE(ring_buffer_test)
 constexpr std::size_t N = 100;
 
 BOOST_AUTO_TEST_CASE(flex_ring_buffer_simple_test) {
-    zed::FlexRingBuffer<std::size_t> rb(N);
+    zedio::FlexRingBuffer<std::size_t> rb(N);
     BOOST_CHECK_EQUAL(rb.capacity(), N);
     for (std::size_t i = 1; i <= N; ++i) {
         rb.push(i);
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(flex_ring_buffer_simple_test) {
 
 BOOST_AUTO_TEST_CASE(flex_ring_buffer_resize_test) {
     constexpr int            N = 5;
-    zed::FlexRingBuffer<int> rb(N);
+    zedio::FlexRingBuffer<int> rb(N);
     BOOST_CHECK_EQUAL(rb.capacity(), N);
     for (std::size_t i = 1; i <= N; ++i) {
         rb.push(i);
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(flex_ring_buffer_resize_test) {
 }
 
 BOOST_AUTO_TEST_CASE(fixed_ring_buffer_test) {
-    zed::FixedRingBuffer<std::size_t, N> rb;
+    zedio::FixedRingBuffer<std::size_t, N> rb;
     BOOST_CHECK_EQUAL(rb.capacity(), N);
     for (std::size_t i = 1; i <= N; ++i) {
         rb.push(i);

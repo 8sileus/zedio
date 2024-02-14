@@ -25,7 +25,7 @@ Your compiler must support C++23. My compiler is GCC 13.1.0.
 Zedio is header only,and you can copy zedio into your project,or install it via CMake.
 1. clone zedio
 ```
-gitclone https://github.com/8sileus/zedio
+git clone https://github.com/8sileus/zedio
 cd zedio
 mkdir build
 cd build
@@ -44,11 +44,11 @@ ctest .
 Writing an echo server using Zedio
 ``` C++
 // Ignore all errors
-#include "zed/async.hpp"
-#include "zed/net.hpp"
+#include "zedio/async.hpp"
+#include "zedio/net.hpp"
 
-using namespace zed::async;
-using namespace zed::net;
+using namespace zedio::async;
+using namespace zedio::net;
 
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];
@@ -57,7 +57,7 @@ auto process(TcpStream stream) -> Task<void> {
         if (len == 0) {
             break;
         }
-        co_await stream.write({buf, len});
+        co_await stream.write_all({buf, len});
     }
 }
 

@@ -1,12 +1,12 @@
-#include "zed/async.hpp"
-#include "zed/log.hpp"
-#include "zed/net.hpp"
+#include "zedio/async.hpp"
+#include "zedio/log.hpp"
+#include "zedio/net.hpp"
 
 #include <string_view>
 
-using namespace zed::async;
-using namespace zed::net;
-using namespace zed::log;
+using namespace zedio::async;
+using namespace zedio::net;
+using namespace zedio::log;
 
 constexpr std::string_view response = R"(
 HTTP/1.1 200 OK
@@ -67,7 +67,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: benchmark thread_num\n";
         return -1;
     }
-    SET_LOG_LEVEL(zed::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
     auto thread_num = std::stoi(argv[1]);
     auto runtime = Runtime::options().set_num_worker(thread_num).build();
     runtime.block_on(server());

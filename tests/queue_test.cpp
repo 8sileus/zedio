@@ -1,12 +1,12 @@
 #define BOOST_TEST_MODULE ring_buffer_test
 
-#include "zed/async/queue.hpp"
+#include "zedio/async/queue.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 
 #include <thread>
 
-using namespace zed::async::detail;
+using namespace zedio::async::detail;
 
 BOOST_AUTO_TEST_SUITE(ring_buffer_test)
 
