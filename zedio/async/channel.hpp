@@ -162,12 +162,12 @@ public:
     template <typename U>
         requires std::is_constructible_v<T, U> || std::is_convertible_v<U, T>
     [[REMEMBER_CO_AWAIT]]
-    auto send(U &&value) -> WriterAwaiter {
+    auto push(U &&value) -> WriterAwaiter {
         return WriterAwaiter{*this, std::forward<U>(value)};
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto recv() -> ReaderAwaiter {
+    auto pop() -> ReaderAwaiter {
         return ReaderAwaiter{*this};
     }
 

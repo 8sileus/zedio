@@ -11,8 +11,8 @@ std::atomic<std::size_t> total_sum;
 
 auto send_channel(Channel<std::size_t> &channel, std::size_t start, std::size_t end) -> Task<void> {
     for (auto i = start; i < end; i += 1) {
-        console.info("send {}", i);
-        co_await channel.send(i);
+        console.info("push {}", i);
+        co_await channel.push(i);
     }
     console.info("send channel end");
 }
@@ -20,9 +20,9 @@ auto send_channel(Channel<std::size_t> &channel, std::size_t start, std::size_t 
 auto recv_channel(Channel<std::size_t> &channel) -> Task<void> {
     std::size_t sum = 0;
     while (true) {
-        auto ok = co_await channel.recv();
+        auto ok = co_await channel.pop();
         if (ok) {
-            console.info("recv {}", ok.value());
+            console.info("pop {}", ok.value());
             sum += 1;
         } else {
             break;
@@ -49,7 +49,7 @@ auto test_channel() -> Task<void> {
 
 auto consumer(Channel<int> &c) -> Task<void> {
     while (true) {
-        auto ret = co_await c.recv();
+        auto ret = co_await c.pop();
         if (!ret) {
             break;
         }
@@ -63,7 +63,7 @@ auto producer() -> Task<void> {
     spawn(consumer(c));
     for (int i = 0; i < 10000; i += 1) {
         console.info("one thread: produce {}", i);
-        co_await c.send(i);
+        co_await c.push(i);
     }
     c.close();
 }
