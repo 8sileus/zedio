@@ -10,131 +10,127 @@
 
 namespace zedio::net {
 
-class TcpSocket;
-class TcpListener;
-
 class TcpStream : util::Noncopyable {
     friend class TcpSocket;
     friend class TcpListener;
 
 private:
     explicit TcpStream(Socket &&sock)
-        : socket_{std::move(sock)} {
-        LOG_TRACE("Build a TcpStream{{fd: {}}}", socket_.fd());
+        : io_{std::move(sock)} {
+        LOG_TRACE("Build a TcpStream{{fd: {}}}", io_.fd());
     }
 
 public:
     TcpStream(TcpStream &&other)
-        : socket_(std::move(other.socket_)) {}
+        : io_(std::move(other.io_)) {}
 
     auto operator=(TcpStream &&other) -> TcpStream & {
-        socket_ = std::move(other.socket_);
+        io_ = std::move(other.io_);
         return *this;
     }
 
     [[nodiscard]]
     auto shutdown(SHUTDOWN_OPTION how) const noexcept {
-        return socket_.shutdown(how);
+        return io_.shutdown(how);
     }
 
     [[nodiscard]]
     auto read(std::span<char> buf) const noexcept {
-        return socket_.read(buf);
+        return io_.read(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
     auto read_vectored(Ts &...bufs) const noexcept {
-        return socket_.read_vectored(bufs...);
+        return io_.read_vectored(bufs...);
     }
 
     [[nodiscard]]
     auto write(std::span<const char> buf) const noexcept {
-        return socket_.write(buf);
+        return io_.write(buf);
     }
 
     [[nodiscard]]
     auto write_all(std::span<const char> buf) const noexcept {
-        return socket_.write_all(buf);
+        return io_.write_all(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
     auto write_vectored(Ts &...bufs) const noexcept {
-        return socket_.write_vectored(bufs...);
+        return io_.write_vectored(bufs...);
     }
 
     [[nodiscard]]
     auto try_read(std::span<char> buf) const noexcept {
-        return socket_.try_read(buf);
+        return io_.try_read(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
     auto try_read_vectored(Ts &...bufs) const noexcept {
-        return socket_.try_read_vectored(bufs...);
+        return io_.try_read_vectored(bufs...);
     }
 
     [[nodiscard]]
     auto try_write(std::span<const char> buf) const noexcept {
-        return socket_.try_write(buf);
+        return io_.try_write(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
     auto try_write_vectored(Ts &...bufs) const noexcept {
-        return socket_.try_write_vectored(bufs...);
+        return io_.try_write_vectored(bufs...);
     }
 
     [[nodiscard]]
     auto local_addr() const noexcept {
-        return socket_.local_addr();
+        return io_.local_addr<SocketAddr>();
     }
 
     [[nodiscard]]
     auto peer_addr() const noexcept {
-        return socket_.peer_addr();
+        return io_.peer_addr<SocketAddr>();
     }
 
     [[nodiscard]]
     auto fd() const noexcept {
-        return socket_.fd();
+        return io_.fd();
     }
 
     [[nodiscard]]
     auto set_nodelay(bool need_delay) const noexcept {
-        return socket_.set_nodelay(need_delay);
+        return io_.set_nodelay(need_delay);
     }
 
     [[nodiscard]]
     auto nodelay() const noexcept {
-        return socket_.nodelay();
+        return io_.nodelay();
     }
 
     [[nodiscard]]
     auto set_linger(std::optional<std::chrono::seconds> duration) const noexcept {
-        return socket_.set_linger(duration);
+        return io_.set_linger(duration);
     }
 
     [[nodiscard]]
     auto linger() const noexcept {
-        return socket_.linger();
+        return io_.linger();
     }
 
     [[nodiscard]]
     auto set_ttl(uint32_t ttl) const noexcept {
-        return socket_.set_ttl(ttl);
+        return io_.set_ttl(ttl);
     }
 
     [[nodiscard]]
     auto ttl() const noexcept {
-        return socket_.ttl();
+        return io_.ttl();
     }
 
 public:
     [[nodiscard]]
-    static auto connect(const SocketAddr &address)
-        -> async::Task<std::expected<TcpStream, std::error_code>> {
+    static auto connect(const SocketAddr &address) -> async::Task<Result<TcpStream>> {
         auto sock = Socket::build(address.family(), SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
         if (!sock) [[unlikely]] {
             co_return std::unexpected{sock.error()};
@@ -146,7 +142,7 @@ public:
     };
 
 private:
-    Socket socket_;
+    Socket io_;
 };
 
 } // namespace zedio::net

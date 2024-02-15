@@ -2,8 +2,7 @@
 
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
-#include "zedio/net/socket_addr.hpp"
-#include "zedio/net/tcp_stream.hpp"
+#include "zedio/net/tcp/stream.hpp"
 // C
 #include <cstring>
 // C++
@@ -11,8 +10,6 @@
 #include <vector>
 
 namespace zedio::net {
-
-class TcpSocket;
 
 class TcpListener : util::Noncopyable {
     friend class TcpSocket;
@@ -75,46 +72,46 @@ private:
     };
 
 private:
-    explicit TcpListener(Socket &&sock, std::unique_ptr<AcceptMultishot> &&accept_awaiter)
-        : socket_{std::move(sock)}
-        , accept_awaiter_{std::move(accept_awaiter)} {
-        LOG_TRACE("Build a TcpListener {{fd: {}}}", socket_.fd());
+    explicit TcpListener(Socket &&sock)
+        : io_{std::move(sock)} {
+        LOG_TRACE("Build a TcpListener {{fd: {}}}", io_.fd());
     }
 
 public:
     TcpListener(TcpListener &&other)
-        : socket_{std::move(other.socket_)}
-        , accept_awaiter_{std::move(other.accept_awaiter_)} {}
-
-    auto operator=(TcpListener &&other) -> TcpListener & {
-        socket_ = std::move(other.socket_);
-        accept_awaiter_ = std::move(other.accept_awaiter_);
-        return *this;
-    }
+        : io_{std::move(other.io_)} {}
 
     [[nodiscard]]
-    auto accept() noexcept -> AcceptMultishot & {
-        return *accept_awaiter_;
+    auto accept() const noexcept -> async::Task<Result<std::pair<TcpStream, SocketAddr>>> {
+        sockaddr_in6 addr{};
+        socklen_t    addrlen{0};
+        auto ret = co_await async::accept(io_.fd(), reinterpret_cast<struct sockaddr *>(&addr),
+                                          &addrlen);
+        if (!ret) [[unlikely]] {
+            co_return std::unexpected{ret.error()};
+        }
+        co_return std::make_pair(TcpStream{Socket::from_fd(ret.value())},
+                                 SocketAddr{reinterpret_cast<const sockaddr *>(&addr), addrlen});
     }
 
     [[nodiscard]]
     auto local_addr() const noexcept {
-        return socket_.local_addr();
+        return io_.local_addr<SocketAddr>();
     }
 
     [[nodiscard]]
     auto fd() const noexcept {
-        return socket_.fd();
+        return io_.fd();
     }
 
     [[nodiscard]]
     auto set_ttl(uint32_t ttl) const noexcept {
-        return socket_.set_ttl(ttl);
+        return io_.set_ttl(ttl);
     }
 
     [[nodiscard]]
     auto ttl() const noexcept {
-        return socket_.ttl();
+        return io_.ttl();
     }
 
 public:
@@ -130,7 +127,7 @@ public:
         if (auto ret = sock.value().listen(SOMAXCONN); !ret) [[unlikely]] {
             return std::unexpected{ret.error()};
         }
-        return build(std::move(sock.value()));
+        return TcpListener{std::move(sock.value())};
     }
 
     [[nodiscard]]
@@ -142,22 +139,22 @@ public:
                 LOG_ERROR("Bind {} failed, error: {}", address.to_string(), ret.error().message());
             }
         }
-        return std::unexpected{make_zedio_error(Error::InvalidSockAddrs)};
+        return std::unexpected{make_zedio_error(Error::InvalidInput)};
     }
 
 private:
-    [[nodiscard]]
-    static auto build(Socket &&sock) -> Result<TcpListener> {
-        if (auto ret = AcceptMultishot::create(sock.fd()); !ret) [[unlikely]] {
-            return std::unexpected{ret.error()};
-        } else {
-            return TcpListener{std::move(sock), std::move(ret.value())};
-        }
-    }
+    // [[nodiscard]]
+    // static auto build(Socket &&sock) -> Result<TcpListener> {
+    //     if (auto ret = AcceptMultishot::create(sock.fd()); !ret) [[unlikely]] {
+    //         return std::unexpected{ret.error()};
+    //     } else {
+    //         return TcpListener{std::move(sock), std::move(ret.value())};
+    //     }
+    // }
 
 private:
-    Socket                           socket_;
-    std::unique_ptr<AcceptMultishot> accept_awaiter_;
+    Socket io_;
+    // std::unique_ptr<AcceptMultishot> accept_awaiter_;
 };
 
 } // namespace zedio::net

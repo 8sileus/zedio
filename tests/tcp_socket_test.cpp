@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE socket_test
 
-#include "zedio/net/tcp_socket.hpp"
+#include "zedio/net/tcp/socket.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 

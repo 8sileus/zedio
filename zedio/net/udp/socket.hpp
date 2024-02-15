@@ -7,47 +7,47 @@ namespace zedio::net {
 class UdpSocket {
 private:
     UdpSocket(Socket &&sock)
-        : socket_{std::move(sock)} {}
+        : io_{std::move(sock)} {}
 
 public:
-       [[nodiscard]]
+    [[nodiscard]]
     auto send(std::span<const char> buf) const noexcept {
-           return socket_.send(buf);
+        return io_.send(buf);
     }
 
     [[nodiscard]]
     auto try_send(std::span<const char> buf) const noexcept {
-        return socket_.try_send(buf);
+        return io_.try_send(buf);
     }
 
     [[nodiscard]]
     auto send_to(std::span<const char> buf, const SocketAddr &addr) const noexcept {
-        return socket_.send_to(buf, addr);
+        return io_.send_to(buf, addr);
     }
 
     [[nodiscard]]
     auto try_send_to(std::span<const char> buf, const SocketAddr &addr) const noexcept {
-        return socket_.try_send_to(buf, addr);
+        return io_.try_send_to(buf, addr);
     }
 
     [[nodiscard]]
     auto recv(std::span<char> buf) const noexcept {
-        return socket_.recv(buf);
+        return io_.recv(buf);
     }
 
     [[nodiscard]]
     auto try_recv(std::span<char> buf) const noexcept {
-        return socket_.try_recv(buf);
+        return io_.try_recv(buf);
     }
 
     [[nodiscard]]
-    auto set_broadcast(bool on)const noexcept{
-        return socket_.set_broadcast(on);
+    auto set_broadcast(bool on) const noexcept {
+        return io_.set_broadcast(on);
     }
 
     [[nodiscard]]
-    auto broadcast()const noexcept{
-        return socket_.broadcast();
+    auto broadcast() const noexcept {
+        return io_.broadcast();
     }
 
 public:
@@ -64,7 +64,7 @@ public:
     }
 
 private:
-    Socket socket_;
+    Socket io_;
 };
 
 } // namespace zedio::net

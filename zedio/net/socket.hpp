@@ -3,7 +3,8 @@
 #include "zedio/async/operations.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/common/util/noncopyable.hpp"
-#include "zedio/net/socket_addr.hpp"
+#include "zedio/net/addr.hpp"
+#include "zedio/net/concepts.hpp"
 // Linux
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -89,7 +90,7 @@ public:
 
     template <typename... Ts>
     [[nodiscard]]
-    auto read_vectored(Ts &...bufs) const noexcept -> async::Task<Result<int>> {
+    auto read_vectored(Ts &...bufs) const noexcept -> async::Task<Result<std::size_t>> {
         constexpr auto              N = sizeof...(Ts);
         std::array<struct iovec, N> iovecs{
             iovec{
@@ -151,7 +152,7 @@ public:
 
     template <typename... Ts>
     [[nodiscard]]
-    auto write_vectored(Ts &...bufs) const noexcept -> async::Task<Result<int>> {
+    auto write_vectored(Ts &...bufs) const noexcept -> async::Task<Result<std::size_t>> {
         constexpr auto                          N = sizeof...(Ts);
         const std::array<const struct iovec, N> iovecs{
             iovec{
@@ -236,18 +237,35 @@ public:
         return fd_;
     }
 
+    // [[nodiscard]]
+    // auto connect(const struct sockaddr *addr, socklen_t length) const noexcept {
+    //     return async::connect(fd_, addr, length);
+    // }
+
+    template <typename Addr>
+        requires is_socket_address<Addr>
     [[nodiscard]]
-    auto connect(const SocketAddr &addr) const noexcept {
+    auto connect(const Addr &addr) const noexcept {
         return async::connect(fd_, addr.sockaddr(), addr.length());
     }
 
+    template <typename Addr>
+        requires is_socket_address<Addr>
     [[nodiscard]]
-    auto bind(const SocketAddr &addr) const noexcept -> Result<void> {
+    auto bind(const Addr &addr) const noexcept -> Result<void> {
         if (::bind(fd_, addr.sockaddr(), addr.length()) == -1) [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
         }
         return {};
     }
+
+    // [[nodiscard]]
+    // auto bind(const struct sockaddr *addr, socklen_t length) const noexcept -> Result<void> {
+    //     if (::bind(fd_, addr, length) == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return {};
+    // }
 
     [[nodiscard]]
     auto listen(int n) const noexcept -> Result<void> {
@@ -257,26 +275,30 @@ public:
         return {};
     }
 
+    template <typename Addr>
+        requires is_socket_address<Addr>
     [[nodiscard]]
-    auto local_addr() const noexcept -> Result<SocketAddr> {
+    auto local_addr() const noexcept -> Result<Addr> {
         struct sockaddr_storage addr {};
         socklen_t               len;
         if (::getsockname(fd_, reinterpret_cast<struct sockaddr *>(&addr), &len) == -1)
             [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
         }
-        return SocketAddr(reinterpret_cast<struct sockaddr *>(&addr), len);
+        return Addr(reinterpret_cast<struct sockaddr *>(&addr), len);
     }
 
+    template <typename Addr>
+        requires is_socket_address<Addr>
     [[nodiscard]]
-    auto peer_addr() const noexcept -> Result<SocketAddr> {
+    auto peer_addr() const noexcept -> Result<Addr> {
         struct sockaddr_storage addr {};
         socklen_t               len;
         if (::getpeername(fd_, reinterpret_cast<struct sockaddr *>(&addr), &len) == -1)
             [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
         }
-        return SocketAddr(reinterpret_cast<struct sockaddr *>(&addr), len);
+        return Addr(reinterpret_cast<struct sockaddr *>(&addr), len);
     }
 
     [[nodiscard]]

@@ -171,22 +171,22 @@ public:
     }
 
     [[nodiscard]]
-    auto sockaddr() const -> const struct sockaddr * {
-        return reinterpret_cast<const struct sockaddr *>(&addr_);
-    }
-
-    [[nodiscard]]
-    auto sockaddr() -> struct sockaddr * {
-        return reinterpret_cast<struct sockaddr *>(&addr_);
-    }
-
-    [[nodiscard]]
     auto family() const -> int {
         return addr_.in6.sin6_family;
     }
 
     [[nodiscard]]
-    auto length() const -> socklen_t {
+    auto sockaddr() const noexcept -> const struct sockaddr * {
+        return reinterpret_cast<const struct sockaddr *>(&addr_);
+    }
+
+    [[nodiscard]]
+    auto sockaddr() noexcept -> struct sockaddr * {
+        return reinterpret_cast<struct sockaddr *>(&addr_);
+    }
+
+    [[nodiscard]]
+    auto length() const noexcept -> socklen_t {
         if (is_ipv4()) {
             return sizeof(sockaddr_in);
         } else {

@@ -255,7 +255,7 @@ private:
         auto num = shared_.workers_.size();
         // auto start = rand() % num;
         auto start = static_cast<std::size_t>(rand_.fastrand_n(static_cast<uint32_t>(num)));
-        for (std::size_t i = 0; i < num * 4; ++i) {
+        for (std::size_t i = 0; i < num; ++i) {
             auto idx = (start + i) % num;
             if (idx == index_) {
                 continue;

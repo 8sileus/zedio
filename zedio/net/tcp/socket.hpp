@@ -1,7 +1,8 @@
 #pragma once
 
 #include "zedio/common/error.hpp"
-#include "zedio/net/tcp_listener.hpp"
+#include "zedio/net/tcp/listener.hpp"
+#include "zedio/net/tcp/stream.hpp"
 // C++
 #include <expected>
 
@@ -9,89 +10,88 @@ namespace zedio::net {
 
 class TcpSocket : util::Noncopyable {
     explicit TcpSocket(Socket &&sock)
-        : socket_{std::move(sock)} {}
+        : io_{std::move(sock)} {}
 
 public:
     TcpSocket(TcpSocket &&other)
-        : socket_{std::move(other.socket_)} {}
+        : io_{std::move(other.io_)} {}
 
     [[nodiscard]]
     auto bind(const SocketAddr &address) const noexcept {
-        return socket_.bind(address);
+        return io_.bind(address);
     }
 
     [[nodiscard]]
     auto fd() const noexcept {
-        return socket_.fd();
+        return io_.fd();
     }
 
     [[nodiscard]]
     auto set_reuseaddr(bool on) const noexcept {
-        return socket_.set_reuseaddr(on);
+        return io_.set_reuseaddr(on);
     }
 
     [[nodiscard]]
     auto reuseaddr() const noexcept {
-        return socket_.reuseaddr();
+        return io_.reuseaddr();
     }
 
     [[nodiscard]]
     auto set_reuseport(bool on) const noexcept {
-        return socket_.set_reuseport(on);
+        return io_.set_reuseport(on);
     }
 
     [[nodiscard]]
     auto reuseport() const noexcept {
-        return socket_.reuseport();
+        return io_.reuseport();
     }
 
     [[nodiscard]]
     auto set_nonblocking(bool on) const noexcept {
-        return socket_.set_nonblocking(on);
+        return io_.set_nonblocking(on);
     }
 
     [[nodiscard]]
     auto nonblocking() const noexcept {
-        return socket_.nonblocking();
+        return io_.nonblocking();
     }
 
     [[nodiscard]]
     auto set_nodelay(bool on) const noexcept {
-        return socket_.set_nodelay(on);
+        return io_.set_nodelay(on);
     }
 
     [[nodiscard]]
     auto nodelay() const noexcept {
-        return socket_.nodelay();
+        return io_.nodelay();
     }
 
     [[nodiscard]]
     auto set_linger(std::optional<std::chrono::seconds> duration) const noexcept {
-        return socket_.set_linger(duration);
+        return io_.set_linger(duration);
     }
 
     [[nodiscard]]
     auto linger() const noexcept {
-        return socket_.linger();
+        return io_.linger();
     }
 
     // Converts the socket into TcpListener
     [[nodiscard]]
     auto listen(int n) -> Result<TcpListener> {
-        if (auto ret = socket_.listen(n); !ret) [[unlikely]] {
+        if (auto ret = io_.listen(n); !ret) [[unlikely]] {
             return std::unexpected{ret.error()};
         }
-        return TcpListener::build(std::move(socket_));
+        return TcpListener{std::move(io_)};
     }
 
     // Converts the socket into TcpStream
     [[nodiscard]]
-    auto connect(const SocketAddr &address)
-        -> async::Task<std::expected<TcpStream, std::error_code>> {
-        if (auto ret = co_await socket_.connect(address); !ret) [[unlikely]] {
+    auto connect(const SocketAddr &address) -> async::Task<Result<TcpStream>> {
+        if (auto ret = co_await io_.connect(address); !ret) [[unlikely]] {
             co_return std::unexpected{ret.error()};
         }
-        co_return TcpStream{std::move(socket_)};
+        co_return TcpStream{std::move(io_)};
     }
 
 public:
@@ -116,7 +116,7 @@ public:
     }
 
 private:
-    Socket socket_;
+    Socket io_;
 };
 
 } // namespace zedio::net

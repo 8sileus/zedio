@@ -8,9 +8,10 @@
 namespace zedio {
 
 enum class Error : int {
-    NullSeq,
+    NullSeq = 1,
     AsyncTimeout,
-    InvalidSockAddrs,
+    InvalidInput,
+    InvalidOutput,
 };
 
 class ZedioCategory : public std::error_category {
@@ -18,8 +19,15 @@ public:
     auto name() const noexcept -> const char * override {
         return "zedio";
     }
-    auto message(int ev) const -> std::string override {
+
+    auto message(int ev) const noexcept -> std::string override {
         return error_to_string(static_cast<Error>(ev));
+    }
+
+    // auto equivalent(int i, const std::error_condition &cond) const noexcept -> bool override;
+
+    auto equivalent(const std::error_code &code, int cond) const noexcept -> bool {
+        return std::addressof(code.category()) == this && code.value() == cond;
     }
 
 private:
@@ -29,8 +37,10 @@ private:
             return "Null io_uring_seq";
         case Error::AsyncTimeout:
             return "Asychronous I/O timeout";
-        case Error::InvalidSockAddrs:
-            return "Invalid socket addresses";
+        case Error::InvalidInput:
+            return "Invalid input";
+        case Error::InvalidOutput:
+            return "Invalid Output";
         default:
             return "Remeber implement error_to_string for new error";
         }
