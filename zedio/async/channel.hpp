@@ -5,10 +5,8 @@
 #include "zedio/common/macros.hpp"
 // C++
 #include <concepts>
-#include <coroutine>
 #include <mutex>
 #include <queue>
-#include <vector>
 
 namespace zedio::async {
 
@@ -19,7 +17,7 @@ private:
         Channel                &channel_;
         std::optional<T>        value_{std::nullopt};
         std::coroutine_handle<> handle_{nullptr};
-        bool                    need_wake_up_other{false};
+        bool                    need_wake_up_other_{false};
     };
 
     class ReaderAwaiter {
@@ -52,7 +50,7 @@ private:
             // Check buffer
             data_.value_ = data_.channel_.buffer_.pop();
             if (data_.value_) {
-                data_.need_wake_up_other = true;
+                data_.need_wake_up_other_ = true;
                 return handle;
             }
 
@@ -61,7 +59,7 @@ private:
         }
 
         auto await_resume() -> std::optional<T> {
-            if (!data_.need_wake_up_other) {
+            if (!data_.need_wake_up_other_) {
                 return data_.value_;
             }
 
@@ -106,7 +104,7 @@ private:
                 return handle;
             }
 
-            //Check waiting readers
+            // Check waiting readers
             if (!data_.channel_.waiting_readers_.empty()) {
                 auto reader = data_.channel_.waiting_readers_.front();
                 std::swap(reader->value_, data_.value_);
@@ -118,7 +116,7 @@ private:
             // Check buffer
             if (data_.channel_.buffer_.push(std::move(data_.value_.value()))) {
                 data_.value_ = std::nullopt;
-                data_.need_wake_up_other = true;
+                data_.need_wake_up_other_ = true;
                 return handle;
             }
             data_.channel_.waiting_writers_.push(&data_);
@@ -126,9 +124,10 @@ private:
         }
 
         auto await_resume() -> bool {
-            if (!data_.need_wake_up_other) {
+            if (!data_.need_wake_up_other_) {
                 return !data_.value_.has_value();
             }
+            data_.need_wake_up_other_ = false;
 
             std::lock_guard lock(data_.channel_.mutex_);
 

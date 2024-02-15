@@ -47,28 +47,25 @@ auto test_channel() -> Task<void> {
     co_return;
 }
 
-auto consumer(Channel<int> &p1, Channel<int> &p2) -> Task<void> {
+auto consumer(Channel<int> &c) -> Task<void> {
     while (true) {
-        auto ok = co_await p1.recv();
-        co_await p2.send(0);
-        if (!ok) {
+        auto ret = co_await c.recv();
+        if (!ret) {
             break;
-        } else {
-            console.info("consume {}", ok.value());
         }
+        console.info("one thread: consume {}", ret.value());
     }
+    co_return;
 }
 
 auto producer() -> Task<void> {
-    Channel<int> p1, p2;
-    spawn(consumer(p1, p2));
-    for (int i = 0; i < 100; i += 1) {
-        console.info("produce {}", i);
-        co_await p1.send(i);
-        co_await p2.recv();
+    Channel<int> c;
+    spawn(consumer(c));
+    for (int i = 0; i < 10000; i += 1) {
+        console.info("one thread: produce {}", i);
+        co_await c.send(i);
     }
-    p1.close();
-    p2.close();
+    c.close();
 }
 
 void p_c_test() {

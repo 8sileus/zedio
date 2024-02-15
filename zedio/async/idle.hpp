@@ -3,8 +3,8 @@
 // C++
 #include <algorithm>
 #include <atomic>
-#include <deque>
 #include <limits>
+#include <list>
 #include <optional>
 #include <utility>
 
@@ -153,7 +153,7 @@ private:
 private:
     IdleState               state_;
     std::size_t             num_workers_;
-    std::deque<std::size_t> sleepers_;
+    std::list<std::size_t>  sleepers_;
     std::mutex              mutex_;
 };
 
