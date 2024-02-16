@@ -1,10 +1,10 @@
 #pragma once
 
 #include "zedio/async/operations.hpp"
+#include "zedio/common/concepts.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 #include "zedio/net/addr.hpp"
-#include "zedio/net/concepts.hpp"
 // Linux
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -285,7 +285,7 @@ public:
             [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
         }
-        return Addr(reinterpret_cast<struct sockaddr *>(&addr), len);
+        return Addr{reinterpret_cast<struct sockaddr *>(&addr), len};
     }
 
     template <typename Addr>
@@ -298,7 +298,7 @@ public:
             [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
         }
-        return Addr(reinterpret_cast<struct sockaddr *>(&addr), len);
+        return Addr{reinterpret_cast<struct sockaddr *>(&addr), len};
     }
 
     [[nodiscard]]
@@ -491,7 +491,7 @@ private:
 public:
     [[nodiscard]]
     static auto build(int domain, int type, int protocol) -> Result<Socket> {
-        if (auto fd = ::socket(domain, type | SOCK_NONBLOCK, protocol); fd != -1) [[likely]] {
+        if (auto fd = ::socket(domain, type, protocol); fd != -1) [[likely]] {
             return Socket{fd};
         } else {
             return std::unexpected{make_sys_error(errno)};

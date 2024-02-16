@@ -29,10 +29,7 @@ public:
     }
 
     [[nodiscard]]
-    auto pathname() -> std::optional<std::string_view> {
-        if (!has_pathname()) {
-            return std::nullopt;
-        }
+    auto pathname() const noexcept -> std::string_view {
         return addr_.sun_path;
     }
 
@@ -48,13 +45,13 @@ public:
 
     [[nodiscard]]
     auto length() const noexcept -> socklen_t {
-        return sizeof(addr_);
+        return strlen(addr_.sun_path) + sizeof(addr_.sun_family);
     }
 
-private:
+public:
     [[nodiscard]]
-    static auto build(std::string_view path) -> std::optional<UnixSocketAddr> {
-        if (path.size() >= sizeof(addr_.sun_path)) {
+    static auto parse(std::string_view path) -> std::optional<UnixSocketAddr> {
+        if (path.size() >= sizeof(addr_.sun_path) || path.empty()) {
             return std::nullopt;
         }
         return UnixSocketAddr{path};

@@ -3,7 +3,7 @@
 #include "zedio/net/socket.hpp"
 #include "zedio/net/unix/addr.hpp"
 
-//C++
+// C++
 namespace zedio::net {
 
 class UnixStream {
@@ -17,6 +17,11 @@ private:
 public:
     UnixStream(UnixStream &&other) noexcept
         : io_{std::move(other.io_)} {}
+
+    auto operator=(UnixStream &&other) -> UnixStream & {
+        io_ = std::move(other.io_);
+        return *this;
+    }
 
     [[nodiscard]]
     auto local_addr() const noexcept {

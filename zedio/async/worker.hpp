@@ -312,7 +312,7 @@ private:
             tasks.pop_front();
             n -= 1;
             if (n > 0) {
-                local_queue_.push_batch(std::move(tasks), n);
+                local_queue_.push_batch(tasks, n);
             }
             return result;
         }

@@ -2,6 +2,9 @@
 
 #include "zedio/net/unix/stream.hpp"
 
+// Linux
+#include <unistd.h>
+
 namespace zedio::net {
 
 class UnixListener {
@@ -24,8 +27,8 @@ private:
         }
 
     private:
-        struct sockaddr_un  addr_ {};
-        socklen_t           addrlen_{0};
+        struct sockaddr_un addr_ {};
+        socklen_t          addrlen_{0};
     };
 
 private:
@@ -36,28 +39,37 @@ public:
     UnixListener(UnixListener &&other) noexcept
         : io_{std::move(other.io_)} {}
 
+    ~UnixListener() {
+        if (io_.fd() >= 0) {
+            if (auto ret = io_.local_addr<UnixSocketAddr>(); ret) [[likely]] {
+                if (::unlink(ret.value().pathname().data()) != 0) [[unlikely]] {
+                    LOG_ERROR("{}", strerror(errno));
+                }
+            } else {
+                LOG_ERROR("{}", ret.error().message());
+            }
+        }
+    }
+
     [[nodiscard]]
     auto fd() const noexcept -> int {
         return io_.fd();
     }
 
     [[nodiscard]]
-    auto accept() -> async::Task<Result<std::pair<UnixStream, UnixSocketAddr>>> {
-        sockaddr_un addr{};
-        socklen_t   length{};
-        auto        ret = co_await async::detail::AcceptAwaiter<async::detail::OPFlag::Exclusive>(
-            io_.fd(), reinterpret_cast<sockaddr *>(&addr), &length);
-        if (!ret) [[unlikely]] {
-            co_return std::unexpected{ret.error()};
-        }
-        co_return std::make_pair(UnixStream{Socket::from_fd(ret.value())},
-                                 UnixSocketAddr{reinterpret_cast<sockaddr *>(&addr), length});
+    auto accept() {
+        return UnixAccepter{io_.fd()};
+    }
+
+    [[nodiscard]]
+    auto local_addr() {
+        return io_.local_addr<UnixSocketAddr>();
     }
 
 public:
     [[nodiscard]]
     static auto bind(const UnixSocketAddr &address) -> Result<UnixListener> {
-        auto io = Socket::build(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        auto io = Socket::build(AF_UNIX, SOCK_STREAM, 0);
         if (!io) [[unlikely]] {
             return std::unexpected{io.error()};
         }

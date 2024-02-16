@@ -37,7 +37,8 @@ private:
     std::chrono::nanoseconds timeout_{};
 };
 
-template <is_awaiter IOAwaiter>
+template <typename IOAwaiter>
+    requires is_awaiter<IOAwaiter>
 class [[REMEMBER_CO_AWAIT]] TimeoutAwaiter : public IOAwaiter {
 public:
     TimeoutAwaiter(IOAwaiter &&op, const std::chrono::nanoseconds &timeout)

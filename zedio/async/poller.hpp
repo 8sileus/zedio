@@ -73,20 +73,21 @@ public:
 
     [[nodiscard]]
     auto poll(LocalQueue &queue) -> bool {
-        std::array<io_uring_cqe *, zedio::config::LOCAL_QUEUE_CAPACITY> cqes;
-        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), queue.remaining_slots());
+        std::array<io_uring_cqe *, zedio::config::LOCAL_QUEUE_CAPACITY>          cqes;
+        std::array<std::coroutine_handle<>, zedio::config::LOCAL_QUEUE_CAPACITY> tasks;
+        std::size_t                                                              num_tasks = 0;
+        std::size_t cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), queue.remaining_slots());
         if (cnt == 0) [[unlikely]] {
             return false;
         }
-        std::vector<std::coroutine_handle<>> tasks;
-        tasks.reserve(cnt);
         LOG_TRACE("poll {} events", cnt);
+
         for (auto i = 0uz; i < cnt; i += 1) {
             auto data = reinterpret_cast<BaseIOAwaiterData *>(cqes[i]->user_data);
             if (data != nullptr) [[likely]] {
                 data->set_result(cqes[i]->res);
                 if (data->is_distributable()) {
-                    tasks.push_back(std::move(data->handle_));
+                    tasks[num_tasks++] = std::move(data->handle_);
                     // queue.push_back_or_overflow(std::move(data->handle_), global_queue);
                 } else {
                     data->handle_.resume();
@@ -94,8 +95,12 @@ public:
             }
             io_uring_cqe_seen(&ring_, cqes[i]);
         }
-        LOG_TRACE("push {} to local queue", tasks.size());
-        queue.push_batch(tasks, tasks.size());
+        if (num_tasks > 0) {
+            LOG_TRACE("push {} tasks to local queue", num_tasks);
+            queue.push_batch(
+                std::span<std::coroutine_handle<>>{tasks.begin(), tasks.begin() + num_tasks},
+                num_tasks);
+        }
         return true;
     }
 
@@ -109,11 +114,10 @@ public:
         return io_uring_get_sqe(&ring_);
     }
 
-    auto submit() -> Result<void> {
+    void submit() {
         if (auto ret = io_uring_submit(&ring_); ret < 0) [[unlikely]] {
-            return std::unexpected{make_sys_error(-ret)};
+            LOG_ERROR("{}", strerror(-ret));
         }
-        return {};
     }
 
     [[nodiscard]]

@@ -5,7 +5,7 @@
 // Linux
 #include <sys/socket.h>
 
-namespace zedio::net {
+namespace zedio {
 
 template <typename Addr>
 concept is_socket_address = requires(Addr addr) {
@@ -13,4 +13,4 @@ concept is_socket_address = requires(Addr addr) {
     { addr.length() } noexcept -> std::same_as<socklen_t>;
 };
 
-} // namespace zedio::net
+} // namespace zedio

@@ -128,7 +128,7 @@ public:
 
     // Caller must ensure that there is no overflow before calling the method
     template <class C>
-    void push_batch(C &&tasks, std::size_t len) {
+    void push_batch(const C &tasks, std::size_t len) {
         assert(0 < len && len <= capacity());
 
         auto [steal, _] = unpack(head_.load(std::memory_order::acquire));
