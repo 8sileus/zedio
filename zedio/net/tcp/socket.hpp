@@ -97,7 +97,7 @@ public:
 public:
     [[nodiscard]]
     static auto v4() -> Result<TcpSocket> {
-        auto sock = Socket::build(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        auto sock = Socket::build(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (sock) [[likely]] {
             return TcpSocket(std::move(sock.value()));
         } else {
@@ -107,7 +107,7 @@ public:
 
     [[nodiscard]]
     static auto v6() -> Result<TcpSocket> {
-        auto sock = Socket::build(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        auto sock = Socket::build(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
         if (sock) [[likely]] {
             return TcpSocket(std::move(sock.value()));
         } else {

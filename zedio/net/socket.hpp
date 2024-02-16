@@ -74,14 +74,14 @@ public:
         return this->read(buf.data(), buf.size_bytes());
     }
 
-    [[nodiscard]]
-    auto try_read(std::span<char> buf) const noexcept -> Result<std::size_t> {
-        auto ret = ::read(this->fd_, buf.data(), buf.size_bytes());
-        if (ret == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return static_cast<std::size_t>(ret);
-    }
+    // [[nodiscard]]
+    // auto try_read(std::span<char> buf) const noexcept -> Result<std::size_t> {
+    //     auto ret = ::read(this->fd_, buf.data(), buf.size_bytes());
+    //     if (ret == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return static_cast<std::size_t>(ret);
+    // }
 
     [[nodiscard]]
     auto read_vectored(struct iovec *iovecs, int nr_vecs) const noexcept {
@@ -102,23 +102,23 @@ public:
         co_return co_await read_vectored(iovecs.data(), iovecs.size());
     }
 
-    template <typename... Ts>
-    [[nodiscard]]
-    auto try_read_vectored(Ts &...bufs) const noexcept -> Result<std::size_t> {
-        constexpr auto              N = sizeof...(Ts);
-        std::array<struct iovec, N> iovecs{
-            iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                  }
-            ...
-        };
-        auto ret = ::readv(this->fd_, iovecs.data(), iovecs.size());
-        if (ret == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return static_cast<std::size_t>(ret);
-    }
+    // template <typename... Ts>
+    // [[nodiscard]]
+    // auto try_read_vectored(Ts &...bufs) const noexcept -> Result<std::size_t> {
+    //     constexpr auto              N = sizeof...(Ts);
+    //     std::array<struct iovec, N> iovecs{
+    //         iovec{
+    //               .iov_base = std::span<char>(bufs).data(),
+    //               .iov_len = std::span<char>(bufs).size_bytes(),
+    //               }
+    //         ...
+    //     };
+    //     auto ret = ::readv(this->fd_, iovecs.data(), iovecs.size());
+    //     if (ret == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return static_cast<std::size_t>(ret);
+    // }
 
     [[nodiscard]]
     auto write(const void *buf, std::size_t len) const noexcept {
@@ -164,46 +164,46 @@ public:
         co_return co_await write_vectored(iovecs.data(), iovecs.size());
     }
 
-    [[nodiscard]]
-    auto try_write(std::span<const char> buf) const noexcept -> Result<std::size_t> {
-        auto ret = ::write(this->fd_, buf.data(), buf.size_bytes());
-        if (ret == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return static_cast<std::size_t>(ret);
-    }
+    // [[nodiscard]]
+    // auto try_write(std::span<const char> buf) const noexcept -> Result<std::size_t> {
+    //     auto ret = ::write(this->fd_, buf.data(), buf.size_bytes());
+    //     if (ret == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return static_cast<std::size_t>(ret);
+    // }
 
-    template <typename... Ts>
-    [[nodiscard]]
-    auto try_write_vectored(Ts &...bufs) const noexcept -> Result<std::size_t> {
-        constexpr auto              N = sizeof...(Ts);
-        std::array<struct iovec, N> iovecs{
-            iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                  }
-            ...
-        };
-        auto ret = ::writev(this->fd_, iovecs.data(), iovecs.size());
-        if (ret == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return static_cast<std::size_t>(ret);
-    }
+    // template <typename... Ts>
+    // [[nodiscard]]
+    // auto try_write_vectored(Ts &...bufs) const noexcept -> Result<std::size_t> {
+    //     constexpr auto              N = sizeof...(Ts);
+    //     std::array<struct iovec, N> iovecs{
+    //         iovec{
+    //               .iov_base = std::span<char>(bufs).data(),
+    //               .iov_len = std::span<char>(bufs).size_bytes(),
+    //               }
+    //         ...
+    //     };
+    //     auto ret = ::writev(this->fd_, iovecs.data(), iovecs.size());
+    //     if (ret == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return static_cast<std::size_t>(ret);
+    // }
 
     [[nodiscard]]
     auto send(std::span<const char> buf) const noexcept {
         return async::send(fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL);
     }
 
-    [[nodiscard]]
-    auto try_send(std::span<const char> buf) const noexcept -> Result<std::size_t> {
-        auto ret = ::send(this->fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL);
-        if (ret == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return static_cast<std::size_t>(ret);
-    }
+    // [[nodiscard]]
+    // auto try_send(std::span<const char> buf) const noexcept -> Result<std::size_t> {
+    //     auto ret = ::send(this->fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL);
+    //     if (ret == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return static_cast<std::size_t>(ret);
+    // }
 
     [[nodiscard]]
     auto send_to(std::span<const char> buf, const SocketAddr &addr) const noexcept {
@@ -211,26 +211,26 @@ public:
                              addr.length());
     }
 
-    [[nodiscard]]
-    auto try_send_to(std::span<const char> buf, const SocketAddr &addr) const noexcept
-        -> Result<std::size_t> {
-        auto ret = ::sendto(fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL, addr.sockaddr(),
-                            addr.length());
-        if (ret == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return static_cast<std::size_t>(ret);
-    }
+    // [[nodiscard]]
+    // auto try_send_to(std::span<const char> buf, const SocketAddr &addr) const noexcept
+    //     -> Result<std::size_t> {
+    //     auto ret = ::sendto(fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL, addr.sockaddr(),
+    //                         addr.length());
+    //     if (ret == -1) [[unlikely]] {
+    //         return std::unexpected{make_sys_error(errno)};
+    //     }
+    //     return static_cast<std::size_t>(ret);
+    // }
 
     [[nodiscard]]
     auto recv(std::span<char> buf) const noexcept {
         return read(buf);
     }
 
-    [[nodiscard]]
-    auto try_recv(std::span<char> buf) const noexcept {
-        return try_read(buf);
-    }
+    // [[nodiscard]]
+    // auto try_recv(std::span<char> buf) const noexcept {
+    //     return try_read(buf);
+    // }
 
     [[nodiscard]]
     auto fd() const noexcept -> int {

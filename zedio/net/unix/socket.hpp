@@ -52,7 +52,7 @@ public:
 public:
     [[nodiscard]]
     auto stream() -> Result<UnixSocket> {
-        if (auto io = Socket::build(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0); io) {
+        if (auto io = Socket::build(AF_UNIX, SOCK_STREAM, 0); io) {
             return UnixSocket{std::move(io.value())};
         } else {
             return std::unexpected{io.error()};
@@ -61,7 +61,7 @@ public:
 
     [[nodiscard]]
     auto datagram() -> Result<UnixSocket> {
-        if (auto io = Socket::build(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0); io) {
+        if (auto io = Socket::build(AF_UNIX, SOCK_DGRAM, 0); io) {
             return UnixSocket{std::move(io.value())};
         } else {
             return std::unexpected{io.error()};

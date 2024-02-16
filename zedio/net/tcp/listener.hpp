@@ -71,7 +71,7 @@ public:
 public:
     [[nodiscard]]
     static auto bind(const SocketAddr &address) -> Result<TcpListener> {
-        auto sock = Socket::build(address.family(), SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        auto sock = Socket::build(address.family(), SOCK_STREAM, IPPROTO_TCP);
         if (!sock) [[unlikely]] {
             return std::unexpected{sock.error()};
         }

@@ -62,7 +62,7 @@ public:
     }
 
     [[nodiscard]]
-    auto local_addr() {
+    auto local_addr() const noexcept {
         return io_.local_addr<UnixSocketAddr>();
     }
 

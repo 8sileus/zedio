@@ -61,27 +61,27 @@ public:
         return io_.write_vectored(bufs...);
     }
 
-    [[nodiscard]]
-    auto try_read(std::span<char> buf) const noexcept {
-        return io_.try_read(buf);
-    }
+    // [[nodiscard]]
+    // auto try_read(std::span<char> buf) const noexcept {
+    //     return io_.try_read(buf);
+    // }
 
-    template <typename... Ts>
-    [[nodiscard]]
-    auto try_read_vectored(Ts &...bufs) const noexcept {
-        return io_.try_read_vectored(bufs...);
-    }
+    // template <typename... Ts>
+    // [[nodiscard]]
+    // auto try_read_vectored(Ts &...bufs) const noexcept {
+    //     return io_.try_read_vectored(bufs...);
+    // }
 
-    [[nodiscard]]
-    auto try_write(std::span<const char> buf) const noexcept {
-        return io_.try_write(buf);
-    }
+    // [[nodiscard]]
+    // auto try_write(std::span<const char> buf) const noexcept {
+    //     return io_.try_write(buf);
+    // }
 
-    template <typename... Ts>
-    [[nodiscard]]
-    auto try_write_vectored(Ts &...bufs) const noexcept {
-        return io_.try_write_vectored(bufs...);
-    }
+    // template <typename... Ts>
+    // [[nodiscard]]
+    // auto try_write_vectored(Ts &...bufs) const noexcept {
+    //     return io_.try_write_vectored(bufs...);
+    // }
 
     [[nodiscard]]
     auto local_addr() const noexcept {
@@ -131,7 +131,7 @@ public:
 public:
     [[nodiscard]]
     static auto connect(const SocketAddr &address) -> async::Task<Result<TcpStream>> {
-        auto sock = Socket::build(address.family(), SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        auto sock = Socket::build(address.family(), SOCK_STREAM, IPPROTO_TCP);
         if (!sock) [[unlikely]] {
             co_return std::unexpected{sock.error()};
         }
