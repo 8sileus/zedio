@@ -24,11 +24,9 @@ public:
     struct Shared {
         Shared(Config config)
             : config_{config}
-            , idle_{config.num_worker_}
-            , main_worker{std::make_unique<Worker>(*this, 0)} {
+            , idle_{config.num_worker_} {
             LOG_TRACE("runtime with {} threads", config_.num_worker_);
-            workers_.emplace_back(main_worker.get());
-            for (std::size_t i = 1; i < config_.num_worker_; ++i) {
+            for (std::size_t i = 0; i < config_.num_worker_; ++i) {
                 // Make sure all threads have started
                 std::barrier sync(2);
                 threads_.emplace_back([this, i, &sync]() {
@@ -46,13 +44,15 @@ public:
         ~Shared() {
             this->close();
             for (auto &thread : threads_) {
-                thread.join();
+                if (thread.joinable()) {
+                    thread.join();
+                }
             }
         }
 
         void wake_up_one() {
             if (auto index = idle_.worker_to_notify(); index) {
-                LOG_TRACE("wake up zedio_WORKER_{}", index.value());
+                LOG_TRACE("Wake up ZEDIO_WORKER_{}", index.value());
                 workers_[index.value()]->wake_up();
             }
         }
@@ -96,11 +96,8 @@ public:
         const Config config_;
         GlobalQueue  global_queue_{};
         /// Coordinates idle workers
-        Idle                    idle_;
-        std::vector<Worker *>   workers_{};
-        std::unique_ptr<Worker> main_worker;
-
-    private:
+        Idle                     idle_;
+        std::vector<Worker *>    workers_{};
         std::vector<std::thread> threads_{};
     };
 
@@ -109,7 +106,7 @@ public:
         : shared_{shared}
         , index_{index}
         , poller_{shared.config_.ring_entries_} {
-        current_thread::set_thread_name("zedio_WORKER_" + std::to_string(index));
+        current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
         LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}", current_thread::get_thread_name(),
                   current_thread::get_tid(), timer_.fd());
         assert(t_worker == nullptr);
@@ -315,7 +312,7 @@ private:
             tasks.pop_front();
             n -= 1;
             if (n > 0) {
-                local_queue_.push_back(std::move(tasks), n);
+                local_queue_.push_batch(std::move(tasks), n);
             }
             return result;
         }
@@ -337,7 +334,7 @@ private:
     // poll I/O events
     [[nodiscard]]
     auto poll() -> bool {
-        if (!poller_.poll(local_queue_, shared_.global_queue_)) {
+        if (!poller_.poll(local_queue_)) {
             return false;
         }
         if (should_notify_others()) {

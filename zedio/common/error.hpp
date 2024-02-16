@@ -8,7 +8,8 @@
 namespace zedio {
 
 enum class Error : int {
-    NullSeq = 1,
+    NoError = 0,
+    NullSeq,
     AsyncTimeout,
     InvalidInput,
     InvalidOutput,
@@ -33,6 +34,8 @@ public:
 private:
     static constexpr auto error_to_string(Error error) -> const char * {
         switch (error) {
+        case Error::NoError:
+            return "Successful";
         case Error::NullSeq:
             return "Null io_uring_seq";
         case Error::AsyncTimeout:

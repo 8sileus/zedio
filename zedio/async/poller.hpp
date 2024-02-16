@@ -72,25 +72,30 @@ public:
     }
 
     [[nodiscard]]
-    auto poll(LocalQueue &queue, GlobalQueue &global_queue) -> bool {
+    auto poll(LocalQueue &queue) -> bool {
         std::array<io_uring_cqe *, zedio::config::LOCAL_QUEUE_CAPACITY> cqes;
-        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
+        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), queue.remaining_slots());
         if (cnt == 0) [[unlikely]] {
             return false;
         }
-        // LOG_TRACE("poll {} events", cnt);
+        std::vector<std::coroutine_handle<>> tasks;
+        tasks.reserve(cnt);
+        LOG_TRACE("poll {} events", cnt);
         for (auto i = 0uz; i < cnt; i += 1) {
             auto data = reinterpret_cast<BaseIOAwaiterData *>(cqes[i]->user_data);
             if (data != nullptr) [[likely]] {
                 data->set_result(cqes[i]->res);
                 if (data->is_distributable()) {
-                    queue.push_back_or_overflow(std::move(data->handle_), global_queue);
+                    tasks.push_back(std::move(data->handle_));
+                    // queue.push_back_or_overflow(std::move(data->handle_), global_queue);
                 } else {
                     data->handle_.resume();
                 }
             }
             io_uring_cqe_seen(&ring_, cqes[i]);
         }
+        LOG_TRACE("push {} to local queue", tasks.size());
+        queue.push_batch(tasks, tasks.size());
         return true;
     }
 
@@ -135,7 +140,8 @@ public:
 
 private:
     io_uring                 ring_{};
-    std::vector<std::size_t> file_indexes_{std::vector<std::size_t>(zedio::config::FIXED_FILES_NUM)};
+    std::vector<std::size_t> file_indexes_{
+        std::vector<std::size_t>(zedio::config::FIXED_FILES_NUM)};
 };
 
 } // namespace zedio::async::detail

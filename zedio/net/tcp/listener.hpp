@@ -14,61 +14,23 @@ namespace zedio::net {
 class TcpListener : util::Noncopyable {
     friend class TcpSocket;
 
-private:
-    class AcceptMultishot {
+    class TcpAccepter : public async::detail::AcceptAwaiter<async::detail::OPFlag::Distributive> {
     public:
-        AcceptMultishot()
-            : data_{static_cast<int>(async::detail::OPFlag::Exclusive)} {}
-
-        ~AcceptMultishot() {
-            auto sqe = async::detail::t_poller->get_sqe();
-            io_uring_prep_cancel(sqe, this, 0);
-            io_uring_sqe_set_data(sqe, nullptr);
-            async::detail::t_poller->submit();
-        }
-
-        constexpr auto await_ready() const noexcept -> bool {
-            return false;
-        }
-
-        auto await_suspend(std::coroutine_handle<> handle) -> std::coroutine_handle<> {
-            data_.handle_ = std::move(handle);
-            return std::noop_coroutine();
-        }
+        TcpAccepter(int fd)
+            : AcceptAwaiter(fd, reinterpret_cast<struct sockaddr *>(&addr_), &addrlen_) {}
 
         auto await_resume() const noexcept -> Result<std::pair<TcpStream, SocketAddr>> {
-            if (data_.is_good_result()) [[likely]] {
-                return std::make_pair(
-                    TcpStream{Socket::from_fd(data_.result())},
-                    SocketAddr{reinterpret_cast<const sockaddr *>(&addr_), addrlen_});
-            }
-            assert(data_.is_bad_result());
-            return std::unexpected{make_sys_error(-data_.result())};
-        }
-
-    public:
-        [[nodiscard]]
-        static auto create(int fd) -> Result<std::unique_ptr<AcceptMultishot>> {
-            auto accept_awaiter = std::make_unique<AcceptMultishot>();
-            auto sqe = async::detail::t_poller->get_sqe();
-            if (sqe == nullptr) [[unlikely]] {
-                return std::unexpected{make_zedio_error(zedio::Error::NullSeq)};
-            }
-            io_uring_prep_multishot_accept(sqe, fd,
-                                           reinterpret_cast<sockaddr *>(&accept_awaiter->addr_),
-                                           &accept_awaiter->addrlen_, SOCK_NONBLOCK);
-            io_uring_sqe_set_data(sqe, &accept_awaiter->data_);
-            if (auto ret = async::detail::t_poller->submit(); !ret) [[unlikely]] {
+            auto ret = AcceptAwaiter::BaseIOAwaiter::await_resume();
+            if (!ret) [[unlikely]] {
                 return std::unexpected{ret.error()};
-            } else {
-                return accept_awaiter;
             }
+            return std::make_pair(TcpStream{Socket::from_fd(ret.value())},
+                                  SocketAddr{reinterpret_cast<const sockaddr *>(&addr_), addrlen_});
         }
 
     private:
-        async::detail::BaseIOAwaiterData data_;
-        sockaddr_in6                     addr_{};
-        socklen_t                        addrlen_{0};
+        struct sockaddr_in6 addr_ {};
+        socklen_t           addrlen_{0};
     };
 
 private:
@@ -82,16 +44,8 @@ public:
         : io_{std::move(other.io_)} {}
 
     [[nodiscard]]
-    auto accept() const noexcept -> async::Task<Result<std::pair<TcpStream, SocketAddr>>> {
-        sockaddr_in6 addr{};
-        socklen_t    addrlen{0};
-        auto ret = co_await async::accept(io_.fd(), reinterpret_cast<struct sockaddr *>(&addr),
-                                          &addrlen);
-        if (!ret) [[unlikely]] {
-            co_return std::unexpected{ret.error()};
-        }
-        co_return std::make_pair(TcpStream{Socket::from_fd(ret.value())},
-                                 SocketAddr{reinterpret_cast<const sockaddr *>(&addr), addrlen});
+    auto accept() const noexcept {
+        return TcpAccepter{io_.fd()};
     }
 
     [[nodiscard]]
@@ -143,18 +97,7 @@ public:
     }
 
 private:
-    // [[nodiscard]]
-    // static auto build(Socket &&sock) -> Result<TcpListener> {
-    //     if (auto ret = AcceptMultishot::create(sock.fd()); !ret) [[unlikely]] {
-    //         return std::unexpected{ret.error()};
-    //     } else {
-    //         return TcpListener{std::move(sock), std::move(ret.value())};
-    //     }
-    // }
-
-private:
     Socket io_;
-    // std::unique_ptr<AcceptMultishot> accept_awaiter_;
 };
 
 } // namespace zedio::net

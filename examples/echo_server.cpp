@@ -56,7 +56,7 @@ auto server() -> Task<void> {
             spawn(process(std::move(stream)));
         } else {
             console.error(has_stream.error().message());
-            continue;
+            break;
         }
     }
 }

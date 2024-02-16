@@ -44,20 +44,28 @@ private:
         : shared_{config} {}
 
 public:
-    // Never stop
-    void run() {
-        shared_.workers_[0]->run();
+    // Waiting for the task to close
+    void block_on(Task<void> &&main_coro) {
+        auto shutdown_coro
+            = [](detail::Worker::Shared &shared, Task<void> &&main_coro) -> Task<void> {
+            co_await main_coro;
+            shared.close();
+            co_return;
+        }(shared_, std::move(main_coro));
+
+        shared_.workers_[0]->schedule_task(shutdown_coro.take());
+        shared_.workers_[0]->wake_up();
+
+        wait_workers();
     }
 
-    // Waiting for the task to close
-    void block_on(Task<void> &&main_task) {
-        detail::t_worker->schedule_task([](Runtime *runtime, Task<void> &&task) -> Task<void> {
-            co_await task;
-            runtime->shared_.close();
-            co_return;
-        }(this, std::move(main_task))
-                                                                                       .take());
-        run();
+private:
+    void wait_workers() {
+        for (auto &thread : shared_.threads_) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
     }
 
 public:

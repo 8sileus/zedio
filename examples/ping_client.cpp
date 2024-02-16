@@ -6,13 +6,21 @@ using namespace zedio::async;
 using namespace zedio::net;
 using namespace zedio::log;
 
-auto client(const SocketAddr &addr) -> Task<void> {
+auto process(const SocketAddr &addr) -> Task<void> {
     auto        stream = (co_await TcpStream::connect(addr)).value();
     char        buf[5] = {"ping"};
     while(true){
         co_await stream.write_all(buf);
         co_await stream.read(buf);
         console.info("{}", buf);
+    }
+}
+
+auto client(const SocketAddr &addr, int client_num) -> Task<void> {
+    for (auto i = 0; i < client_num; i += 1) {
+        spawn(process(addr));
+    }
+    while (true) {
     }
 }
 
@@ -27,9 +35,6 @@ auto main(int argc, char **argv) -> int {
     auto addr = SocketAddr::parse(ip, port).value();
     auto runtime = Runtime::create();
     auto client_num = std::stoi(argv[3]);
-    for (auto i = 0; i < client_num; i += 1) {
-        spawn(client(addr));
-    }
-    runtime.run();
+    runtime.block_on(client(addr, client_num));
     return 0;
 }
