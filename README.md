@@ -1,8 +1,6 @@
-# ZEDIO 
-Zedio is a runtime for writing asycnhronous applications with the C++. It is:
-- **Fast**: You can trust the performance of C++.
-- **Convenient**: It is used like golang.
-- **Rust Style**: Rust is modern C++.
+# ZEDIO
+Zedio is a runtime for writing asycnhronous applications with the C++.   
+It's being developed, if you're interested in zedio and want to participate in its development, look [Development](#development)
 ```
   ______  ______   _____    _____    ____  
  |___  / |  ____| |  __ \  |_   _|  / __ \ 
@@ -12,9 +10,10 @@ Zedio is a runtime for writing asycnhronous applications with the C++. It is:
  /_____| |______| |_____/  |_____|  \____/ 
                                                                        
 ```
+
 ## Overview
-Zedio is a event-driven platform for writing asynchronous applications with C++, At a high level, it provides a few major components:
-- A multithreaded, work-stealing based task scheduler.(copy from tokio)
+Zedio is a event-driven platform for writing asynchronous applications with the C++, At a high level, it provides a few major components:
+- A multithreaded, work-stealing based task scheduler.(reference tokio)
 - A proactor backed by linux systems's io_uring.
 - Asynchronous TCP and UDP sockets.
 
@@ -87,11 +86,18 @@ ZEDIO:
 TOKIO:  
 ![](./doc/png/tokio_benchmark.png)  
 
-
 ## Dependencies
 boost: https://github.com/boostorg/boost  
 liburing: https://github.com/axboe/liburing
 
+## Development
+You can help us develop this project if you're familiar with C++20 standard and io_uring, we have lots of things that you can help. about:   
+- Writing tests
+- Writing benchmark
+- Writing documentation
+- Report bugs
+- Share ideas
+
 ## Discussion
 - QQ Group: 590815858
-
+- Email: 1926004708@qq.com
