@@ -28,7 +28,7 @@ private:
 public:
     ~Socket() {
         if (fd_ >= 0) {
-            close();
+            async_close(fd_);
         }
     }
 
@@ -39,22 +39,16 @@ public:
 
     auto operator=(Socket &&other) -> Socket & {
         if (fd_ >= 0) {
-            close();
+            async_close(fd_);
         }
         fd_ = other.fd_;
         other.fd_ = -1;
         return *this;
     }
 
-    void close() noexcept {
-        while (true) {
-            if (::close(fd_) == 0) [[likely]] {
-                fd_ = -1;
-                break;
-            } else if (errno != EINTR) {
-                LOG_ERROR("close failed error:{}", strerror(EINTR));
-            }
-        }
+    [[nodiscard]]
+    auto close() const noexcept {
+        return async::close(fd_);
     }
 
     [[nodiscard]]
@@ -486,6 +480,34 @@ private:
             return std::unexpected{make_sys_error(errno)};
         }
         return {};
+    }
+
+    static void sync_close(int fd) noexcept {
+        int ret = 0;
+        int cnt = 10;
+        do {
+            ret = ::close(fd);
+            cnt -= 1;
+        } while (ret == EINTR && cnt > 0);
+        if (cnt == 0) [[unlikely]] {
+            LOG_DEBUG("sync close {} failed, error: {}", ret, strerror(errno));
+        }
+    }
+
+    static void async_close(int fd) noexcept {
+        auto task = [](int fd) -> async::Task<void> {
+            int cnt = 10;
+            Result<void> ret{};
+            do {
+                ret = co_await async::close(fd);
+                if (ret) [[likely]] {
+                    co_return;
+                }
+            } while (cnt--);
+            LOG_DEBUG("async close {} failed, error: {}", fd, ret.error().message());
+            sync_close(fd);
+        }(fd);
+        async::detail::t_worker->schedule_task(task.take());
     }
 
 public:
