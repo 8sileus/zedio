@@ -24,7 +24,8 @@ public:
     struct Shared {
         Shared(Config config)
             : config_{config}
-            , idle_{config.num_worker_} {
+            , idle_{config.num_worker_}
+            , shutdown_{static_cast<std::ptrdiff_t>(config.num_worker_)} {
             LOG_TRACE("runtime with {} threads", config_.num_worker_);
             for (std::size_t i = 0; i < config_.num_worker_; ++i) {
                 // Make sure all threads have started
@@ -35,6 +36,8 @@ public:
                     // workers_.emplace_back(std::make_unique<Worker>(*this, i));
                     sync.arrive_and_drop();
                     worker.run();
+
+                    shutdown_.arrive_and_wait();
                     // workers_[i]->run();
                 });
                 sync.arrive_and_wait();
@@ -97,6 +100,7 @@ public:
         GlobalQueue  global_queue_{};
         /// Coordinates idle workers
         Idle                     idle_;
+        std::barrier<>           shutdown_;
         std::vector<Worker *>    workers_{};
         std::vector<std::thread> threads_{};
     };
@@ -105,7 +109,7 @@ public:
     Worker(Shared &shared, std::size_t index)
         : shared_{shared}
         , index_{index}
-        , poller_{shared.config_.ring_entries_} {
+        , poller_{shared.config_} {
         current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
         LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}", current_thread::get_thread_name(),
                   current_thread::get_tid(), timer_.fd());

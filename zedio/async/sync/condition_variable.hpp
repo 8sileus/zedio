@@ -1,0 +1,101 @@
+#pragma once
+
+#include "zedio/async/sync/mutex.hpp"
+#include "zedio/async/task.hpp"
+
+// C++
+#include <mutex>
+
+namespace zedio::async::sync {
+
+class ConditionVariable {
+    class Awaiter {
+        friend ConditionVariable;
+
+    public:
+        Awaiter(ConditionVariable &cv, Mutex &mutex)
+            : cv_{cv}
+            , mutex_{mutex} {}
+
+        auto await_ready() const noexcept -> bool {
+            return false;
+        }
+
+        void await_suspend(std::coroutine_handle<> handle) noexcept {
+            handle_ = handle;
+
+            std::unique_lock<Mutex> lock{mutex_, std::adopt_lock};
+            auto awaiters = cv_.awaiters_.load(std::memory_order::relaxed);
+            do {
+                next_ = awaiters;
+            } while (!cv_.awaiters_.compare_exchange_weak(
+                awaiters, this, std::memory_order::acquire,
+                std::memory_order::relaxed));
+        }
+
+        void await_resume() const noexcept {}
+
+    private:
+        ConditionVariable      &cv_;
+        Mutex                  &mutex_;
+        std::coroutine_handle<> handle_;
+        Awaiter                *next_{nullptr};
+    };
+
+public:
+    ConditionVariable() = default;
+
+    // Forbid copy
+    ConditionVariable(const ConditionVariable &) = delete;
+    auto operator=(const ConditionVariable &) -> ConditionVariable & = delete;
+
+    // Forbid move
+    ConditionVariable(ConditionVariable &&) = delete;
+    auto operator=(ConditionVariable &&) -> ConditionVariable & = delete;
+
+    void notify_one() noexcept {
+        auto awaiters = awaiters_.load(std::memory_order::relaxed);
+        if (awaiters == nullptr) {
+            return;
+        }
+        while (awaiters_.compare_exchange_weak(awaiters, awaiters->next_,
+                                               std::memory_order::relaxed,
+                                               std::memory_order::relaxed))
+            ;
+        awaiters->next_ = nullptr;
+        resume(awaiters);
+    }
+
+    void notify_all() noexcept {
+        auto awaiters = awaiters_.load(std::memory_order::relaxed);
+        while (!awaiters_.compare_exchange_weak(awaiters, nullptr,
+                                                std::memory_order::release,
+                                                std::memory_order::relaxed))
+            ;
+        resume(awaiters);
+    }
+
+    template <class Predicate>
+        requires std::is_invocable_r_v<bool, Predicate>
+    [[REMEMBER_CO_AWAIT]]
+    auto wait(Mutex &mutex, Predicate &&predicate) -> async::Task<void> {
+        while (!predicate()) {
+            co_await Awaiter{this, mutex};
+            co_await mutex.lock();
+        }
+        co_return;
+    }
+
+private:
+    static void resume(Awaiter *awaiter) {
+        while (awaiter != nullptr) {
+            awaiter->handle_.resume();
+            awaiter = awaiter->next_;
+        }
+    }
+
+private:
+    std::atomic<Awaiter *> awaiters_{nullptr};
+};
+
+} // namespace zedio::async::sync

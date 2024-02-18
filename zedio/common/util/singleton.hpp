@@ -4,10 +4,10 @@ namespace zedio::util {
 
 template <typename T>
 class Singleton {
-public:
     Singleton() = delete;
     ~Singleton() = delete;
 
+public:
     [[nodiscard]]
     static auto instance() -> T & {
         static T instance;

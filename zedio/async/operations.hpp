@@ -65,6 +65,6 @@ using writev = detail::WritevAwaiter<flag>;
 // using writev2 = detail::Writev2Awaiter<flag>;
 
 template <OPFlag flag = OPFlag::Distributive>
-using openat2 = detail::OpenAtAwaiter<flag>;
+using openat2 = detail::OpenAt2Awaiter<flag>;
 
 } // namespace zedio::async

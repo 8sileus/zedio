@@ -11,32 +11,45 @@ private:
     public:
         [[nodiscard]]
         auto set_num_worker(std::size_t num_worker) -> Builder & {
-            config.num_worker_ = num_worker;
+            config_.num_worker_ = num_worker;
             return *this;
         }
 
         [[nodiscard]]
         auto set_ring_entries(std::size_t ring_entries) -> Builder & {
-            config.ring_entries_ = ring_entries;
+            config_.ring_entries_ = ring_entries;
             return *this;
         }
 
+        [[nodiscard]]
         auto set_check_io_interval(uint32_t interval) -> Builder & {
-            config.check_io_interval_ = interval;
+            config_.check_io_interval_ = interval;
             return *this;
         }
 
+        [[nodiscard]]
         auto set_check_gloabal_interval(uint32_t interval) -> Builder & {
-            config.check_global_interval_ = interval;
+            config_.check_global_interval_ = interval;
             return *this;
         }
 
+        [[nodiscard]]
+        auto set_io_uring_sqpoll(bool on) -> Builder & {
+            if (on) {
+                config_.io_uring_flags_ |= IORING_SETUP_SQPOLL;
+            } else {
+                config_.io_uring_flags_ &= ~IORING_SETUP_SQPOLL;
+            }
+            return *this;
+        }
+
+        [[nodiscard]]
         auto build() -> Runtime {
-            return Runtime{std::move(config)};
+            return Runtime{std::move(config_)};
         }
 
     private:
-        detail::Config config;
+        detail::Config config_;
     };
 
 private:
@@ -46,8 +59,8 @@ private:
 public:
     // Waiting for the task to close
     void block_on(Task<void> &&main_coro) {
-        auto shutdown_coro
-            = [](detail::Worker::Shared &shared, Task<void> &&main_coro) -> Task<void> {
+        auto shutdown_coro = [](detail::Worker::Shared &shared,
+                                Task<void> &&main_coro) -> Task<void> {
             co_await main_coro;
             shared.close();
             co_return;
@@ -87,7 +100,8 @@ private:
 };
 
 template <typename... Ts>
-    requires std::conjunction_v<std::is_same<Task<void>, Ts>...> && (sizeof...(Ts) > 0)
+    requires std::conjunction_v<std::is_same<Task<void>, Ts>...>
+             && (sizeof...(Ts) > 0)
 static inline void spawn(Ts &&...tasks) {
     if constexpr (sizeof...(Ts) == 1) {
         (detail::t_worker->schedule_task(std::move(tasks.take())), ...);
@@ -101,7 +115,8 @@ static inline void spawn(Ts &&...tasks) {
 }
 
 template <typename... Ts>
-    requires std::conjunction_v<std::is_same<Task<void>, Ts>...> && (sizeof...(Ts) > 0)
+    requires std::conjunction_v<std::is_same<Task<void>, Ts>...>
+             && (sizeof...(Ts) > 0)
 [[nodiscard]] static inline auto join(Ts &&...tasks) -> Task<void> {
     return [](Ts... tasks) -> Task<void> {
         ((co_await tasks), ...);
@@ -110,9 +125,10 @@ template <typename... Ts>
 }
 
 [[nodiscard]]
-static inline auto
-add_timer_event(const std::function<void()> &cb, const std::chrono::nanoseconds &delay,
-                const std::chrono::nanoseconds &period = std::chrono::nanoseconds{0}) {
+static inline auto add_timer_event(const std::function<void()>    &cb,
+                                   const std::chrono::nanoseconds &delay,
+                                   const std::chrono::nanoseconds &period
+                                   = std::chrono::nanoseconds{0}) {
     return detail::t_worker->timer().add_timer_event(cb, delay, period);
 }
 

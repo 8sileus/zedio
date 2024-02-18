@@ -23,7 +23,8 @@ struct [[REMEMBER_CO_AWAIT]] BaseIOAwaiter {
         return data_.is_ready();
     }
 
-    auto await_suspend(std::coroutine_handle<> handle) -> std::coroutine_handle<> {
+    auto await_suspend(std::coroutine_handle<> handle)
+        -> std::coroutine_handle<> {
         data_.handle_ = std::move(handle);
         io_uring_sqe_set_data(sqe_, &this->data_);
         if (data_.result_ = io_uring_submit(t_poller->ring()); data_.result_ < 0) [[unlikely]] {
@@ -195,8 +196,8 @@ struct [[REMEMBER_CO_AWAIT]] WritevAwaiter : public BaseIOAwaiter<std::size_t> {
 // };
 
 template <OPFlag flag>
-struct [[REMEMBER_CO_AWAIT]] OpenAtAwaiter : public BaseIOAwaiter<int> {
-    OpenAtAwaiter(int dfd, const char *path, struct open_how *how)
+struct [[REMEMBER_CO_AWAIT]] OpenAt2Awaiter : public BaseIOAwaiter<int> {
+    OpenAt2Awaiter(int dfd, const char *path, struct open_how *how)
         : BaseIOAwaiter(static_cast<int>(flag)) {
         REGISTER_IO(io_uring_prep_openat2, dfd, path, how)
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/async/awaiter_data.hpp"
+#include "zedio/async/config.hpp"
 #include "zedio/async/queue.hpp"
 #include "zedio/async/task.hpp"
 #include "zedio/common/config.hpp"
@@ -26,15 +27,19 @@ thread_local Poller *t_poller{nullptr};
 
 class Poller : util::Noncopyable {
 public:
-    Poller(std::size_t entries) {
-        if (auto ret = io_uring_queue_init(entries, &ring_, 0); ret < 0) [[unlikely]] {
-            throw std::runtime_error(
-                std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
+    Poller(const Config &config) {
+        if (auto ret = io_uring_queue_init(config.ring_entries_, &ring_,
+                                           config.io_uring_flags_);
+            ret < 0) [[unlikely]] {
+            throw std::runtime_error(std::format(
+                "Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
-        if (auto ret = io_uring_register_files_sparse(&ring_, zedio::config::FIXED_FILES_NUM);
+        if (auto ret = io_uring_register_files_sparse(
+                &ring_, zedio::config::FIXED_FILES_NUM);
             ret < 0) [[unlikely]] {
             throw std::runtime_error(
-                std::format("Call io_uring_register_files failed, error: {}.", strerror(-ret)));
+                std::format("Call io_uring_register_files failed, error: {}.",
+                            strerror(-ret)));
         }
         std::iota(file_indexes_.begin(), file_indexes_.end(), 0);
         assert(t_poller == nullptr);
@@ -73,33 +78,41 @@ public:
 
     [[nodiscard]]
     auto poll(LocalQueue &queue) -> bool {
-        std::array<io_uring_cqe *, zedio::config::LOCAL_QUEUE_CAPACITY>          cqes;
-        std::array<std::coroutine_handle<>, zedio::config::LOCAL_QUEUE_CAPACITY> tasks;
-        std::size_t                                                              num_tasks = 0;
-        std::size_t cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), queue.remaining_slots());
-        if (cnt == 0) [[unlikely]] {
+        constexpr const auto SIZE = zedio::config::LOCAL_QUEUE_CAPACITY;
+        std::array<io_uring_cqe *, SIZE>          cqes;
+        std::array<std::coroutine_handle<>, SIZE> tasks;
+        std::size_t                               distributable_tasks = 0;
+        std::size_t                               exclusive_tasks = SIZE;
+
+        std::size_t cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(),
+                                                  queue.remaining_slots());
+        if (cnt == 0) {
             return false;
         }
-        LOG_TRACE("poll {} events", cnt);
-
         for (auto i = 0uz; i < cnt; i += 1) {
-            auto data = reinterpret_cast<BaseIOAwaiterData *>(cqes[i]->user_data);
+            auto data
+                = reinterpret_cast<BaseIOAwaiterData *>(cqes[i]->user_data);
             if (data != nullptr) [[likely]] {
                 data->set_result(cqes[i]->res);
                 if (data->is_distributable()) {
-                    tasks[num_tasks++] = std::move(data->handle_);
-                    // queue.push_back_or_overflow(std::move(data->handle_), global_queue);
+                    tasks[distributable_tasks++] = std::move(data->handle_);
                 } else {
-                    data->handle_.resume();
+                    tasks[--exclusive_tasks] = std::move(data->handle_);
                 }
             }
-            io_uring_cqe_seen(&ring_, cqes[i]);
         }
-        if (num_tasks > 0) {
-            LOG_TRACE("push {} tasks to local queue", num_tasks);
+        assert(distributable_tasks <= exclusive_tasks);
+        LOG_TRACE("poll {} tasks {{shared: {}, private: {}}}", cnt,
+                  distributable_tasks, SIZE - exclusive_tasks);
+        io_uring_cq_advance(&ring_, cnt);
+        if (distributable_tasks > 0) {
             queue.push_batch(
-                std::span<std::coroutine_handle<>>{tasks.begin(), tasks.begin() + num_tasks},
-                num_tasks);
+                std::span<std::coroutine_handle<>>{
+                    tasks.begin(), tasks.begin() + distributable_tasks},
+                distributable_tasks);
+        }
+        while (exclusive_tasks < SIZE) {
+            tasks[exclusive_tasks++].resume();
         }
         return true;
     }
@@ -125,8 +138,8 @@ public:
         assert(!file_indexes_.empty());
         auto index = file_indexes_.back();
         file_indexes_.pop_back();
-        if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
-            [[unlikely]] {
+        if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1);
+            ret < 0) [[unlikely]] {
             return std::unexpected{make_sys_error(-ret)};
         }
         return index;
@@ -136,9 +149,10 @@ public:
         // LOG_DEBUG("unregister {}", index);
         file_indexes_.push_back(index);
         auto fd = -1;
-        if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
-            [[unlikely]] {
-            LOG_ERROR("Unregister file offset {} failed ,error {}", index, strerror(-ret));
+        if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1);
+            ret < 0) [[unlikely]] {
+            LOG_ERROR("Unregister file offset {} failed ,error {}", index,
+                      strerror(-ret));
         };
     }
 

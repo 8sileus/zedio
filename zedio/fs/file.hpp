@@ -12,50 +12,46 @@ class File {
 private:
     class Builder {
     public:
-        auto create(bool on) noexcept -> Builder & {
-            if (on) {
-                how_.flags |= O_CREAT;
-            }
+        auto create(bool on) noexcept {
+            return set_flag(on, O_CREAT);
         }
 
-        auto append(bool on) noexcept -> Builder & {
-            if (on) {
-                how_.flags |= O_APPEND;
-            }
+        auto append(bool on) noexcept {
+            return set_flag(on, O_APPEND);
         }
 
-        auto write(bool on) noexcept -> Builder & {
-            if (on) {
-                how_.flags |= O_WRONLY;
-            }
+        auto write(bool on) noexcept {
+            return set_flag(on, O_WRONLY);
         }
 
-        auto read(bool on) noexcept -> Builder & {
-            if (on) {
-                how_.flags |= O_RDONLY;
-            }
+        auto read(bool on) noexcept {
+            return set_flag(on, O_RDONLY);
         }
 
-        auto truncate(bool on) noexcept -> Builder & {
-            if (on) {
-                how_.flags |= O_TRUNC;
-            }
+        auto truncate(bool on) noexcept {
+            return set_flag(on, O_TRUNC);
         }
 
-        auto open(std::string_view path) -> async::Task<Result<File>> {
-            auto total_path = std::filesystem::absolute(path);
-            auto root_path = total_path.root_path();
-            int  dfd = ::open(root_path.c_str(), O_DIRECTORY);
-            if (dfd == -1) [[unlikely]] {
-                co_return std::unexpected{make_sys_error(errno)};
-            }
-            auto file_name = total_path.filename();
-            auto ret = co_await async::openat2(dfd, file_name.c_str(), &how_);
+        auto open(std::string path) -> async::Task<Result<File>> {
+            // std::filesystem::path path{file_name};
+            // auto root_path = path.root_path();
+            auto ret = co_await async::openat2(AT_FDCWD, path.data(), &how_);
             if (!ret) [[unlikely]] {
+                LOG_ERROR("{}", ret.error().value());
                 co_return std::unexpected{ret.error()};
             } else {
                 co_return File{ret.value()};
             }
+        }
+
+    private:
+        auto set_flag(bool on, uint64_t flag) noexcept -> Builder & {
+            if (on) {
+                how_.flags |= flag;
+            } else {
+                how_.flags &= ~flag;
+            }
+            return *this;
         }
 
     private:
@@ -67,10 +63,6 @@ private:
         : fd_{fd} {}
 
 public:
-    ~File() {
-        this->close();
-    }
-
     File(File &&other)
         : fd_{other.fd_} {
         other.fd_ = -1;
@@ -78,26 +70,50 @@ public:
 
     auto operator=(File &&other) -> File & {
         if (fd_ >= 0) {
-            this->close();
+            // this->close();
         }
         fd_ = other.fd_;
         other.fd_ = -1;
         return *this;
     }
 
-    void close() {
-        if (fd_ >= 0) {
-            ::close(fd_);
+    [[nodiscard]]
+    auto write_all(std::span<const char> buf) const noexcept
+        -> async::Task<Result<void>> {
+        std::size_t has_written_bytes = 0;
+        std::size_t remaining_bytes = buf.size_bytes();
+        while (remaining_bytes > 0) {
+            auto ret = co_await async::write(
+                fd_, buf.data() + has_written_bytes, remaining_bytes, 0);
+            if (!ret) [[unlikely]] {
+                co_return std::unexpected{ret.error()};
+            }
+            has_written_bytes += ret.value();
+            remaining_bytes -= ret.value();
         }
+        co_return Result<void>{};
+    }
+
+    auto set_len();
+
+    auto metadata();
+
+    auto set_permissions();
+
+    auto read_to_end();
+
+    auto close() const noexcept {
+        return async::close(fd_);
     }
 
 public:
     [[nodiscard]] auto static open(std::string_view path) {
-        return options().read(true).open(path);
+        return options().read(true).open(std::string{path});
     }
 
     [[nodiscard]] auto static create(std::string_view path) {
-        return options().write(true).create(true).truncate(true).open(path);
+        return options().write(true).create(true).truncate(true).open(
+            std::string{path});
     }
 
     [[nodiscard]] auto static options() -> Builder {
