@@ -5,20 +5,25 @@ Language: Cpp
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align 
 AlignArrayOfStructures: Right
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AlignConsecutiveDeclarations: true
 AlignEscapedNewlines: Left
 AlignOperands: true
 AllowShortFunctionsOnASingleLine: Empty
 AlwaysBreakTemplateDeclarations: true
+BinPackArguments: false
+BinPackParameters: false
 BreakBeforeBinaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakAfterAttributes: Always 
+
 # DerivePointerAlignment: false
 # PointerAlignment: Left
 
 NamespaceIndentation: Inner
 
-ColumnLimit: 80
+ColumnLimit: 100
 
 IndentWidth:	4
 

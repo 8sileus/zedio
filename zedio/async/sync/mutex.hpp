@@ -24,20 +24,21 @@ class Mutex {
 
         auto await_suspend(std::coroutine_handle<> handle) noexcept -> bool {
             handle_ = handle;
-            auto state = mutex_.state_.load(std::memory_order::acquire);
+            auto state = mutex_.state_.load(std::memory_order::relaxed);
             while (true) {
-                if (state == mutex_.unlocked_state()) {
-                    if (mutex_.state_.compare_exchange_weak(
-                            state, mutex_.locked_state(),
-                            std::memory_order::acq_rel,
-                            std::memory_order::acquire)) {
+                if (state == mutex_.unlocking_state()) {
+                    if (mutex_.state_.compare_exchange_weak(state,
+                                                            mutex_.locking_state(),
+                                                            std::memory_order::acquire,
+                                                            std::memory_order::relaxed)) {
                         return false;
                     }
                 } else {
-                    next_ = static_cast<Awaiter *>(state);
-                    if (mutex_.state_.compare_exchange_weak(
-                            state, this, std::memory_order::acq_rel,
-                            std::memory_order::acquire)) {
+                    next_ = state;
+                    if (mutex_.state_.compare_exchange_weak(state,
+                                                            this,
+                                                            std::memory_order::acquire,
+                                                            std::memory_order::relaxed)) {
                         break;
                     }
                 }
@@ -55,7 +56,12 @@ class Mutex {
 
 public:
     Mutex()
-        : state_{this} {}
+        : state_{unlocking_state()} {}
+
+    ~Mutex() {
+        assert(state_ == unlocking_state() || state_ == locking_state());
+        assert(fifo_awaiters_ == nullptr);
+    }
 
     // Forbid copy
     Mutex(const Mutex &) = delete;
@@ -67,8 +73,9 @@ public:
 
     [[nodiscard]]
     auto try_lock() noexcept -> bool {
-        void *odd = nullptr;
-        return state_.compare_exchange_strong(odd, nullptr,
+        auto state = state_.load(std::memory_order::relaxed);
+        return state_.compare_exchange_strong(state,
+                                              locking_state(),
                                               std::memory_order::acquire,
                                               std::memory_order::relaxed);
     }
@@ -80,57 +87,66 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto unlock() noexcept {
-        assert(state_.load(std::memory_order::relaxed) != unlocked_state());
-        auto head_awaiter = waiters_;
+        assert(state_.load(std::memory_order::relaxed) != unlocking_state());
 
         // IF head_awaiter is nullptr,That means there are no ordered coroutines
         // to resume.
-        if (head_awaiter == nullptr) {
-            auto state = state_.load(std::memory_order::acquire);
+        if (fifo_awaiters_ == nullptr) {
+            auto state = state_.load(std::memory_order::relaxed);
             // If current state == nullptr and state == unlocked state,That
             // means no coroutine were enqueued while i execute ordered
             // coroutines
-            if (state == locked_state()
-                && state_.compare_exchange_strong(state, unlocked_state(),
-                                                  std::memory_order::acq_rel,
-                                                  std::memory_order::acquire)) {
+            if (state == locking_state()
+                && state_.compare_exchange_strong(state,
+                                                  unlocking_state(),
+                                                  std::memory_order::acquire,
+                                                  std::memory_order::relaxed)) {
                 return;
             }
-            auto current_waiter = static_cast<Awaiter *>(
-                state_.exchange(nullptr, std::memory_order::acquire));
-            assert(state != unlocked_state() && state != locked_state());
+            auto lifo_awaiters = state_.exchange(locking_state(), std::memory_order::acquire);
+            assert(lifo_awaiters != locking_state() && lifo_awaiters != unlocking_state());
             // Reverse lists
             do {
-                std::tie(head_awaiter, current_waiter, current_waiter->next_)
-                    = std::tuple{current_waiter, current_waiter->next_,
-                                 head_awaiter};
-            } while (current_waiter != nullptr);
+                std::tie(fifo_awaiters_, lifo_awaiters, lifo_awaiters->next_)
+                    = std::tuple{lifo_awaiters, lifo_awaiters->next_, fifo_awaiters_};
+            } while (lifo_awaiters != nullptr);
         }
-        assert(head_awaiter != nullptr);
-        waiters_ = head_awaiter->next_;
-        head_awaiter->handle_.resume();
+        assert(fifo_awaiters_ != nullptr);
+        auto resume = fifo_awaiters_;
+        fifo_awaiters_ = fifo_awaiters_->next_;
+        resume->handle_.resume();
     }
 
 private:
-    auto locked_state() -> void * {
+    [[nodiscard]]
+    auto locking_state() -> Awaiter * {
         return nullptr;
     }
 
-    auto unlocked_state() -> void * {
-        return this;
+    [[nodiscard]]
+    auto unlocking_state() -> Awaiter * {
+        return reinterpret_cast<Awaiter *>(this);
     }
 
 private:
     // Locked     => nullptr;
     // Not locked => this;
     // other      => head of lifo queue
-    std::atomic<void *> state_;
-    Awaiter            *waiters_{nullptr};
+    std::atomic<Awaiter *> state_;
+    Awaiter               *fifo_awaiters_{nullptr};
 };
 
+class LockGuard {
+    LockGuard(Mutex &mutex)
+        : mutex_{mutex} {}
 
-class LockGuard{
-    
+public:
+    ~LockGuard() {
+        mutex_.unlock();
+    }
+
+private:
+    Mutex &mutex_;
 };
 
 } // namespace zedio::async::sync

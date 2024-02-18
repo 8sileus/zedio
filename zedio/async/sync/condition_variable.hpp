@@ -25,12 +25,12 @@ class ConditionVariable {
             handle_ = handle;
 
             std::unique_lock<Mutex> lock{mutex_, std::adopt_lock};
-            auto awaiters = cv_.awaiters_.load(std::memory_order::relaxed);
-            do {
-                next_ = awaiters;
-            } while (!cv_.awaiters_.compare_exchange_weak(
-                awaiters, this, std::memory_order::acquire,
-                std::memory_order::relaxed));
+            next_ = cv_.awaiters_.load(std::memory_order::relaxed);
+            while (!cv_.awaiters_.compare_exchange_weak(next_,
+                                                        this,
+                                                        std::memory_order::acquire,
+                                                        std::memory_order::release))
+                ;
         }
 
         void await_resume() const noexcept {}
@@ -58,21 +58,23 @@ public:
         if (awaiters == nullptr) {
             return;
         }
-        while (awaiters_.compare_exchange_weak(awaiters, awaiters->next_,
-                                               std::memory_order::relaxed,
+        while (!awaiters_.compare_exchange_weak(awaiters,
+                                               awaiters->next_,
+                                               std::memory_order::release,
                                                std::memory_order::relaxed))
             ;
         awaiters->next_ = nullptr;
-        resume(awaiters);
+        ConditionVariable::resume(awaiters);
     }
 
     void notify_all() noexcept {
         auto awaiters = awaiters_.load(std::memory_order::relaxed);
-        while (!awaiters_.compare_exchange_weak(awaiters, nullptr,
+        while (!awaiters_.compare_exchange_weak(awaiters,
+                                                nullptr,
                                                 std::memory_order::release,
                                                 std::memory_order::relaxed))
             ;
-        resume(awaiters);
+        ConditionVariable::resume(awaiters);
     }
 
     template <class Predicate>
@@ -80,7 +82,7 @@ public:
     [[REMEMBER_CO_AWAIT]]
     auto wait(Mutex &mutex, Predicate &&predicate) -> async::Task<void> {
         while (!predicate()) {
-            co_await Awaiter{this, mutex};
+            co_await Awaiter{*this, mutex};
             co_await mutex.lock();
         }
         co_return;

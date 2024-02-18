@@ -23,8 +23,7 @@ struct [[REMEMBER_CO_AWAIT]] BaseIOAwaiter {
         return data_.is_ready();
     }
 
-    auto await_suspend(std::coroutine_handle<> handle)
-        -> std::coroutine_handle<> {
+    auto await_suspend(std::coroutine_handle<> handle) -> std::coroutine_handle<> {
         data_.handle_ = std::move(handle);
         io_uring_sqe_set_data(sqe_, &this->data_);
         if (data_.result_ = io_uring_submit(t_poller->ring()); data_.result_ < 0) [[unlikely]] {
@@ -138,8 +137,12 @@ struct [[REMEMBER_CO_AWAIT]] SendMsgAwaiter : public BaseIOAwaiter<std::size_t> 
 
 template <OPFlag flag>
 struct [[REMEMBER_CO_AWAIT]] SendToAwaiter : public BaseIOAwaiter<std::size_t> {
-    SendToAwaiter(int sockfd, const void *buf, size_t len, int flags, const sockaddr *addr,
-                  socklen_t addrlen)
+    SendToAwaiter(int             sockfd,
+                  const void     *buf,
+                  size_t          len,
+                  int             flags,
+                  const sockaddr *addr,
+                  socklen_t       addrlen)
         : BaseIOAwaiter(static_cast<int>(flag)) {
         REGISTER_IO(io_uring_prep_sendto, sockfd, buf, len, flags, addr, addrlen)
     }
