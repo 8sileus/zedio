@@ -19,6 +19,14 @@ struct [[REMEMBER_CO_AWAIT]] BaseIOAwaiter {
     BaseIOAwaiter(int state)
         : data_{state} {}
 
+    // Delete copy
+    BaseIOAwaiter(const BaseIOAwaiter &) = delete;
+    auto operator=(const BaseIOAwaiter &) -> BaseIOAwaiter & = delete;
+
+    // Delete move
+    BaseIOAwaiter(BaseIOAwaiter &&) = delete;
+    auto operator=(BaseIOAwaiter &&) -> BaseIOAwaiter & = delete;
+
     auto await_ready() const noexcept -> bool {
         return data_.is_ready();
     }
@@ -203,6 +211,14 @@ struct [[REMEMBER_CO_AWAIT]] OpenAt2Awaiter : public BaseIOAwaiter<int> {
     OpenAt2Awaiter(int dfd, const char *path, struct open_how *how)
         : BaseIOAwaiter(static_cast<int>(flag)) {
         REGISTER_IO(io_uring_prep_openat2, dfd, path, how)
+    }
+};
+
+template <OPFlag flag>
+struct [[REMEMBER_CO_AWAIT]] OpenAtAwaiter : public BaseIOAwaiter<int> {
+    OpenAtAwaiter(int dfd, const char *path, int flags, mode_t mode)
+        : BaseIOAwaiter(static_cast<int>(flag)) {
+        REGISTER_IO(io_uring_prep_openat, dfd, path, flags, mode)
     }
 };
 

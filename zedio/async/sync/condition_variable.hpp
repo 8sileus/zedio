@@ -29,7 +29,7 @@ class ConditionVariable {
             while (!cv_.awaiters_.compare_exchange_weak(next_,
                                                         this,
                                                         std::memory_order::acquire,
-                                                        std::memory_order::release))
+                                                        std::memory_order::relaxed))
                 ;
         }
 
@@ -59,9 +59,9 @@ public:
             return;
         }
         while (!awaiters_.compare_exchange_weak(awaiters,
-                                               awaiters->next_,
-                                               std::memory_order::release,
-                                               std::memory_order::relaxed))
+                                                awaiters->next_,
+                                                std::memory_order::release,
+                                                std::memory_order::relaxed))
             ;
         awaiters->next_ = nullptr;
         ConditionVariable::resume(awaiters);

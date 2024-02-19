@@ -2,9 +2,12 @@
 
 #include "zedio/async/operations.hpp"
 #include "zedio/common/error.hpp"
+#include "zedio/fs/builder.hpp"
 
 // C++
 #include <filesystem>
+// Linux
+#include <fcntl.h>
 
 namespace zedio::fs {
 
@@ -12,50 +15,50 @@ class File {
 private:
     class Builder {
     public:
-        auto create(bool on) noexcept {
-            return set_flag(on, O_CREAT);
-        }
 
-        auto append(bool on) noexcept {
-            return set_flag(on, O_APPEND);
-        }
-
-        auto write(bool on) noexcept {
-            return set_flag(on, O_WRONLY);
-        }
-
-        auto read(bool on) noexcept {
+        auto read(bool on) noexcept -> Builder & {
             return set_flag(on, O_RDONLY);
         }
 
-        auto truncate(bool on) noexcept {
+        auto write(bool on) noexcept -> Builder & {
+            return set_flag(on, O_WRONLY);
+        }
+
+        auto append(bool on) noexcept -> Builder & {
+            return set_flag(on, O_APPEND);
+        }
+
+        auto create(bool on) noexcept -> Builder & {
+            return set_flag(on, O_CREAT);
+        }
+
+        auto truncate(bool on) noexcept -> Builder & {
             return set_flag(on, O_TRUNC);
         }
 
-        auto open(std::string path) -> async::Task<Result<File>> {
-            // std::filesystem::path path{file_name};
-            // auto root_path = path.root_path();
-            auto ret = co_await async::openat2(AT_FDCWD, path.data(), &how_);
-            if (!ret) [[unlikely]] {
-                LOG_ERROR("{}", ret.error().value());
-                co_return std::unexpected{ret.error()};
-            } else {
-                co_return File{ret.value()};
-            }
+        auto mode(mode_t mode) noexcept -> Builder & {
+            mode_ = mode;
+            return *this;
+        }
+
+        auto open(std::string_view path) -> detail::FileBuilderAwaiter<File> {
+            return detail::FileBuilderAwaiter<File>(AT_FDCWD, path, flags_, mode_);
         }
 
     private:
+
         auto set_flag(bool on, uint64_t flag) noexcept -> Builder & {
             if (on) {
-                how_.flags |= flag;
+                flags_ |= flag;
             } else {
-                how_.flags &= ~flag;
+                flags_ &= ~flag;
             }
             return *this;
         }
 
     private:
-        struct open_how how_ {};
+        uint64_t flags_{0};
+        uint64_t mode_{0};
     };
 
 private:
@@ -78,13 +81,12 @@ public:
     }
 
     [[nodiscard]]
-    auto write_all(std::span<const char> buf) const noexcept
-        -> async::Task<Result<void>> {
+    auto write_all(std::span<const char> buf) const noexcept -> async::Task<Result<void>> {
         std::size_t has_written_bytes = 0;
         std::size_t remaining_bytes = buf.size_bytes();
         while (remaining_bytes > 0) {
-            auto ret = co_await async::write(
-                fd_, buf.data() + has_written_bytes, remaining_bytes, 0);
+            auto ret
+                = co_await async::write(fd_, buf.data() + has_written_bytes, remaining_bytes, 0);
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
@@ -108,16 +110,19 @@ public:
 
 public:
     [[nodiscard]] auto static open(std::string_view path) {
-        return options().read(true).open(std::string{path});
+        return options().read(true).open(path);
     }
 
-    [[nodiscard]] auto static create(std::string_view path) {
-        return options().write(true).create(true).truncate(true).open(
-            std::string{path});
+    [[nodiscard]] auto static create(std::string_view path, mode_t permission = 0666) {
+        return options().write(true).create(true).truncate(true).mode(permission).open(path);
     }
 
     [[nodiscard]] auto static options() -> Builder {
         return Builder{};
+    }
+
+    [[nodiscard]] auto static from_fd(int fd) -> File {
+        return File{fd};
     }
 
 private:
