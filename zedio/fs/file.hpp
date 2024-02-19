@@ -1,9 +1,7 @@
 #pragma once
 
-#include "zedio/async/operations.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/fs/builder.hpp"
-
 // C++
 #include <filesystem>
 // Linux
@@ -12,55 +10,6 @@
 namespace zedio::fs {
 
 class File {
-private:
-    class Builder {
-    public:
-
-        auto read(bool on) noexcept -> Builder & {
-            return set_flag(on, O_RDONLY);
-        }
-
-        auto write(bool on) noexcept -> Builder & {
-            return set_flag(on, O_WRONLY);
-        }
-
-        auto append(bool on) noexcept -> Builder & {
-            return set_flag(on, O_APPEND);
-        }
-
-        auto create(bool on) noexcept -> Builder & {
-            return set_flag(on, O_CREAT);
-        }
-
-        auto truncate(bool on) noexcept -> Builder & {
-            return set_flag(on, O_TRUNC);
-        }
-
-        auto mode(mode_t mode) noexcept -> Builder & {
-            mode_ = mode;
-            return *this;
-        }
-
-        auto open(std::string_view path) -> detail::FileBuilderAwaiter<File> {
-            return detail::FileBuilderAwaiter<File>(AT_FDCWD, path, flags_, mode_);
-        }
-
-    private:
-
-        auto set_flag(bool on, uint64_t flag) noexcept -> Builder & {
-            if (on) {
-                flags_ |= flag;
-            } else {
-                flags_ &= ~flag;
-            }
-            return *this;
-        }
-
-    private:
-        uint64_t flags_{0};
-        uint64_t mode_{0};
-    };
-
 private:
     File(int fd)
         : fd_{fd} {}
@@ -117,8 +66,8 @@ public:
         return options().write(true).create(true).truncate(true).mode(permission).open(path);
     }
 
-    [[nodiscard]] auto static options() -> Builder {
-        return Builder{};
+    [[nodiscard]] auto static options() -> detail::Builder<File> {
+        return detail::Builder<File>{};
     }
 
     [[nodiscard]] auto static from_fd(int fd) -> File {

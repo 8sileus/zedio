@@ -25,7 +25,7 @@ private:
 public:
     ~Socket() {
         if (fd_ >= 0) {
-            async_close(fd_);
+            sync_close(fd_);
         }
     }
 
@@ -36,7 +36,7 @@ public:
 
     auto operator=(Socket &&other) -> Socket & {
         if (fd_ >= 0) {
-            async_close(fd_);
+            sync_close(fd_);
         }
         fd_ = other.fd_;
         other.fd_ = -1;
@@ -483,30 +483,13 @@ private:
 
     static void sync_close(int fd) noexcept {
         int ret = 0;
-        int cnt = 10;
+        int cnt = 3;
         do {
-            ret = ::close(fd);
-            cnt -= 1;
-        } while (ret == EINTR && cnt > 0);
-        if (cnt == 0) [[unlikely]] {
-            LOG_DEBUG("sync close {} failed, error: {}", ret, strerror(errno));
-        }
-    }
-
-    static void async_close(int fd) noexcept {
-        auto task = [](int fd) -> async::Task<void> {
-            int cnt = 10;
-            Result<void> ret{};
-            do {
-                ret = co_await async::close(fd);
-                if (ret) [[likely]] {
-                    co_return;
-                }
-            } while (cnt--);
-            LOG_DEBUG("async close {} failed, error: {}", fd, ret.error().message());
-            sync_close(fd);
-        }(fd);
-        async::detail::t_worker->schedule_task(task.take());
+            if (ret = ::close(fd); ret == 0) [[likely]] {
+                return;
+            }
+        } while (ret == EINTR && cnt--);
+        LOG_ERROR("sync close {} failed, error: {}", ret, strerror(errno));
     }
 
 public:
