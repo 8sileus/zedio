@@ -200,7 +200,11 @@ public:
         requires is_socket_address<Addr>
     [[nodiscard]]
     auto send_to(std::span<const char> buf, const Addr &addr) const noexcept {
-        return async::sendto(fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL, addr.sockaddr(),
+        return async::sendto(fd_,
+                             buf.data(),
+                             buf.size_bytes(),
+                             MSG_NOSIGNAL,
+                             addr.sockaddr(),
                              addr.length());
     }
 
@@ -387,6 +391,23 @@ public:
     }
 
     [[nodiscard]]
+    auto set_keepalive(bool on) const noexcept {
+        auto optval{on ? 1 : 0};
+        return set_sock_opt(SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
+    }
+
+    [[nodiscard]]
+    auto keepalive() const noexcept -> Result<bool> {
+        auto optval{0};
+        if (auto ret = get_sock_opt(SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)); ret)
+            [[likely]] {
+            return optval == 1;
+        } else {
+            return std::unexpected{ret.error()};
+        }
+    }
+
+    [[nodiscard]]
     auto set_recv_buffer_size(int size) const noexcept {
         return set_sock_opt(SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
     }
@@ -408,7 +429,7 @@ public:
 
     [[nodiscard]]
     auto send_buffer_size() const noexcept -> Result<std::size_t> {
-        int size = 0;
+        int size{0};
         if (auto ret = get_sock_opt(SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)); ret) [[likely]] {
             return static_cast<std::size_t>(size);
         } else {

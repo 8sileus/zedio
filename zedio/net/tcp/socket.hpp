@@ -27,6 +27,36 @@ public:
     }
 
     [[nodiscard]]
+    auto set_keepalive(bool on) const noexcept {
+        return io_.set_keepalive(on);
+    }
+
+    [[nodiscard]]
+    auto keepalive() const noexcept {
+        return io_.keepalive();
+    }
+
+    [[nodiscard]]
+    auto set_send_buffer_size(std::size_t size) const noexcept {
+        return io_.set_send_buffer_size(size);
+    }
+
+    [[nodiscard]]
+    auto send_buffer_size() const noexcept {
+        return io_.send_buffer_size();
+    }
+
+    [[nodiscard]]
+    auto set_recv_buffer_size(std::size_t size) const noexcept {
+        return io_.set_recv_buffer_size(size);
+    }
+
+    [[nodiscard]]
+    auto recv_buffer_size() const noexcept {
+        return io_.recv_buffer_size();
+    }
+
+    [[nodiscard]]
     auto set_reuseaddr(bool on) const noexcept {
         return io_.set_reuseaddr(on);
     }

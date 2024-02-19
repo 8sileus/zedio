@@ -51,17 +51,35 @@ BOOST_AUTO_TEST_CASE(api_test) {
     BOOST_CHECK(sock.set_linger(std::nullopt));
     BOOST_CHECK(sock.linger().value() == std::nullopt);
     // test nodelay
-    auto ret = sock.nodelay();
-    if (ret) {
-        LOG_INFO("{}", ret.value());
-    } else {
-        LOG_ERROR("{}", ret.error().message());
+    {
+
+        auto ret = sock.nodelay();
+        if (ret) {
+            LOG_INFO("{}", ret.value());
+        } else {
+            LOG_ERROR("{}", ret.error().message());
+        }
+        auto ok = ret.value();
+        BOOST_CHECK(sock.set_nodelay(!ok));
+        BOOST_CHECK(sock.nodelay().value() == !ok);
+        BOOST_CHECK(sock.set_nodelay(ok));
+        BOOST_CHECK(sock.nodelay().value() == ok);
     }
-    bool ok = ret.value();
-    BOOST_CHECK(sock.set_nodelay(!ok));
-    BOOST_CHECK(sock.nodelay().value() == !ok);
-    BOOST_CHECK(sock.set_nodelay(ok));
-    BOOST_CHECK(sock.nodelay().value() == ok);
+    // test keepalive
+    {
+
+        auto ret = sock.keepalive();
+        if (ret) {
+            LOG_INFO("{}", ret.value());
+        } else {
+            LOG_ERROR("{}", ret.error().message());
+        }
+        auto ok = ret.value();
+        BOOST_CHECK(sock.set_keepalive(!ok));
+        BOOST_CHECK(sock.keepalive().value() == !ok);
+        BOOST_CHECK(sock.set_keepalive(ok));
+        BOOST_CHECK(sock.keepalive().value() == ok);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
