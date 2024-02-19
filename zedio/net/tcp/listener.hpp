@@ -2,6 +2,7 @@
 
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
+#include "zedio/net/accepter.hpp"
 #include "zedio/net/tcp/stream.hpp"
 // C
 #include <cstring>
@@ -13,25 +14,6 @@ namespace zedio::net {
 
 class TcpListener : util::Noncopyable {
     friend class TcpSocket;
-
-    class TcpAccepter : public async::detail::AcceptAwaiter<async::detail::OPFlag::Distributive> {
-    public:
-        TcpAccepter(int fd)
-            : AcceptAwaiter(fd, reinterpret_cast<struct sockaddr *>(&addr_), &addrlen_) {}
-
-        auto await_resume() const noexcept -> Result<std::pair<TcpStream, SocketAddr>> {
-            auto ret = AcceptAwaiter::BaseIOAwaiter::await_resume();
-            if (!ret) [[unlikely]] {
-                return std::unexpected{ret.error()};
-            }
-            return std::make_pair(TcpStream{Socket::from_fd(ret.value())},
-                                  SocketAddr{reinterpret_cast<const sockaddr *>(&addr_), addrlen_});
-        }
-
-    private:
-        struct sockaddr_in6 addr_ {};
-        socklen_t           addrlen_{0};
-    };
 
 private:
     explicit TcpListener(Socket &&sock)
@@ -45,7 +27,7 @@ public:
 
     [[nodiscard]]
     auto accept() const noexcept {
-        return TcpAccepter{io_.fd()};
+        return detail::Accepter<TcpStream, SocketAddr>{io_.fd()};
     }
 
     [[nodiscard]]

@@ -4,11 +4,8 @@
 #include "zedio/common/concepts.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/common/util/noncopyable.hpp"
-#include "zedio/net/addr.hpp"
 // Linux
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include <netdb.h>
 // C++
 #include <chrono>
 
@@ -199,8 +196,10 @@ public:
     //     return static_cast<std::size_t>(ret);
     // }
 
+    template <typename Addr>
+        requires is_socket_address<Addr>
     [[nodiscard]]
-    auto send_to(std::span<const char> buf, const SocketAddr &addr) const noexcept {
+    auto send_to(std::span<const char> buf, const Addr &addr) const noexcept {
         return async::sendto(fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL, addr.sockaddr(),
                              addr.length());
     }

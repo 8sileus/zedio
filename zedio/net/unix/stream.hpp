@@ -1,14 +1,16 @@
 #pragma once
 
+#include "zedio/net/addr.hpp"
 #include "zedio/net/socket.hpp"
-#include "zedio/net/unix/addr.hpp"
 
 // C++
 namespace zedio::net {
 
 class UnixStream {
-    friend class UnixListener;
     friend class UnixSocket;
+
+    template <class T1, class T2>
+    friend class detail::Accepter;
 
 private:
     explicit UnixStream(Socket &&io)

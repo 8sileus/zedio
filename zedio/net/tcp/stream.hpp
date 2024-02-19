@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zedio/net/addr.hpp"
 #include "zedio/net/socket.hpp"
 // C++
 #include <chrono>
@@ -12,7 +13,9 @@ namespace zedio::net {
 
 class TcpStream : util::Noncopyable {
     friend class TcpSocket;
-    friend class TcpListener;
+
+    template <class T1, class T2>
+    friend class detail::Accepter;
 
 private:
     explicit TcpStream(Socket &&sock)

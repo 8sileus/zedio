@@ -2,7 +2,6 @@
 
 #include "zedio/common/error.hpp"
 #include "zedio/net/socket.hpp"
-#include "zedio/net/unix/addr.hpp"
 #include "zedio/net/unix/listener.hpp"
 // Linux
 #include <sys/un.h>

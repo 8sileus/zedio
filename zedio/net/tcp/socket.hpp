@@ -97,21 +97,21 @@ public:
 public:
     [[nodiscard]]
     static auto v4() -> Result<TcpSocket> {
-        auto sock = Socket::build(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (sock) [[likely]] {
-            return TcpSocket(std::move(sock.value()));
+        auto io = Socket::build(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (io) [[likely]] {
+            return TcpSocket(std::move(io.value()));
         } else {
-            return std::unexpected{sock.error()};
+            return std::unexpected{io.error()};
         }
     }
 
     [[nodiscard]]
     static auto v6() -> Result<TcpSocket> {
-        auto sock = Socket::build(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
-        if (sock) [[likely]] {
-            return TcpSocket(std::move(sock.value()));
+        auto io = Socket::build(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+        if (io) [[likely]] {
+            return TcpSocket(std::move(io.value()));
         } else {
-            return std::unexpected{sock.error()};
+            return std::unexpected{io.error()};
         }
     }
 

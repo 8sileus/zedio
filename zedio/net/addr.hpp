@@ -1,16 +1,16 @@
 #pragma once
 
 #include "zedio/common/error.hpp"
+#include "zedio/net/accepter.hpp"
 // Linux
 #include <arpa/inet.h>
-#include <netdb.h>
 #include <netinet/in.h>
+#include <sys/un.h>
 // C
 #include <cassert>
 #include <cstdint>
 #include <cstring>
 // C++
-#include <format>
 #include <string_view>
 
 namespace zedio::net {
@@ -57,7 +57,13 @@ private:
 
 class Ipv6Addr {
 public:
-    Ipv6Addr(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e, uint16_t f, uint16_t g,
+    Ipv6Addr(uint16_t a,
+             uint16_t b,
+             uint16_t c,
+             uint16_t d,
+             uint16_t e,
+             uint16_t f,
+             uint16_t g,
              uint16_t h) {
         ip_.__in6_u.__u6_addr16[0] = ::htons(a);
         ip_.__in6_u.__u6_addr16[1] = ::htons(b);
@@ -104,6 +110,12 @@ private:
 };
 
 class SocketAddr {
+    template <class T1, class T2>
+    friend class detail::Accepter;
+
+private:
+    SocketAddr() = default;
+
 public:
     SocketAddr(const sockaddr *addr, std::size_t len) {
         std::memcpy(&addr_, addr, len);
@@ -216,6 +228,61 @@ private:
         sockaddr_in  in4;
         sockaddr_in6 in6;
     } addr_;
+};
+
+class UnixSocketAddr {
+
+    template <class T1, class T2>
+    friend class detail::Accepter;
+
+    UnixSocketAddr(const std::string_view &path) {
+        addr_.sun_family = AF_UNIX;
+        std::memcpy(addr_.sun_path, path.data(), path.size());
+    }
+
+    UnixSocketAddr() = default;
+
+public:
+    UnixSocketAddr(const sockaddr *addr, std::size_t len) {
+        std::memcpy(&addr_, addr, len);
+    }
+
+    [[nodiscard]]
+    auto has_pathname() const noexcept -> bool {
+        return addr_.sun_path[0] == '\0';
+    }
+
+    [[nodiscard]]
+    auto pathname() const noexcept -> std::string_view {
+        return addr_.sun_path;
+    }
+
+    [[nodiscard]]
+    auto sockaddr() const noexcept -> const struct sockaddr * {
+        return reinterpret_cast<const struct sockaddr *>(&addr_);
+    }
+
+    [[nodiscard]]
+    auto sockaddr() noexcept -> struct sockaddr * {
+        return reinterpret_cast<struct sockaddr *>(&addr_);
+    }
+
+    [[nodiscard]]
+    auto length() const noexcept -> socklen_t {
+        return strlen(addr_.sun_path) + sizeof(addr_.sun_family);
+    }
+
+public:
+    [[nodiscard]]
+    static auto parse(std::string_view path) -> std::optional<UnixSocketAddr> {
+        if (path.size() >= sizeof(addr_.sun_path) || path.empty()) {
+            return std::nullopt;
+        }
+        return UnixSocketAddr{path};
+    }
+
+private:
+    sockaddr_un addr_{};
 };
 
 } // namespace zedio::net

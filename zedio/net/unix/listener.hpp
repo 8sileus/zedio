@@ -11,27 +11,6 @@ class UnixListener {
     friend class UnixSocket;
 
 private:
-    class UnixAccepter : public async::detail::AcceptAwaiter<async::detail::OPFlag::Distributive> {
-    public:
-        UnixAccepter(int fd)
-            : AcceptAwaiter(fd, reinterpret_cast<struct sockaddr *>(&addr_), &addrlen_) {}
-
-        auto await_resume() const noexcept -> Result<std::pair<UnixStream, UnixSocketAddr>> {
-            auto ret = AcceptAwaiter::BaseIOAwaiter::await_resume();
-            if (!ret) [[unlikely]] {
-                return std::unexpected{ret.error()};
-            }
-            return std::make_pair(
-                UnixStream{Socket::from_fd(ret.value())},
-                UnixSocketAddr{reinterpret_cast<const sockaddr *>(&addr_), addrlen_});
-        }
-
-    private:
-        struct sockaddr_un addr_ {};
-        socklen_t          addrlen_{0};
-    };
-
-private:
     UnixListener(Socket &&io)
         : io_{std::move(io)} {}
 
@@ -58,7 +37,7 @@ public:
 
     [[nodiscard]]
     auto accept() {
-        return UnixAccepter{io_.fd()};
+        return detail::Accepter<UnixStream, UnixSocketAddr>{io_.fd()};
     }
 
     [[nodiscard]]
