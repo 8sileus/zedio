@@ -4,6 +4,7 @@
 
 namespace zedio::async::detail {
 
+
 struct Config {
     /// worker
 
@@ -20,6 +21,10 @@ struct Config {
     std::size_t ring_entries_{1024};
     // io_uring flags
     uint32_t io_uring_flags_{0};
+
+    // static
+    static constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};
+    static constexpr std::size_t FIXED_FILES_NUM{10};
 };
 
 } // namespace zedio::async::detail

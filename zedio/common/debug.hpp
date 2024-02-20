@@ -1,5 +1,8 @@
 #pragma once
 
+// C
+#include <cassert>
+
 #ifdef NEED_ZEDIO_LOG
 
 #include "zedio/log.hpp"
@@ -19,11 +22,11 @@ auto &debug_logger = zedio::log::console;
 
 #define SET_LOG_LEVEL(level)
 
-#define LOG_TRACE(...) 
-#define LOG_INFO(...) 
+#define LOG_TRACE(...)
+#define LOG_INFO(...)
 #define LOG_DEBUG(...)
-#define LOG_WARN(...) 
+#define LOG_WARN(...)
 #define LOG_ERROR(...)
-#define LOG_FATAL(...) 
+#define LOG_FATAL(...)
 
 #endif

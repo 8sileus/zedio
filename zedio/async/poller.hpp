@@ -3,10 +3,8 @@
 #include "zedio/async/config.hpp"
 #include "zedio/async/io/callback.hpp"
 #include "zedio/async/queue.hpp"
-#include "zedio/common/config.hpp"
 #include "zedio/common/debug.hpp"
 // C
-#include <cassert>
 #include <cstring>
 // C++
 #include <chrono>
@@ -30,8 +28,8 @@ public:
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
-        if (auto ret = io_uring_register_files_sparse(&ring_, zedio::config::FIXED_FILES_NUM);
-            ret < 0) [[unlikely]] {
+        if (auto ret = io_uring_register_files_sparse(&ring_, Config::FIXED_FILES_NUM); ret < 0)
+            [[unlikely]] {
             throw std::runtime_error(
                 std::format("Call io_uring_register_files failed, error: {}.", strerror(-ret)));
         }
@@ -72,7 +70,7 @@ public:
 
     [[nodiscard]]
     auto poll(LocalQueue &queue) -> bool {
-        constexpr const auto                      SIZE = zedio::config::LOCAL_QUEUE_CAPACITY;
+        constexpr const auto                      SIZE = Config::LOCAL_QUEUE_CAPACITY;
         std::array<io_uring_cqe *, SIZE>          cqes;
         std::array<std::coroutine_handle<>, SIZE> tasks;
         std::size_t                               shared_tasks = 0;
@@ -149,8 +147,7 @@ public:
 
 private:
     io_uring                 ring_{};
-    std::vector<std::size_t> file_indexes_{
-        std::vector<std::size_t>(zedio::config::FIXED_FILES_NUM)};
+    std::vector<std::size_t> file_indexes_{std::vector<std::size_t>(Config::FIXED_FILES_NUM)};
 };
 
 } // namespace zedio::async::detail
