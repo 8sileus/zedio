@@ -1,12 +1,12 @@
 #pragma once
 
-#include "zedio/async/awaiter_io.hpp"
+#include "zedio/async/io/awaiter.hpp"
 #include "zedio/net/socket.hpp"
 
 namespace zedio::net::detail {
 
 template <class Stream, class Addr>
-class Accepter : public async::detail::AcceptAwaiter<async::detail::OPFlag::Distributive> {
+class Accepter : public async::detail::AcceptAwaiter<async::detail::Mode::S> {
     using return_type = Result<std::pair<Stream, Addr>>;
 
 public:
@@ -14,7 +14,7 @@ public:
         : AcceptAwaiter(fd, reinterpret_cast<sockaddr *>(&addr_.addr_), &length_) {}
 
     auto await_resume() const noexcept -> return_type {
-        auto ret = BaseIOAwaiter::await_resume();
+        auto ret = AcceptAwaiter::await_resume();
         if (!ret) [[unlikely]] {
             return std::unexpected{ret.error()};
         }

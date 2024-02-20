@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/async/awaiter_io.hpp"
+#include "zedio/async/io/awaiter.hpp"
 #include "zedio/async/task.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
@@ -19,6 +19,10 @@
 using namespace std::literals::chrono_literals;
 
 namespace zedio::async::detail {
+
+class Timer;
+
+thread_local Timer *t_timer;
 
 class TimerEvent : util::Noncopyable {
 public:
@@ -89,11 +93,14 @@ public:
             throw std::runtime_error(
                 std::format("call timer_create failed, error: {}", strerror(errno)));
         }
+        assert(t_timer == nullptr);
+        t_timer = this;
         loop_.resume();
     }
 
     ~Timer() {
         t_poller->unregister_file(idx_);
+        t_timer = nullptr;
         ::close(fd_);
     }
 
@@ -144,7 +151,7 @@ private:
     auto loop() -> Task<void> {
         char buf[8]{};
         while (true) {
-            if (auto result = co_await ReadAwaiter<OPFlag::Registered>(idx_, buf, sizeof(buf), 0);
+            if (auto result = co_await ReadAwaiter<Mode::F>(idx_, buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }

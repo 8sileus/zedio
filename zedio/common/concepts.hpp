@@ -13,4 +13,11 @@ concept is_socket_address = requires(Addr addr) {
     { addr.length() } noexcept -> std::same_as<socklen_t>;
 };
 
+template <class IOAwaiter>
+concept is_awaiter = requires(IOAwaiter awaiter) {
+    { awaiter.await_ready() };
+    { awaiter.await_resume() };
+    { awaiter.await_suspend(std::noop_coroutine()) };
+};
+
 } // namespace zedio

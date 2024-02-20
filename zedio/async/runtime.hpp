@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/async/operations.hpp"
+#include "zedio/async/operation.hpp"
 #include "zedio/async/worker.hpp"
 
 namespace zedio::async {

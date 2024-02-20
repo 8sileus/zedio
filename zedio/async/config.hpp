@@ -5,11 +5,6 @@
 namespace zedio::async::detail {
 
 struct Config {
-    Config() {}
-
-    Config(const Config &) = default;
-    auto operator=(const Config &) -> Config & = default;
-
     /// worker
 
     // num of worker

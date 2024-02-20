@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/async/awaiter_io.hpp"
+#include "zedio/async/io/awaiter.hpp"
 #include "zedio/async/task.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
@@ -49,8 +49,7 @@ private:
     auto loop() -> Task<void> {
         uint64_t buf{0};
         while (true) {
-            if (auto result
-                = co_await ReadAwaiter<OPFlag::Registered>(this->idx_, &buf, sizeof(buf), 0);
+            if (auto result = co_await ReadAwaiter<Mode::F>(this->idx_, &buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }

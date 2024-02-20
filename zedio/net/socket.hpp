@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/async/operations.hpp"
+#include "zedio/async/operation.hpp"
 #include "zedio/common/concepts.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/common/util/noncopyable.hpp"
