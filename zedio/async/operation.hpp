@@ -70,4 +70,9 @@ using openat2 = detail::OpenAt2Awaiter<mode>;
 template <Mode mode = Mode::S>
 using openat = detail::OpenAtAwaiter<mode>;
 
+template <Mode mode = Mode::S>
+using statx = detail::StatxAwaiter<mode>;
+
+template <Mode mode = Mode::S>
+using fsync = detail::FsyncAwaiter<mode>;
 } // namespace zedio::async

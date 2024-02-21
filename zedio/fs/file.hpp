@@ -20,6 +20,12 @@ public:
         other.fd_ = -1;
     }
 
+    ~File() {
+        if (fd_ >= 0) {
+            // TODO register close
+        }
+    }
+
     auto operator=(File &&other) -> File & {
         if (fd_ >= 0) {
             // this->close();
@@ -45,16 +51,50 @@ public:
         co_return Result<void>{};
     }
 
-    auto set_len();
+    auto read_to_end(std::string &s) {
+        // TODO get file size and reserve size
+        // TODO register link io
+    }
 
-    auto metadata();
+    auto read_to_end(std::vector<char> &s){
+        // TODO get file size and reserve size
+        // TODO register link io
+    }
+
+    auto set_len();
 
     auto set_permissions();
 
-    auto read_to_end();
+    [[nodiscard]]
+    auto metadata() {
+        struct Awaiter : public async::statx<> {
+            Awaiter(int fd)
+                : async::statx<>{fd, nullptr, AT_EMPTY_PATH, STATX_ALL, &statx_} {}
 
-    auto close() const noexcept {
-        return async::close(fd_);
+            auto await_resume() const noexcept -> Result<struct statx> {
+                if (auto ret = async::statx<>::await_resume(); !ret) [[unlikely]] {
+                    return std::unexpected{ret.error()};
+                }
+                return statx_;
+            }
+
+            struct statx statx_;
+        };
+
+        return Awaiter{fd_};
+    }
+
+    [[nodiscard]]
+    auto fsync(bool sync_metadata = true) const noexcept {
+        auto flag{sync_metadata ? 0 : IORING_FSYNC_DATASYNC};
+        return async::fsync(fd_, flag);
+    }
+
+    [[nodiscard]]
+    auto close() noexcept {
+        auto fd = fd_;
+        fd_ = -1;
+        return async::close(fd);
     }
 
 public:

@@ -41,6 +41,16 @@ public:
     }
 
     [[nodiscard]]
+    auto shutdown(SHUTDOWN_OPTION how) const noexcept {
+        return io_.shutdown(how);
+    }
+
+    [[nodiscard]]
+    auto close() noexcept {
+        return io_.close();
+    }
+
+    [[nodiscard]]
     auto read(std::span<char> buf) const noexcept {
         return io_.read(buf);
     }

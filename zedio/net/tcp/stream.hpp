@@ -38,6 +38,11 @@ public:
     }
 
     [[nodiscard]]
+    auto close() noexcept {
+        return io_.close();
+    }
+
+    [[nodiscard]]
     auto read(std::span<char> buf) const noexcept {
         return io_.read(buf);
     }

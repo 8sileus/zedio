@@ -44,8 +44,10 @@ public:
     }
 
     [[nodiscard]]
-    auto close() const noexcept {
-        return async::close(fd_);
+    auto close() noexcept {
+        auto fd = fd_;
+        fd_ = -1;
+        return async::close(fd);
     }
 
     [[nodiscard]]

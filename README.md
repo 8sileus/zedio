@@ -97,6 +97,8 @@ You can help us develop this project if you're familiar with C++20 standard and 
 - Writing documentation
 - Report bugs
 - Share ideas
+- Technical support
+- Suggest someone
 
 ## Discussion
 - QQ Group: 590815858

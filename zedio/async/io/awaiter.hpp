@@ -132,4 +132,16 @@ struct [[REMEMBER_CO_AWAIT]] OpenAtAwaiter : public IORegistrator<mode, int> {
         : IORegistrator<mode, int>{io_uring_prep_openat, dfd, path, flags, permission} {}
 };
 
+template <Mode mode>
+struct [[REMEMBER_CO_AWAIT]] StatxAwaiter : public IORegistrator<mode, void> {
+    StatxAwaiter(int dfd, const char *path, int flags, unsigned mask, struct statx *statxbuf)
+        : IORegistrator<mode, void>{io_uring_prep_statx, dfd, path, flags, mask, statxbuf} {}
+};
+
+template <Mode mode>
+struct [[REMEMBER_CO_AWAIT]] FsyncAwaiter : public IORegistrator<mode, void> {
+    FsyncAwaiter(int fd, unsigned fsync_flags)
+        : IORegistrator<mode, void>{io_uring_prep_fsync, fd, fsync_flags} {}
+};
+
 } // namespace zedio::async::detail
