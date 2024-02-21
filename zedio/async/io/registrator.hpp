@@ -11,6 +11,7 @@ template <Mode mode, typename R>
 class IORegistrator {
 public:
     template <typename F, typename... Args>
+        requires std::is_invocable_r_v<void, F, io_uring_sqe *, Args...>
     IORegistrator(F &&f, Args &&...args)
         : cb_{mode}
         , sqe_{t_poller->get_sqe()} {

@@ -51,15 +51,15 @@ public:
         co_return Result<void>{};
     }
 
-    auto read_to_end(std::string &s) {
-        // TODO get file size and reserve size
-        // TODO register link io
-    }
+    // auto read_to_end(std::string &s) {
+    //     // TODO get file size and reserve size
+    //     // TODO register link io
+    // }
 
-    auto read_to_end(std::vector<char> &s){
-        // TODO get file size and reserve size
-        // TODO register link io
-    }
+    // auto read_to_end(std::vector<char> &s) {
+    //     // TODO get file size and reserve size
+    //     // TODO register link io
+    // }
 
     auto set_len();
 
@@ -67,7 +67,8 @@ public:
 
     [[nodiscard]]
     auto metadata() {
-        struct Awaiter : public async::statx<> {
+        class Awaiter : public async::statx<> {
+        public:
             Awaiter(int fd)
                 : async::statx<>{fd, nullptr, AT_EMPTY_PATH, STATX_ALL, &statx_} {}
 
@@ -78,9 +79,9 @@ public:
                 return statx_;
             }
 
+        private:
             struct statx statx_;
         };
-
         return Awaiter{fd_};
     }
 

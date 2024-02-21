@@ -4,7 +4,6 @@
 
 namespace zedio::async::detail {
 
-
 struct Config {
     /// worker
 
