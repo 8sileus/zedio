@@ -4,10 +4,10 @@
 #include "zedio/async/idle.hpp"
 #include "zedio/async/poller.hpp"
 #include "zedio/async/queue.hpp"
-#include "zedio/async/rand.hpp"
 #include "zedio/async/time/timer.hpp"
 #include "zedio/async/waker.hpp"
 #include "zedio/common/debug.hpp"
+#include "zedio/common/rand.hpp"
 #include "zedio/common/util/thread.hpp"
 // C++
 #include <barrier>
