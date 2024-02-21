@@ -2,8 +2,8 @@
 
 #include "zedio/async/config.hpp"
 #include "zedio/async/io/callback.hpp"
-#include "zedio/async/queue.hpp"
 #include "zedio/common/debug.hpp"
+#include "zedio/runtime/queue.hpp"
 // C
 #include <cstring>
 // C++
@@ -69,7 +69,7 @@ public:
     }
 
     [[nodiscard]]
-    auto poll(LocalQueue &queue) -> bool {
+    auto poll(runtime::detail::LocalQueue &queue) -> bool {
         constexpr const auto                      SIZE = Config::LOCAL_QUEUE_CAPACITY;
         std::array<io_uring_cqe *, SIZE>          cqes;
         std::array<std::coroutine_handle<>, SIZE> tasks;

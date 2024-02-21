@@ -7,7 +7,7 @@
 // C
 #include <cinttypes>
 
-namespace zedio::async::detail {
+namespace zedio {
 
 class FastRand {
 public:
@@ -24,7 +24,6 @@ public:
     }
 
 private:
-
     auto fastrand() -> uint32_t {
         auto s1 = one_;
         auto s0 = two_;
@@ -36,8 +35,8 @@ private:
     }
 
 private:
-    uint32_t    one_;
-    uint32_t    two_;
+    uint32_t one_;
+    uint32_t two_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio

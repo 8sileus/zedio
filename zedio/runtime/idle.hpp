@@ -8,7 +8,7 @@
 #include <optional>
 #include <utility>
 
-namespace zedio::async::detail {
+namespace zedio::runtime::detail {
 
 class IdleState {
 public:
@@ -157,4 +157,4 @@ private:
     std::mutex              mutex_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::runtime::detail

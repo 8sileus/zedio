@@ -1,7 +1,7 @@
 #pragma once
 
-#include "zedio/async/config.hpp"
 #include "zedio/common/debug.hpp"
+#include "zedio/runtime/config.hpp"
 
 // C
 #include <cassert>
@@ -15,7 +15,7 @@
 #include <memory>
 #include <utility>
 
-namespace zedio::async::detail {
+namespace zedio::runtime::detail {
 
 class GlobalQueue {
 public:
@@ -122,7 +122,7 @@ public:
     }
 
     [[nodiscard]]
-    constexpr auto capacity() const -> std::size_t {
+    constexpr auto capacity() const noexcept -> std::size_t {
         return buffer_.max_size();
     }
 
@@ -347,4 +347,4 @@ private:
     std::array<std::coroutine_handle<>, Config::LOCAL_QUEUE_CAPACITY> buffer_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::runtime::detail

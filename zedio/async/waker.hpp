@@ -1,7 +1,7 @@
 #pragma once
 
+#include "zedio/async/future/task.hpp"
 #include "zedio/async/io/awaiter.hpp"
-#include "zedio/async/task.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 // Linux

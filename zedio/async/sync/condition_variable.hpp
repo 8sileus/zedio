@@ -1,7 +1,7 @@
 #pragma once
 
+#include "zedio/async/future/task.hpp"
 #include "zedio/async/sync/mutex.hpp"
-#include "zedio/async/task.hpp"
 
 // C++
 #include <mutex>
@@ -29,8 +29,8 @@ class ConditionVariable {
             while (!cv_.awaiters_.compare_exchange_weak(next_,
                                                         this,
                                                         std::memory_order::acquire,
-                                                        std::memory_order::relaxed))
-                ;
+                                                        std::memory_order::relaxed)) {
+            }
         }
 
         void await_resume() const noexcept {}
@@ -61,8 +61,8 @@ public:
         while (!awaiters_.compare_exchange_weak(awaiters,
                                                 awaiters->next_,
                                                 std::memory_order::release,
-                                                std::memory_order::relaxed))
-            ;
+                                                std::memory_order::relaxed)) {
+        }
         awaiters->next_ = nullptr;
         ConditionVariable::resume(awaiters);
     }
@@ -72,8 +72,8 @@ public:
         while (!awaiters_.compare_exchange_weak(awaiters,
                                                 nullptr,
                                                 std::memory_order::release,
-                                                std::memory_order::relaxed))
-            ;
+                                                std::memory_order::relaxed)) {
+        }
         ConditionVariable::resume(awaiters);
     }
 

@@ -1,19 +1,19 @@
 #pragma once
 
-#include "zedio/async/config.hpp"
-#include "zedio/async/idle.hpp"
 #include "zedio/async/poller.hpp"
-#include "zedio/async/queue.hpp"
 #include "zedio/async/time/timer.hpp"
 #include "zedio/async/waker.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/rand.hpp"
 #include "zedio/common/util/thread.hpp"
+#include "zedio/runtime/config.hpp"
+#include "zedio/runtime/idle.hpp"
+#include "zedio/runtime/queue.hpp"
 // C++
 #include <barrier>
 #include <thread>
 
-namespace zedio::async::detail {
+namespace zedio::runtime::detail {
 
 class Worker;
 
@@ -111,8 +111,10 @@ public:
         , index_{index}
         , poller_{shared.config_} {
         current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
-        LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}", current_thread::get_thread_name(),
-                  current_thread::get_tid(), timer_.fd());
+        LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}",
+                  current_thread::get_thread_name(),
+                  current_thread::get_tid(),
+                  timer_.fd());
         assert(t_worker == nullptr);
         t_worker = this;
     }
@@ -149,11 +151,6 @@ public:
             sleep();
         }
         LOG_TRACE("stop");
-    }
-
-    [[nodiscard]]
-    auto timer() -> Timer & {
-        return timer_;
     }
 
     void wake_up() {
@@ -369,12 +366,12 @@ private:
     FastRand                               rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
-    Poller                                 poller_;
-    Timer                                  timer_{};
-    Waker                                  waker_{};
+    async::detail::Poller                  poller_;
+    async::detail::Timer                   timer_{};
+    async::detail::Waker                   waker_{};
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::runtime::detail

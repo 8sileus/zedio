@@ -55,7 +55,7 @@ public:
 
     [[nodiscard]]
     auto write(std::span<const char> buf) const noexcept {
-        return io_.write(buf);
+        return io_.send(buf);
     }
 
     [[nodiscard]]
@@ -68,28 +68,6 @@ public:
     auto write_vectored(Ts &...bufs) const noexcept {
         return io_.write_vectored(bufs...);
     }
-
-    // [[nodiscard]]
-    // auto try_read(std::span<char> buf) const noexcept {
-    //     return io_.try_read(buf);
-    // }
-
-    // template <typename... Ts>
-    // [[nodiscard]]
-    // auto try_read_vectored(Ts &...bufs) const noexcept {
-    //     return io_.try_read_vectored(bufs...);
-    // }
-
-    // [[nodiscard]]
-    // auto try_write(std::span<const char> buf) const noexcept {
-    //     return io_.try_write(buf);
-    // }
-
-    // template <typename... Ts>
-    // [[nodiscard]]
-    // auto try_write_vectored(Ts &...bufs) const noexcept {
-    //     return io_.try_write_vectored(bufs...);
-    // }
 
     [[nodiscard]]
     auto local_addr() const noexcept {

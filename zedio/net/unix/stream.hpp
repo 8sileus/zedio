@@ -63,7 +63,7 @@ public:
 
     [[nodiscard]]
     auto write(std::span<const char> buf) const noexcept {
-        return io_.write(buf);
+        return io_.send(buf);
     }
 
     [[nodiscard]]

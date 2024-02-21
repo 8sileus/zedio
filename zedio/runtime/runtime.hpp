@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/async/operation.hpp"
-#include "zedio/async/worker.hpp"
+#include "zedio/runtime/worker.hpp"
 
 namespace zedio::async {
 
@@ -49,18 +49,18 @@ private:
         }
 
     private:
-        detail::Config config_;
+        runtime::detail::Config config_;
     };
 
 private:
-    Runtime(detail::Config config)
+    Runtime(runtime::detail::Config config)
         : shared_{config} {}
 
 public:
     // Waiting for the task to close
-    void block_on(Task<void> &&main_coro) {
-        auto shutdown_coro = [](detail::Worker::Shared &shared,
-                                Task<void> &&main_coro) -> Task<void> {
+    void block_on(async::Task<void> &&main_coro) {
+        auto shutdown_coro
+            = [](runtime::detail::Worker::Shared &shared, Task<void> &&main_coro) -> Task<void> {
             co_await main_coro;
             shared.close();
             co_return;
@@ -96,27 +96,27 @@ public:
     }
 
 private:
-    detail::Worker::Shared shared_;
+    runtime::detail::Worker::Shared shared_;
 };
 
 template <typename... Ts>
-    requires std::conjunction_v<std::is_same<Task<void>, Ts>...>
-             && (sizeof...(Ts) > 0)
+    requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
 static inline void spawn(Ts &&...tasks) {
+    using runtime::detail::t_worker;
+
     if constexpr (sizeof...(Ts) == 1) {
-        (detail::t_worker->schedule_task(std::move(tasks.take())), ...);
+        (t_worker->schedule_task(std::move(tasks.take())), ...);
     } else {
         auto task = [](Ts... tasks) -> Task<void> {
             ((co_await tasks), ...);
             co_return;
         }(std::forward<Ts>(tasks)...);
-        detail::t_worker->schedule_task(std::move(task.take()));
+        t_worker->schedule_task(std::move(task.take()));
     }
 }
 
 template <typename... Ts>
-    requires std::conjunction_v<std::is_same<Task<void>, Ts>...>
-             && (sizeof...(Ts) > 0)
+    requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
 [[nodiscard]] static inline auto join(Ts &&...tasks) -> Task<void> {
     return [](Ts... tasks) -> Task<void> {
         ((co_await tasks), ...);
@@ -129,7 +129,7 @@ static inline auto add_timer_event(const std::function<void()>    &cb,
                                    const std::chrono::nanoseconds &delay,
                                    const std::chrono::nanoseconds &period
                                    = std::chrono::nanoseconds{0}) {
-    return detail::t_worker->timer().add_timer_event(cb, delay, period);
+    return async::detail::t_timer->add_timer_event(cb, delay, period);
 }
 
 } // namespace zedio::async
