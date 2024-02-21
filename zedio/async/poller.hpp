@@ -28,12 +28,12 @@ public:
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
-        if (auto ret = io_uring_register_files_sparse(&ring_, Config::FIXED_FILES_NUM); ret < 0)
-            [[unlikely]] {
-            throw std::runtime_error(
-                std::format("Call io_uring_register_files failed, error: {}.", strerror(-ret)));
-        }
-        std::iota(file_indexes_.begin(), file_indexes_.end(), 0);
+        // if (auto ret = io_uring_register_files_sparse(&ring_, Config::FIXED_FILES_NUM); ret < 0)
+        //     [[unlikely]] {
+        //     throw std::runtime_error(
+        //         std::format("Call io_uring_register_files failed, error: {}.", strerror(-ret)));
+        // }
+        // std::iota(file_indexes_.begin(), file_indexes_.end(), 0);
         assert(t_poller == nullptr);
         t_poller = this;
     }
@@ -123,31 +123,31 @@ public:
         return io_uring_submit(&ring_);
     }
 
-    [[nodiscard]]
-    auto register_file(int fd) -> std::expected<int, std::error_code> {
-        assert(!file_indexes_.empty());
-        auto index = file_indexes_.back();
-        file_indexes_.pop_back();
-        if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
-            [[unlikely]] {
-            return std::unexpected{make_sys_error(-ret)};
-        }
-        return index;
-    }
+    // [[nodiscard]]
+    // auto register_file(int fd) -> std::expected<int, std::error_code> {
+    //     assert(!file_indexes_.empty());
+    //     auto index = file_indexes_.back();
+    //     file_indexes_.pop_back();
+    //     if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
+    //         [[unlikely]] {
+    //         return std::unexpected{make_sys_error(-ret)};
+    //     }
+    //     return index;
+    // }
 
-    void unregister_file(std::size_t index) {
-        // LOG_DEBUG("unregister {}", index);
-        file_indexes_.push_back(index);
-        auto fd = -1;
-        if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
-            [[unlikely]] {
-            LOG_ERROR("Unregister file offset {} failed ,error {}", index, strerror(-ret));
-        };
-    }
+    // void unregister_file(std::size_t index) {
+    //     // LOG_DEBUG("unregister {}", index);
+    //     file_indexes_.push_back(index);
+    //     auto fd = -1;
+    //     if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
+    //         [[unlikely]] {
+    //         LOG_ERROR("Unregister file offset {} failed ,error {}", index, strerror(-ret));
+    //     };
+    // }
 
 private:
     io_uring                 ring_{};
-    std::vector<std::size_t> file_indexes_{std::vector<std::size_t>(Config::FIXED_FILES_NUM)};
+    // std::vector<std::size_t> file_indexes_{std::vector<std::size_t>(Config::FIXED_FILES_NUM)};
 };
 
 } // namespace zedio::async::detail

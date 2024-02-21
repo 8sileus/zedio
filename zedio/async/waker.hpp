@@ -19,16 +19,18 @@ public:
     Waker()
         : loop_{loop()}
         , fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)}
-        , idx_{t_poller->register_file(fd_).value()} {
+    // , idx_{t_poller->register_file(fd_).value()}
+    {
         if (this->fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
-                                                 this->fd_, strerror(errno)));
+                                                 this->fd_,
+                                                 strerror(errno)));
         }
         loop_.resume();
     }
 
     ~Waker() {
-        t_poller->unregister_file(idx_);
+        // t_poller->unregister_file(idx_);
         ::close(this->fd_);
     }
 
@@ -49,7 +51,7 @@ private:
     auto loop() -> Task<void> {
         uint64_t buf{0};
         while (true) {
-            if (auto result = co_await ReadAwaiter<Mode::F>(this->idx_, &buf, sizeof(buf), 0);
+            if (auto result = co_await ReadAwaiter<Mode::X>(this->fd_, &buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }
@@ -59,7 +61,7 @@ private:
 private:
     Task<void> loop_;
     int        fd_;
-    int        idx_;
+    // int        idx_;
 };
 
 } // namespace zedio::async::detail

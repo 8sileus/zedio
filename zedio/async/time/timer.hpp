@@ -88,7 +88,8 @@ public:
     Timer()
         : loop_{loop()}
         , fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)}
-        , idx_{t_poller->register_file(fd_).value()} {
+    // , idx_{t_poller->register_file(fd_).value()}
+    {
         if (fd_ < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("call timer_create failed, error: {}", strerror(errno)));
@@ -99,7 +100,7 @@ public:
     }
 
     ~Timer() {
-        t_poller->unregister_file(idx_);
+        // t_poller->unregister_file(idx_);
         t_timer = nullptr;
         ::close(fd_);
     }
@@ -151,7 +152,7 @@ private:
     auto loop() -> Task<void> {
         char buf[8]{};
         while (true) {
-            if (auto result = co_await ReadAwaiter<Mode::F>(idx_, buf, sizeof(buf), 0);
+            if (auto result = co_await ReadAwaiter<Mode::X>(fd_, buf, sizeof(buf), 0);
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Timer read failed, error: {}.", result.error().message());
             }
@@ -182,7 +183,7 @@ private:
     Task<void>                                 loop_;
     std::multiset<std::shared_ptr<TimerEvent>> events_{};
     int                                        fd_;
-    int                                        idx_;
+    // int                                        idx_;
 };
 
 } // namespace zedio::async::detail
