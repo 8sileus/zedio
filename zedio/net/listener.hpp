@@ -22,7 +22,10 @@ public:
         class Awaiter : public async::detail::AcceptAwaiter<> {
         public:
             Awaiter(int fd)
-                : AcceptAwaiter{fd, reinterpret_cast<struct sockaddr *>(&addr_), &length_} {}
+                : AcceptAwaiter{fd,
+                                reinterpret_cast<struct sockaddr *>(&addr_),
+                                &length_,
+                                SOCK_NONBLOCK} {}
 
             auto await_resume() const noexcept -> Result<std::pair<Stream, Addr>> {
                 auto ret = AcceptAwaiter::await_resume();

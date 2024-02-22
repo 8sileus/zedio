@@ -25,7 +25,6 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    // SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
     auto runtime = Runtime::create();
     runtime.block_on(server());
     return 0;

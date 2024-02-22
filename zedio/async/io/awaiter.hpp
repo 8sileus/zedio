@@ -13,8 +13,8 @@ struct [[REMEMBER_CO_AWAIT]] SocketAwaiter : public IORegistrator<mode, int> {
 
 template <Mode mode = Mode::S>
 struct [[REMEMBER_CO_AWAIT]] AcceptAwaiter : public IORegistrator<mode, int> {
-    AcceptAwaiter(int fd, sockaddr *addr, socklen_t *addrlen)
-        : IORegistrator<mode, int>{io_uring_prep_accept, fd, addr, addrlen, 0} {}
+    AcceptAwaiter(int fd, sockaddr *addr, socklen_t *addrlen, int flags)
+        : IORegistrator<mode, int>{io_uring_prep_accept, fd, addr, addrlen, flags} {}
 };
 
 template <Mode mode = Mode::S>

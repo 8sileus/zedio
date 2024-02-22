@@ -39,7 +39,7 @@ ctest .
 ```
 
 ## Example
-Writing an echo server using Zedio
+Writing an echo server using Zedio  
 ``` C++
 // Ignore all errors
 #include "zedio/async.hpp"
@@ -74,17 +74,6 @@ auto main() -> int {
     return 0;
 }
 ```
-
-## Performance comparison Tokio
-OS：Ubuntu23.04  
-Number of cores ：4    
-Memory：4G  
-CPU：AMD Ryzen 5 3600 6-Core Processor  
-command：./wrk -t4 -c1000 -d90s --latency http://192.168.15.33:7777/   
-ZEDIO:  
-![](./doc/png/zedio_benchmark.png)  
-TOKIO:  
-![](./doc/png/tokio_benchmark.png)  
 
 ## Dependencies
 boost: https://github.com/boostorg/boost  

@@ -447,7 +447,7 @@ private:
 public:
     [[nodiscard]]
     static auto socket(int domain, int type, int protocol) -> Result<IO> {
-        if (auto fd = ::socket(domain, type, protocol); fd != -1) [[likely]] {
+        if (auto fd = ::socket(domain, type | SOCK_NONBLOCK, protocol); fd != -1) [[likely]] {
             return IO{fd};
         } else {
             return std::unexpected{make_sys_error(errno)};
