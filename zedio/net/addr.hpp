@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/error.hpp"
-#include "zedio/net/accepter.hpp"
+#include "zedio/net/listener.hpp"
 // Linux
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -110,8 +110,8 @@ private:
 };
 
 class SocketAddr {
-    template <class T1, class T2>
-    friend class detail::Accepter;
+    template <class T1, class T2, class T3>
+    friend class detail::BaseListener;
 
 private:
     SocketAddr() = default;
@@ -232,8 +232,8 @@ private:
 
 class UnixSocketAddr {
 
-    template <class T1, class T2>
-    friend class detail::Accepter;
+    template <class T1, class T2, class T3>
+    friend class detail::BaseListener;
 
     UnixSocketAddr(const std::string_view &path) {
         addr_.sun_family = AF_UNIX;
@@ -250,6 +250,11 @@ public:
     [[nodiscard]]
     auto has_pathname() const noexcept -> bool {
         return addr_.sun_path[0] == '\0';
+    }
+
+    [[nodiscard]]
+    auto family() const -> int {
+        return addr_.sun_family;
     }
 
     [[nodiscard]]

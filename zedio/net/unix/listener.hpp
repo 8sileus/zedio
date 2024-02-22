@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zedio/net/listener.hpp"
 #include "zedio/net/unix/stream.hpp"
 
 // Linux
@@ -7,21 +8,25 @@
 
 namespace zedio::net {
 
-class UnixListener {
+class UnixListener : public detail::BaseListener<UnixListener, UnixStream, UnixSocketAddr> {
     friend class UnixSocket;
+    friend class BaseListener;
 
 private:
-    UnixListener(Socket &&io)
-        : io_{std::move(io)} {}
+    UnixListener(IO &&io)
+        : BaseListener{std::move(io)} {
+        LOG_TRACE("Build a UnixListener {{fd: {}}}", io_.fd());
+    }
 
 public:
-    UnixListener(UnixListener &&other) noexcept
-        : io_{std::move(other.io_)} {}
+    UnixListener(UnixListener &&other) noexcept = default;
 
     ~UnixListener() {
         if (io_.fd() >= 0) {
+            // TODO register unlink
             if (auto ret = io_.local_addr<UnixSocketAddr>(); ret) [[likely]] {
-                if (::unlink(ret.value().pathname().data()) != 0) [[unlikely]] {
+                std::string path(ret.value().pathname());
+                if (::unlink(path.data()) != 0) [[unlikely]] {
                     LOG_ERROR("{}", strerror(errno));
                 }
             } else {
@@ -29,40 +34,6 @@ public:
             }
         }
     }
-
-    [[nodiscard]]
-    auto fd() const noexcept -> int {
-        return io_.fd();
-    }
-
-    [[nodiscard]]
-    auto accept() {
-        return detail::Accepter<UnixStream, UnixSocketAddr>{io_.fd()};
-    }
-
-    [[nodiscard]]
-    auto local_addr() const noexcept {
-        return io_.local_addr<UnixSocketAddr>();
-    }
-
-public:
-    [[nodiscard]]
-    static auto bind(const UnixSocketAddr &address) -> Result<UnixListener> {
-        auto io = Socket::build(AF_UNIX, SOCK_STREAM, 0);
-        if (!io) [[unlikely]] {
-            return std::unexpected{io.error()};
-        }
-        if (auto ret = io.value().bind(address); !ret) [[unlikely]] {
-            return std::unexpected{ret.error()};
-        }
-        if (auto ret = io.value().listen(SOMAXCONN); !ret) [[unlikely]] {
-            return std::unexpected{ret.error()};
-        }
-        return UnixListener{std::move(io.value())};
-    }
-
-private:
-    Socket io_;
 };
 
 } // namespace zedio::net
