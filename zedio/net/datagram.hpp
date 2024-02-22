@@ -25,7 +25,7 @@ public:
         return io_.send_to<Addr>(buf, addr);
     }
 
-    [[nodiscard]] 
+    [[nodiscard]]
     auto recv(std::span<char> buf) const noexcept {
         return io_.recv(buf);
     }

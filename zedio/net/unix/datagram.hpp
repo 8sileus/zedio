@@ -27,6 +27,16 @@ public:
     auto passcred() const noexcept {
         return io_.passcred();
     }
+
+public:
+    [[nodiscard]]
+    static auto unbound() -> Result<UnixDatagram> {
+        auto io = IO::socket(AF_UNIX, SOCK_DGRAM, 0);
+        if (!io) [[unlikely]] {
+            return std::unexpected{io.error()};
+        }
+        return UnixDatagram{std::move(io.value())};
+    }
 };
 
 } // namespace zedio::net

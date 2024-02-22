@@ -26,14 +26,14 @@ public:
         }
     }
 
-    [[nodiscard]]
-    auto datagram() -> Result<UnixSocket> {
-        if (auto io = IO::socket(AF_UNIX, SOCK_DGRAM, 0); io) {
-            return UnixSocket{std::move(io.value())};
-        } else {
-            return std::unexpected{io.error()};
-        }
-    }
+    // [[nodiscard]]
+    // auto datagram() -> Result<UnixSocket> {
+    //     if (auto io = IO::socket(AF_UNIX, SOCK_DGRAM, 0); io) {
+    //         return UnixSocket{std::move(io.value())};
+    //     } else {
+    //         return std::unexpected{io.error()};
+    //     }
+    // }
 };
 
 } // namespace zedio::net
