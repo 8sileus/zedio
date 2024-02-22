@@ -37,7 +37,7 @@ public:
 
         private:
             Addr      addr_{};
-            socklen_t length_{};
+            socklen_t length_{sizeof(Addr)};
         };
         return Awaiter{io_.fd()};
     }
