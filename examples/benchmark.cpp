@@ -17,7 +17,7 @@ Hello, World!
 )";
 
 auto process(TcpStream stream) -> Task<void> {
-    char buf[1024];
+    char buf[128];
     while (true) {
         auto ok = co_await stream.read(buf);
         if (!ok) {
@@ -48,8 +48,6 @@ auto server() -> Task<void> {
     }
     auto listener = std::move(has_listener.value());
     while (true) {
-        // check memory leaking
-        // auto has_stream = co_await timeout(listener.accept(), 40s);
         auto has_stream = co_await listener.accept();
         if (has_stream) {
             auto &[stream, peer_addr] = has_stream.value();

@@ -13,8 +13,8 @@ It's being developed, if you're interested in zedio and want to participate in i
 
 ## Overview
 Zedio is a event-driven platform for writing asynchronous applications with the C++, At a high level, it provides a few major components:
-- A multithreaded, work-stealing based task scheduler.(reference tokio)
-- A proactor backed by linux systems's io_uring.
+- A multithreaded, work-stealing based task scheduler. (reference tokio)
+- A proactor backed by io_uring.
 - Asynchronous TCP and UDP sockets.
 
 ## Install && Compile Tests
@@ -80,11 +80,7 @@ boost: https://github.com/boostorg/boost
 liburing: https://github.com/axboe/liburing
 
 ## Benchmark
-The performance testing:
-- Tokio
-
-[BENCHMARK](./docs/benchmark.md)
-
+[benchamrk](./docs/benchmark.md)
 
 ## Development
 You can help us develop this project if you're familiar with C++20 standard and io_uring, we have lots of things that you can help. about:   

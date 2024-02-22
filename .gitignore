@@ -2,3 +2,6 @@
 generate.sh
 /bin
 /build
+/docs/benchmark/go
+/docs/benchmark/monoio
+/docs/benchmark/tokio

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zedio/async/io.hpp"
 #include "zedio/async/operation.hpp"
 
 namespace zedio::fs::detail {
