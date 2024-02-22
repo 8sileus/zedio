@@ -186,7 +186,7 @@ public:
     [[nodiscard]]
     auto local_addr() const noexcept -> Result<Addr> {
         struct sockaddr_storage addr {};
-        socklen_t               len;
+        socklen_t               len{sizeof(addr)};
         if (::getsockname(fd_, reinterpret_cast<struct sockaddr *>(&addr), &len) == -1)
             [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
@@ -199,7 +199,7 @@ public:
     [[nodiscard]]
     auto peer_addr() const noexcept -> Result<Addr> {
         struct sockaddr_storage addr {};
-        socklen_t               len;
+        socklen_t               len{sizeof(addr)};
         if (::getpeername(fd_, reinterpret_cast<struct sockaddr *>(&addr), &len) == -1)
             [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
