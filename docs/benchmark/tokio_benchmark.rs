@@ -22,7 +22,7 @@ async fn main() {
 }
 
 async fn process(mut stream: TcpStream) {
-    let mut buf = [0; 1024];
+    let mut buf = [0; 128];
     loop {
         match stream.read(&mut buf).await {
             Ok(len) => {

@@ -61,7 +61,13 @@ public:
     void block_on(async::Task<void> &&main_coro) {
         auto shutdown_coro
             = [](runtime::detail::Worker::Shared &shared, Task<void> &&main_coro) -> Task<void> {
-            co_await main_coro;
+            try {
+                co_await main_coro;
+            } catch (const std::exception &ex) {
+                LOG_ERROR("{}", ex.what());
+            } catch (...) {
+                LOG_ERROR("Catch a unknown exception");
+            }
             shared.close();
             co_return;
         }(shared_, std::move(main_coro));

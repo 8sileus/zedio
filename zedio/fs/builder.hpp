@@ -5,66 +5,81 @@
 
 namespace zedio::fs::detail {
 
-template <class FileType>
+template <class T>
 class Builder {
-private:
-    class Awaiter : public async::detail::OpenAtAwaiter<async::detail::Mode::S> {
-    public:
-        Awaiter(int fd, const std::string_view &path, int flags, mode_t mode)
-            : OpenAtAwaiter{fd, path.data(), flags, mode} {}
-
-        auto await_resume() const noexcept -> Result<FileType> {
-            auto ret = OpenAtAwaiter::await_resume();
-            if (!ret) [[unlikely]] {
-                return std::unexpected{ret.error()};
-            }
-            return FileType{FileType::from_fd(ret.value())};
-        }
-    };
-
 public:
     auto read(bool on) noexcept -> Builder & {
-        return set_flag(on, O_RDONLY);
+        read_ = on;
+        return *this;
     }
 
     auto write(bool on) noexcept -> Builder & {
-        return set_flag(on, O_WRONLY);
+        write_ = on;
+        return *this;
     }
 
     auto append(bool on) noexcept -> Builder & {
-        return set_flag(on, O_APPEND);
+        append_ = on;
+        return *this;
     }
 
     auto create(bool on) noexcept -> Builder & {
-        return set_flag(on, O_CREAT);
+        create_ = on;
+        return *this;
     }
 
     auto truncate(bool on) noexcept -> Builder & {
-        return set_flag(on, O_TRUNC);
-    }
-
-    auto mode(mode_t mode) noexcept -> Builder & {
-        mode_ = mode;
+        truncate_ = on;
         return *this;
     }
 
-    auto open(std::string_view path) -> Awaiter {
-        return Awaiter(AT_FDCWD, path, flags_, mode_);
+    auto permission(mode_t permission) noexcept -> Builder & {
+        permission_ = permission;
+        return *this;
+    }
+
+    auto custom_flags(int flags) noexcept -> Builder & {
+        flags_ |= flags;
+    }
+
+    auto open(std::string_view path) {
+        adjust_flags();
+        return async::detail::IO::open<T>(path, flags_, permission_);
     }
 
 private:
-    auto set_flag(bool on, uint64_t flag) noexcept -> Builder & {
-        if (on) {
-            flags_ |= flag;
+    void adjust_flags() {
+        if (read_ && !write_ && !append_) {
+            flags_ |= O_RDONLY;
+        } else if (!read_ && write_ && !append_) {
+            flags_ |= O_WRONLY;
+        } else if (read_ && write_ && !append_) {
+            flags_ |= O_RDWR;
+        } else if (read_ && append_) {
+            flags_ |= O_RDWR | O_APPEND;
+        } else if (append_) {
+            flags_ |= O_WRONLY | O_APPEND;
         } else {
-            flags_ &= ~flag;
+            flags_ = -1;
         }
-        return *this;
+
+        if (truncate_) {
+            flags_ |= O_TRUNC;
+        }
+        if (create_) {
+            flags_ |= O_CREAT;
+        }
     }
 
 private:
-    uint64_t flags_{0};
-    uint64_t mode_{0};
+    bool read_{false};
+    bool write_{false};
+    bool append_{false};
+    bool create_{false};
+    bool truncate_{false};
+
+    int    flags_{0};
+    mode_t permission_{0};
 };
 
 } // namespace zedio::fs::detail

@@ -22,7 +22,7 @@ async fn main() {
 
 
 async fn process(mut stream: TcpStream) -> std::io::Result<()> {
-    let mut buf: Vec<u8> = Vec::with_capacity(1024);
+    let mut buf: Vec<u8> = Vec::with_capacity(128);
     let mut res;
     loop {
         // read

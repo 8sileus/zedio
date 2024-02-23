@@ -59,7 +59,7 @@ public:
 
     [[nodiscard]]
     auto read(std::span<char> buf) const noexcept {
-        return ReadAwaiter<>{fd_, buf.data(), buf.size_bytes(), 0};
+        return ReadAwaiter<>{fd_, buf.data(), buf.size_bytes(), static_cast<std::size_t>(-1)};
     }
 
     template <typename... Ts>
@@ -67,10 +67,10 @@ public:
     auto read_vectored(Ts &...bufs) const noexcept {
         constexpr auto N = sizeof...(Ts);
 
-        class Awaiter : public async::detail::ReadvAwaiter<> {
+        class Awaiter : public ReadvAwaiter<> {
         public:
             Awaiter(int fd,Ts&...bufs)
-                : ReadvAwaiter{fd, iovecs_.data(),iovecs_.size(), 0}
+                : ReadvAwaiter{fd, iovecs_.data(),iovecs_.size(),static_cast<std::size_t>(-1)}
                 , iovecs_{ iovec{
                   .iov_base = std::span<char>(bufs).data(),
                   .iov_len = std::span<char>(bufs).size_bytes(),
@@ -84,13 +84,16 @@ public:
 
     [[nodiscard]]
     auto write(std::span<const char> buf) const noexcept {
-        return WriteAwaiter<>{fd_, buf.data(), static_cast<unsigned>(buf.size_bytes()), 0};
+        return WriteAwaiter<>{fd_,
+                              buf.data(),
+                              static_cast<unsigned>(buf.size_bytes()),
+                              static_cast<std::size_t>(-1)};
     }
 
     [[nodiscard]]
-    auto write_all(std::span<const char> buf) const noexcept -> async::Task<Result<void>> {
-        std::size_t has_written_bytes = 0;
-        std::size_t remaining_bytes = buf.size_bytes();
+    auto write_all(std::span<const char> buf) const noexcept -> Task<Result<void>> {
+        auto has_written_bytes{0uz};
+        auto remaining_bytes{buf.size_bytes()};
         while (remaining_bytes > 0) {
             auto ret = co_await this->write({buf.data() + has_written_bytes, remaining_bytes});
             if (!ret) [[unlikely]] {
@@ -107,10 +110,10 @@ public:
     auto write_vectored(Ts &...bufs) const noexcept {
         constexpr auto N = sizeof...(Ts);
 
-        class Awaiter : public async::detail::ReadvAwaiter<> {
+        class Awaiter : public ReadvAwaiter<> {
         public:
             Awaiter(int fd,Ts&...bufs)
-                : ReadvAwaiter{fd, &iovecs_, N, 0}
+                : ReadvAwaiter{fd, &iovecs_, N, static_cast<std::size_t>(-1)}
                 , iovecs_{ iovec{
                   .iov_base = std::span<char>(bufs).data(),
                   .iov_len = std::span<char>(bufs).size_bytes(),
@@ -131,7 +134,7 @@ public:
         requires is_socket_address<Addr>
     [[nodiscard]]
     auto send_to(std::span<const char> buf, const Addr &addr) const noexcept {
-        return async::sendto(fd_,
+        return SendToAwaiter(fd_,
                              buf.data(),
                              buf.size_bytes(),
                              MSG_NOSIGNAL,
@@ -160,7 +163,7 @@ public:
         requires is_socket_address<Addr>
     [[nodiscard]]
     auto connect(const Addr &addr) const noexcept {
-        return async::connect(fd_, addr.sockaddr(), addr.length());
+        return ConnectAwaiter<>(fd_, addr.sockaddr(), addr.length());
     }
 
     template <typename Addr>
@@ -179,6 +182,60 @@ public:
             return std::unexpected{make_sys_error(errno)};
         }
         return {};
+    }
+
+    [[nodiscard]]
+    auto fsync(int flags) const noexcept {
+        return FsyncAwaiter<>(fd_, flags);
+    }
+
+    [[nodiscard]]
+    auto metadata() const noexcept {
+        class Awaiter : public StatxAwaiter<> {
+        public:
+            Awaiter(int fd)
+                : StatxAwaiter{fd, "", AT_EMPTY_PATH | AT_STATX_SYNC_AS_STAT, STATX_ALL, &statx_} {}
+
+            auto await_resume() const noexcept -> Result<struct ::statx> {
+                if (auto ret = StatxAwaiter::await_resume(); !ret) [[unlikely]] {
+                    return std::unexpected{ret.error()};
+                }
+                return statx_;
+            }
+
+        private:
+            struct ::statx statx_ {};
+        };
+        return Awaiter{fd_};
+    }
+
+    template <class T>
+        requires std::is_same_v<T, std::vector<char>> || std::is_same_v<T, std::string>
+    [[nodiscard]]
+    auto read_to_end(T &buf) const noexcept -> Task<Result<void>> {
+        {
+            auto ret = co_await this->metadata();
+            if (!ret) {
+                co_return std::unexpected{ret.error()};
+            }
+            buf.resize(ret.value().stx_size);
+        }
+        std::span<char>     span{buf};
+        Result<std::size_t> ret;
+        while (true) {
+            ret = co_await this->read(span);
+            if (!ret) [[unlikely]] {
+                co_return std::unexpected{ret.error()};
+            }
+            if (ret.value() == 0) {
+                break;
+            }
+            span = span.subspan(ret.value());
+            if (span.empty()) {
+                break;
+            }
+        }
+        co_return Result<void>{};
     }
 
     template <typename Addr>
@@ -215,7 +272,7 @@ public:
 
     [[nodiscard]]
     auto reuseaddr() const noexcept -> Result<bool> {
-        auto optval = 0;
+        auto optval{0};
         if (auto ret = get_sock_opt(SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)); ret)
             [[likely]] {
             return optval != 0;
@@ -232,7 +289,7 @@ public:
 
     [[nodiscard]]
     auto reuseport() const noexcept -> Result<bool> {
-        auto optval = 0;
+        auto optval{0};
         if (auto ret = get_sock_opt(SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)); ret)
             [[likely]] {
             return optval != 0;
@@ -248,7 +305,7 @@ public:
 
     [[nodiscard]]
     auto ttl() const noexcept -> Result<uint32_t> {
-        uint32_t optval = 0;
+        uint32_t optval{0};
         if (auto ret = get_sock_opt(IPPROTO_IP, IP_TTL, &optval, sizeof(optval)); ret) [[likely]] {
             return optval;
         } else {
@@ -323,7 +380,7 @@ public:
 
     [[nodiscard]]
     auto recv_buffer_size() const noexcept -> Result<std::size_t> {
-        int size = 0;
+        auto size{0};
         if (auto ret = get_sock_opt(SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)); ret) [[likely]] {
             return static_cast<std::size_t>(size);
         } else {
@@ -338,7 +395,7 @@ public:
 
     [[nodiscard]]
     auto send_buffer_size() const noexcept -> Result<std::size_t> {
-        int size{0};
+        auto size{0};
         if (auto ret = get_sock_opt(SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)); ret) [[likely]] {
             return static_cast<std::size_t>(size);
         } else {
@@ -452,6 +509,25 @@ public:
         } else {
             return std::unexpected{make_sys_error(errno)};
         }
+    }
+
+    template <class T>
+    [[nodiscard]]
+    static auto open(const std::string_view &path, int flags, mode_t mode) {
+        class Awaiter : public OpenAtAwaiter<> {
+        public:
+            Awaiter(int fd, const std::string_view &path, int flags, mode_t mode)
+                : OpenAtAwaiter{fd, path.data(), flags, mode} {}
+
+            auto await_resume() const noexcept -> Result<T> {
+                auto ret = OpenAtAwaiter::await_resume();
+                if (!ret) [[unlikely]] {
+                    return std::unexpected{ret.error()};
+                }
+                return T{IO{ret.value()}};
+            }
+        };
+        return Awaiter{AT_FDCWD, path, flags, mode};
     }
 
     [[nodiscard]]

@@ -15,7 +15,7 @@ Hello, World!
 
 func worker(conn net.Conn) {
 	defer conn.Close()
-	b := make([]byte, 512)
+	b := make([]byte, 128)
 	for {
 		_, err := conn.Read(b)
 		if err != nil {

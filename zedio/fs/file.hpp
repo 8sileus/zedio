@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zedio/async/io.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/fs/builder.hpp"
 // C++
@@ -10,92 +11,71 @@
 namespace zedio::fs {
 
 class File {
+    using IO = zedio::async::detail::IO;
+    friend IO;
+
 private:
-    File(int fd)
-        : fd_{fd} {}
+    File(IO &&io)
+        : io_{std::move(io)} {}
 
 public:
-    File(File &&other)
-        : fd_{other.fd_} {
-        other.fd_ = -1;
-    }
+    File(File &&other) noexcept = default;
+    auto operator=(File &&other) -> File & = default;
 
-    ~File() {
-        if (fd_ >= 0) {
-            // TODO register close
-        }
-    }
-
-    auto operator=(File &&other) -> File & {
-        if (fd_ >= 0) {
-            // this->close();
-        }
-        fd_ = other.fd_;
-        other.fd_ = -1;
-        return *this;
+    [[nodiscard]]
+    auto write_all(std::span<const char> buf) const noexcept {
+        return io_.write_all(buf);
     }
 
     [[nodiscard]]
-    auto write_all(std::span<const char> buf) const noexcept -> async::Task<Result<void>> {
-        std::size_t has_written_bytes = 0;
-        std::size_t remaining_bytes = buf.size_bytes();
-        while (remaining_bytes > 0) {
-            auto ret
-                = co_await async::write(fd_, buf.data() + has_written_bytes, remaining_bytes, 0);
-            if (!ret) [[unlikely]] {
-                co_return std::unexpected{ret.error()};
-            }
-            has_written_bytes += ret.value();
-            remaining_bytes -= ret.value();
-        }
-        co_return Result<void>{};
+    auto write(std::span<const char> buf) const noexcept {
+        return io_.write(buf);
     }
 
-    // auto read_to_end(std::string &s) {
-    //     // TODO get file size and reserve size
-    //     // TODO register link io
-    // }
+    template <typename... Ts>
+    [[nodiscard]]
+    auto write_vectored(Ts &...bufs) const noexcept {
+        return io_.write_vectored(bufs...);
+    }
 
-    // auto read_to_end(std::vector<char> &s) {
-    //     // TODO get file size and reserve size
-    //     // TODO register link io
-    // }
+    [[nodiscard]]
+    auto read(std::span<char> buf) const noexcept {
+        return io_.read(buf);
+    }
 
-    auto set_len();
+    auto read_to_string(std::string &buf) {
+        return io_.read_to_end(buf);
+    }
+
+    auto read_to_end(std::vector<char> &buf) {
+        return io_.read_to_end(buf);
+    }
 
     auto set_permissions();
 
     [[nodiscard]]
     auto metadata() {
-        class Awaiter : public async::statx<> {
-        public:
-            Awaiter(int fd)
-                : async::statx<>{fd, nullptr, AT_EMPTY_PATH, STATX_ALL, &statx_} {}
-
-            auto await_resume() const noexcept -> Result<struct statx> {
-                if (auto ret = async::statx<>::await_resume(); !ret) [[unlikely]] {
-                    return std::unexpected{ret.error()};
-                }
-                return statx_;
-            }
-
-        private:
-            struct statx statx_;
-        };
-        return Awaiter{fd_};
+        return io_.metadata();
     }
 
     [[nodiscard]]
-    auto fsync(bool sync_metadata = true) const noexcept {
-        auto flag{sync_metadata ? 0 : IORING_FSYNC_DATASYNC};
-        return async::fsync(fd_, flag);
+    auto fsync_all() const noexcept {
+        return io_.fsync(0);
+    }
+
+    [[nodiscard]]
+    auto fsync_data() const noexcept {
+        return io_.fsync(IORING_FSYNC_DATASYNC);
     }
 
     [[nodiscard]]
     auto close() noexcept {
-        auto fd = fd_;
-        fd_ = -1;
-        return async::close(fd);
+        return io_.close();
+    }
+
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return io_.fd();
     }
 
 public:
@@ -104,19 +84,15 @@ public:
     }
 
     [[nodiscard]] auto static create(std::string_view path, mode_t permission = 0666) {
-        return options().write(true).create(true).truncate(true).mode(permission).open(path);
+        return options().write(true).create(true).truncate(true).permission(permission).open(path);
     }
 
     [[nodiscard]] auto static options() -> detail::Builder<File> {
         return detail::Builder<File>{};
     }
 
-    [[nodiscard]] auto static from_fd(int fd) -> File {
-        return File{fd};
-    }
-
 private:
-    int fd_;
+    IO io_;
 };
 
 } // namespace zedio::fs

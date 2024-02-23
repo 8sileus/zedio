@@ -19,17 +19,10 @@ Hello, World!
 auto process(TcpStream stream) -> Task<void> {
     char buf[128];
     while (true) {
-        auto ok = co_await stream.read(buf);
-        if (!ok) {
-            console.error(ok.error().message());
+        if (auto ret = co_await stream.read(buf); !ret || ret.value() == 0) {
             break;
         }
-        if (ok.value() == 0) {
-            break;
-        }
-        ok = co_await stream.write(response);
-        if (!ok) {
-            console.error(ok.error().message());
+        if (auto ret = co_await stream.write_all(response); !ret) {
             break;
         }
     }
