@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/async/future/task.hpp"
+#include "zedio/async/coroutine/task.hpp"
 #include "zedio/async/operation.hpp"
 // Linux
 #include <netdb.h>
