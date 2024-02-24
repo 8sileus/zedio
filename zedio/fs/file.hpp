@@ -51,7 +51,9 @@ public:
         return io_.read_to_end(buf);
     }
 
-    auto set_permissions();
+    void seek(off64_t offset, int whence) {
+        ::lseek64(io_.fd(), offset, whence);
+    }
 
     [[nodiscard]]
     auto metadata() {
