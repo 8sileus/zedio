@@ -26,7 +26,9 @@ public:
     ~IO() {
         if (fd_ >= 0) {
             // TODO register closer
-            sync_close(fd_);
+            if (async_close(fd_) == false) {
+                sync_close(fd_);
+            }
             fd_ = -1;
         }
     }
@@ -499,6 +501,17 @@ private:
             }
         } while (ret == EINTR && cnt--);
         LOG_ERROR("sync close {} failed, error: {}", ret, strerror(errno));
+    }
+
+    static auto async_close(int fd) noexcept -> bool {
+        auto sqe = t_poller->get_sqe();
+        if (sqe == nullptr) {
+            LOG_WARN("async close fd failed, sqe is nullptr");
+            return false;
+        }
+        io_uring_prep_close(sqe, fd);
+        io_uring_sqe_set_data(sqe, nullptr);
+        return true;
     }
 
 public:

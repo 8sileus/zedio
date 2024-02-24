@@ -46,7 +46,9 @@ public:
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
     auto wait(std::optional<std::coroutine_handle<>> &run_next) {
-        // handle_waiting_awatiers();
+        if (auto ret = submit(); ret < 0) {
+            LOG_ERROR("sub mit failed, error: {}", strerror(-ret));
+        }
 
         io_uring_cqe *cqe{nullptr};
         if (auto ret = io_uring_wait_cqe(&ring_, &cqe); ret != 0) [[unlikely]] {
@@ -123,31 +125,8 @@ public:
         return io_uring_submit(&ring_);
     }
 
-    // [[nodiscard]]
-    // auto register_file(int fd) -> std::expected<int, std::error_code> {
-    //     assert(!file_indexes_.empty());
-    //     auto index = file_indexes_.back();
-    //     file_indexes_.pop_back();
-    //     if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
-    //         [[unlikely]] {
-    //         return std::unexpected{make_sys_error(-ret)};
-    //     }
-    //     return index;
-    // }
-
-    // void unregister_file(std::size_t index) {
-    //     // LOG_DEBUG("unregister {}", index);
-    //     file_indexes_.push_back(index);
-    //     auto fd = -1;
-    //     if (auto ret = io_uring_register_files_update(&ring_, index, &fd, 1); ret < 0)
-    //         [[unlikely]] {
-    //         LOG_ERROR("Unregister file offset {} failed ,error {}", index, strerror(-ret));
-    //     };
-    // }
-
 private:
     io_uring                 ring_{};
-    // std::vector<std::size_t> file_indexes_{std::vector<std::size_t>(Config::FIXED_FILES_NUM)};
 };
 
 } // namespace zedio::async::detail
