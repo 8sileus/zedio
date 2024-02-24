@@ -26,9 +26,9 @@ auto create_file() -> Task<void> {
     } else {
         console.error("{} {}", meta.error().value(), meta.error().message());
     }
-    console.info("offset {}", lseek(ret.value().fd(), 0, SEEK_SET));
+    ret.value().seek(0, SEEK_SET);
     {
-        std::string buf;
+        std::string buf = "hahah\n";
         co_await ret.value().read_to_string(buf);
         console.info("{} {}", buf, buf.size());
     }
@@ -53,7 +53,7 @@ auto open_file() -> Task<void> {
     } else {
         console.error("{} {}", meta.error().value(), meta.error().message());
     }
-    std::string buf;
+    std::string buf = "nono\n";
     co_await ret.value().read_to_string(buf);
     console.info("{}", buf);
 }

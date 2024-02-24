@@ -47,7 +47,8 @@ public:
         return io_.read_to_end(buf);
     }
 
-    auto read_to_end(std::vector<char> &buf) {
+    template <typename T>
+    auto read_to_end(std::vector<T> &buf) {
         return io_.read_to_end(buf);
     }
 

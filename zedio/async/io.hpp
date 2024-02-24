@@ -210,18 +210,18 @@ public:
     }
 
     template <class T>
-        requires std::is_same_v<T, std::vector<char>> || std::is_same_v<T, std::string>
     [[nodiscard]]
     auto read_to_end(T &buf) const noexcept -> Task<Result<void>> {
+        auto offset = buf.size();
         {
             auto ret = co_await this->metadata();
             if (!ret) {
                 co_return std::unexpected{ret.error()};
             }
-            buf.resize(ret.value().stx_size);
+            buf.resize(offset + ret.value().stx_size);
         }
-        std::span<char>     span{buf};
-        Result<std::size_t> ret;
+        auto span = std::span<char>{buf}.subspan(offset);
+        auto ret = Result<std::size_t>{};
         while (true) {
             ret = co_await this->read(span);
             if (!ret) [[unlikely]] {

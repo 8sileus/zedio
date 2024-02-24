@@ -14,6 +14,10 @@ public:
         : io_{std::move(io)} buf_(buf_size) {}
 
 protected:
+    auto read_until() {
+        // TODO.
+    }
+
     template <typename T>
     auto read_buf(std::span<T> buf) -> async::Task<Result<std::size_t>> {
         if (buf.bytes_size() >= capacity()) {
