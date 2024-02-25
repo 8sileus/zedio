@@ -5,7 +5,6 @@
 #include <queue>
 
 using namespace zedio::async;
-using namespace zedio::async::sync;
 using namespace zedio::log;
 
 auto consumer(ConditionVariable &cv, [[maybe_unused]] Mutex &mutex, bool &run, std::queue<int> &q)

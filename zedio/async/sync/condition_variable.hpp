@@ -6,7 +6,7 @@
 // C++
 #include <mutex>
 
-namespace zedio::async::sync {
+namespace zedio::async {
 
 class ConditionVariable {
     class Awaiter {
@@ -60,7 +60,7 @@ public:
         }
         while (!awaiters_.compare_exchange_weak(awaiters,
                                                 awaiters->next_,
-                                                std::memory_order::release,
+                                                std::memory_order::acq_rel,
                                                 std::memory_order::relaxed)) {
         }
         awaiters->next_ = nullptr;
@@ -71,7 +71,7 @@ public:
         auto awaiters = awaiters_.load(std::memory_order::relaxed);
         while (!awaiters_.compare_exchange_weak(awaiters,
                                                 nullptr,
-                                                std::memory_order::release,
+                                                std::memory_order::acq_rel,
                                                 std::memory_order::relaxed)) {
         }
         ConditionVariable::resume(awaiters);
@@ -100,4 +100,4 @@ private:
     std::atomic<Awaiter *> awaiters_{nullptr};
 };
 
-} // namespace zedio::async::sync
+} // namespace zedio::async

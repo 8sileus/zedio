@@ -2,7 +2,6 @@
 #include "zedio/log.hpp"
 
 using namespace zedio::async;
-using namespace zedio::async::sync;
 using namespace zedio::log;
 
 auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum)

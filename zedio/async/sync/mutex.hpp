@@ -8,7 +8,7 @@
 // C
 #include <cassert>
 
-namespace zedio::async::sync {
+namespace zedio::async {
 
 class Mutex {
     class Awaiter {
@@ -149,4 +149,4 @@ private:
     Mutex &mutex_;
 };
 
-} // namespace zedio::async::sync
+} // namespace zedio::async
