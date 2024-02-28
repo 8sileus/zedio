@@ -1,9 +1,12 @@
 #pragma once
 
 #include "zedio/common/error.hpp"
+#include "zedio/common/macros.hpp"
 #include "zedio/common/util/get_func_args.hpp"
+#include "zedio/common/util/noncopyable.hpp"
 #include "zedio/io/base/callback.hpp"
 #include "zedio/io/base/poller.hpp"
+#include "zedio/io/base/timeout.hpp"
 
 namespace zedio::io::detail {
 
@@ -17,6 +20,13 @@ public:
     IORegistrator(IOFunc &&f, Args... args)
         : f_{f}
         , args_{t_poller->get_sqe(), std::forward<Args>(args)...} {}
+
+    // Delete copy
+    IORegistrator(const IORegistrator &other) = delete;
+    auto operator=(const IORegistrator &other) -> IORegistrator & = delete;
+    // Allow move
+    IORegistrator(IORegistrator &&other) = default;
+    auto operator=(IORegistrator &&other) -> IORegistrator & = default;
 
     auto await_ready() const noexcept -> bool {
         return false;
@@ -38,9 +48,15 @@ public:
         return cb_.result_ >= 0;
     }
 
+    [[REMEMBER_CO_AWAIT]]
     auto set_exclusion() -> IO & {
         cb_.is_exclusive_ = true;
         return static_cast<IO &>(*this);
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto set_timeout(std::chrono::nanoseconds timeout) -> TimeoutIO<IO> {
+        return TimeoutIO<IO>{std::move(static_cast<IO &>(*this)), timeout};
     }
 
 protected:

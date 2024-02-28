@@ -19,15 +19,20 @@ public:
 
     [[nodiscard]]
     auto accept() const noexcept {
-        class Awaiter : public io::Accept {
+        class Awaiter : public io::detail::IORegistrator<Awaiter, decltype(io_uring_prep_accept)> {
+            using Super = io::detail::IORegistrator<Awaiter, decltype(io_uring_prep_accept)>;
+
         public:
             Awaiter(int fd)
-                : Accept{fd, reinterpret_cast<struct sockaddr *>(&addr_), &length_, SOCK_NONBLOCK} {
-            }
+                : Super{io_uring_prep_accept,
+                        fd,
+                        reinterpret_cast<struct sockaddr *>(&addr_),
+                        &length_,
+                        SOCK_NONBLOCK} {}
 
             auto await_resume() const noexcept -> Result<std::pair<Stream, Addr>> {
                 if (this->cb_.result_ >= 0) [[likely]] {
-                    return std::make_pair(Stream{IO::from_fd(cb_.result_)}, addr_);
+                    return std::make_pair(Stream{IO::from_fd(this->cb_.result_)}, addr_);
                 } else {
                     return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }

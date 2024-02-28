@@ -48,10 +48,11 @@ auto server() -> Task<void> {
     }
     auto listener = std::move(has_listener.value());
     while (true) {
-        // auto has_stream = co_await timeout(listener.accept(), 3s);
-        auto has_stream = co_await listener.accept();
+        auto has_stream = co_await listener.accept().set_timeout(3s);
+        // auto has_stream = co_await listener.accept();
+
         if (has_stream) {
-            auto [stream, peer_addr] = std::move(has_stream.value());
+            auto &[stream, peer_addr] = has_stream.value();
             console.info("Accept a connection from {}", peer_addr.to_string());
             spawn(process(std::move(stream)));
         } else {

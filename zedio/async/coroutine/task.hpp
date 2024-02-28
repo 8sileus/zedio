@@ -202,6 +202,10 @@ public:
         return res;
     }
 
+    auto handle() -> std::coroutine_handle<promise_type> {
+        return handle_;
+    }
+
     void resume() const {
         handle_.resume();
     }

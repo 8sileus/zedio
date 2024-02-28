@@ -143,10 +143,10 @@ public:
 
 private:
     void wait_before() {
-        std::function<void(io_uring_sqe *)> cb{nullptr};
-        io_uring_sqe                       *sqe;
+        decltype(waiting_coros_)::value_type cb{nullptr};
+        io_uring_sqe                        *sqe{nullptr};
         if (waker_buf_ != 0) {
-            // waker_buf_ = 0;
+            waker_buf_ = 0;
             sqe = this->get_sqe();
             assert(sqe != nullptr);
             io_uring_prep_read(sqe, waker_fd_, &waker_buf_, sizeof(waker_buf_), 0);

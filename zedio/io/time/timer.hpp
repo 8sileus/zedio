@@ -3,7 +3,8 @@
 #include "zedio/async/coroutine/task.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
-#include "zedio/io/awaiter/read.hpp"
+#include "zedio/io/base/callback.hpp"
+#include "zedio/io/base/poller.hpp"
 // Linux
 #include <sys/timerfd.h>
 // C
@@ -88,9 +89,7 @@ class Timer : util::Noncopyable {
 public:
     Timer()
         : loop_{loop()}
-        , fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)}
-    // , idx_{t_poller->register_file(fd_).value()}
-    {
+        , fd_{::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)} {
         if (fd_ < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("call timer_create failed, error: {}", strerror(errno)));
@@ -152,12 +151,21 @@ private:
 private:
     [[nodiscard]]
     auto loop() -> zedio::async::Task<void> {
-        char buf[8]{};
+        char     buf[8]{};
+        Callback cb{.handle_ = loop_.handle(), .result_ = 0, .is_exclusive_ = true};
         while (true) {
-            if (auto result = co_await Read{fd_, buf, sizeof(buf), 0}.set_exclusion();
-                !result.has_value()) [[unlikely]] {
-                LOG_ERROR("Timer read failed, error: {}.", result.error().message());
+            auto sqe = t_poller->get_sqe();
+            io_uring_prep_read(sqe, fd_, buf, sizeof(buf), 0);
+            io_uring_sqe_set_data(sqe, &cb);
+            if (auto ret = t_poller->submit(); ret < 0) [[unlikely]] {
+                LOG_FATAL("register timer failed: {}", strerror(-ret));
             }
+            co_await std::suspend_always{};
+
+            // if (auto result = co_await Read{fd_, buf, sizeof(buf), 0}.set_exclusion();
+            //     !result.has_value()) [[unlikely]] {
+            //     LOG_ERROR("Timer read failed, error: {}.", result.error().message());
+            // }
             auto                                     now = std::chrono::steady_clock::now();
             auto                                     it = events_.begin();
             auto                                     cnt = 0uz;
@@ -185,7 +193,6 @@ private:
     zedio::async::Task<void>                   loop_;
     std::multiset<std::shared_ptr<TimerEvent>> events_{};
     int                                        fd_;
-    // int                                        idx_;
 };
 
 } // namespace zedio::io::detail
