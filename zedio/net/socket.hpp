@@ -1,13 +1,13 @@
 #pragma once
 
-#include "zedio/async/io.hpp"
+#include "zedio/io/io.hpp"
 
 namespace zedio::net::detail {
 
 template <class Listener, class Stream, class Addr>
 class BaseSocket {
 protected:
-    using IO = zedio::async::detail::IO;
+    using IO = zedio::io::IO;
 
     explicit BaseSocket(IO &&io)
         : io_{std::move(io)} {}
@@ -38,24 +38,23 @@ public:
     // Converts the socket into TcpStream
     [[nodiscard]]
     auto connect(const Addr &addr) {
-        class Awaiter : public async::detail::ConnectAwaiter<> {
+        class Awaiter : public io::Connect {
         public:
-            Awaiter(int fd, const Addr &addr)
-                : ConnectAwaiter(fd, addr.sockaddr(), addr.length())
-                , fd_{fd} {}
+            Awaiter(IO io, const Addr &addr)
+                : Connect{io.fd(), addr.sockaddr(), addr.length()}
+                , io_{std::move(io)} {}
 
             auto await_resume() const noexcept -> Result<Stream> {
-                auto ret = ConnectAwaiter::await_resume();
-                if (!ret) [[unlikely]] {
-                    return std::unexpected{ret.error()};
+                if (this->cb_.result_ >= 0) [[likely]] {
+                    return Stream{std::move(io_)};
+                } else {
+                    return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }
-                return Stream{IO::from_fd(fd_)};
             }
-
         private:
-            int fd_;
+            IO io_;
         };
-        return Awaiter{io_.take_fd(), addr};
+        return Awaiter{std::move(io_), addr};
     }
 
 protected:

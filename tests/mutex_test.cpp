@@ -4,8 +4,7 @@
 using namespace zedio::async;
 using namespace zedio::log;
 
-auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum)
-    -> Task<void> {
+auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum) -> Task<void> {
     while (n--) {
         co_await mutex.lock();
         sum += 1;
@@ -17,11 +16,11 @@ auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum)
 
 auto test(std::size_t n) -> Task<void> {
     Mutex       mutex_;
-    std::size_t sum=0;
+    std::size_t sum = 0;
     for (auto i = 0uz; i < 10; i += 1) {
         spawn(cal(mutex_, n, sum));
     }
-    co_await zedio::async::sleep(10s);
+    co_await zedio::io::Sleep(10s);
     console.info("expected: {}, actual {}", n * 10, sum);
     co_return;
 }

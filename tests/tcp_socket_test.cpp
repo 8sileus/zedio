@@ -7,6 +7,7 @@
 BOOST_AUTO_TEST_SUITE(tcp_socket_test)
 
 using namespace zedio::net;
+using namespace std::chrono_literals;
 
 #define X_HAS_VAL(F)                                     \
     if (auto ret = F; !ret) {                            \
@@ -27,7 +28,7 @@ BOOST_AUTO_TEST_CASE(api_test) {
     auto addr = SocketAddr::parse("localhost", 9898).value();
     BOOST_CHECK(sock.bind(addr));
     // test nonblocking
-    BOOST_CHECK(sock.nonblocking().value() == false);
+    BOOST_CHECK(sock.nonblocking().value() == true);
     BOOST_CHECK(sock.set_nonblocking(false));
     BOOST_CHECK(sock.nonblocking().value() == false);
     BOOST_CHECK(sock.set_nonblocking(true));

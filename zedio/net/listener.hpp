@@ -1,14 +1,14 @@
 #pragma once
 
-#include "zedio/async/io.hpp"
 #include "zedio/common/concepts.hpp"
+#include "zedio/io/io.hpp"
 
 namespace zedio::net::detail {
 
 template <class Listener, class Stream, class Addr>
 class BaseListener {
 protected:
-    using IO = zedio::async::detail::IO;
+    using IO = zedio::io::IO;
 
     explicit BaseListener(IO &&io)
         : io_{std::move(io)} {}
@@ -19,20 +19,18 @@ public:
 
     [[nodiscard]]
     auto accept() const noexcept {
-        class Awaiter : public async::detail::AcceptAwaiter<> {
+        class Awaiter : public io::Accept {
         public:
             Awaiter(int fd)
-                : AcceptAwaiter{fd,
-                                reinterpret_cast<struct sockaddr *>(&addr_),
-                                &length_,
-                                SOCK_NONBLOCK} {}
+                : Accept{fd, reinterpret_cast<struct sockaddr *>(&addr_), &length_, SOCK_NONBLOCK} {
+            }
 
             auto await_resume() const noexcept -> Result<std::pair<Stream, Addr>> {
-                auto ret = AcceptAwaiter::await_resume();
-                if (!ret) [[unlikely]] {
-                    return std::unexpected{ret.error()};
+                if (this->cb_.result_ >= 0) [[likely]] {
+                    return std::make_pair(Stream{IO::from_fd(cb_.result_)}, addr_);
+                } else {
+                    return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }
-                return std::make_pair(Stream{IO::from_fd(ret.value())}, addr_);
             }
 
         private:

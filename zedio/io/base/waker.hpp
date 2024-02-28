@@ -1,9 +1,9 @@
 #pragma once
 
 #include "zedio/async/coroutine/task.hpp"
-#include "zedio/async/io/awaiter.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
+#include "zedio/io/async_io/read.hpp"
 // Linux
 #include <sys/eventfd.h>
 // C
@@ -12,7 +12,7 @@
 #include <format>
 #include <mutex>
 
-namespace zedio::async::detail {
+namespace zedio::io::detail {
 
 class Waker : util::Noncopyable {
 public:
@@ -48,10 +48,10 @@ public:
     }
 
 private:
-    auto loop() -> Task<void> {
+    auto loop() -> zedio::async::Task<void> {
         uint64_t buf{0};
         while (true) {
-            if (auto result = co_await ReadAwaiter<Mode::X>(this->fd_, &buf, sizeof(buf), 0);
+            if (auto result = co_await Read{this->fd_, &buf, sizeof(buf), 0}.set_exclusion();
                 !result.has_value()) [[unlikely]] {
                 LOG_ERROR("Waker read failed, error: {}.", result.error().message());
             }
@@ -59,9 +59,9 @@ private:
     }
 
 private:
-    Task<void> loop_;
-    int        fd_;
+    zedio::async::Task<void> loop_;
+    int                      fd_;
     // int        idx_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::io::detail

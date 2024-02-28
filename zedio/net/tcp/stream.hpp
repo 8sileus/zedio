@@ -1,33 +1,20 @@
 #pragma once
 
 #include "zedio/net/addr.hpp"
-#include "zedio/net/socket.hpp"
 #include "zedio/net/stream.hpp"
 // C++
 #include <chrono>
 #include <optional>
-#include <span>
-// Linux
-#include <sys/socket.h>
 
 namespace zedio::net {
 
 class TcpStream : public detail::BaseStream<TcpStream, SocketAddr> {
-    friend class BaseStream;
-
-    template <class Listener, class Stream, class Addr>
-    friend class detail::BaseListener;
-
-    template <class Listener, class Stream, class Addr>
-    friend class detail::BaseSocket;
-
-private:
+public:
     explicit TcpStream(IO &&io)
         : BaseStream{std::move(io)} {
         LOG_TRACE("Build a TcpStream{{fd: {}}}", io_.fd());
     }
 
-public:
     TcpStream(TcpStream &&other) = default;
     auto operator=(TcpStream &&other) -> TcpStream & = default;
 

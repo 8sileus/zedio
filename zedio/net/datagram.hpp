@@ -1,13 +1,13 @@
 #pragma once
 
-#include "zedio/async/io.hpp"
+#include "zedio/io/io.hpp"
 
 namespace zedio::net::detail {
 
 template <class Datagram, class Addr>
 class BaseDatagram {
 protected:
-    using IO = zedio::async::detail::IO;
+    using IO = zedio::io::IO;
 
     explicit BaseDatagram(IO &&io)
         : io_{std::move(io)} {}

@@ -2,6 +2,7 @@
 
 // C++
 #include <concepts>
+#include <coroutine>
 // Linux
 #include <sys/socket.h>
 

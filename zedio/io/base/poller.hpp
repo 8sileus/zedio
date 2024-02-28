@@ -1,8 +1,8 @@
 #pragma once
 
-#include "zedio/async/config.hpp"
-#include "zedio/async/io/callback.hpp"
 #include "zedio/common/debug.hpp"
+#include "zedio/io/base/callback.hpp"
+#include "zedio/io/base/config.hpp"
 #include "zedio/runtime/queue.hpp"
 // C
 #include <cstring>
@@ -10,11 +10,12 @@
 #include <chrono>
 #include <expected>
 #include <format>
+#include <functional>
 #include <numeric>
 #include <queue>
 // Linux
 #include <liburing.h>
-namespace zedio::async::detail {
+namespace zedio::io::detail {
 
 class Poller;
 
@@ -28,12 +29,6 @@ public:
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
-        // if (auto ret = io_uring_register_files_sparse(&ring_, Config::FIXED_FILES_NUM); ret < 0)
-        //     [[unlikely]] {
-        //     throw std::runtime_error(
-        //         std::format("Call io_uring_register_files failed, error: {}.", strerror(-ret)));
-        // }
-        // std::iota(file_indexes_.begin(), file_indexes_.end(), 0);
         assert(t_poller == nullptr);
         t_poller = this;
     }
@@ -61,10 +56,10 @@ public:
         auto cb = reinterpret_cast<Callback *>(cqe->user_data);
         if (cb != nullptr) [[likely]] {
             cb->result_ = cqe->res;
-            if (cb->is_shared()) {
-                run_next = cb->handle_;
-            } else {
+            if (cb->is_exclusive_) {
                 cb->handle_.resume();
+            } else {
+                run_next = cb->handle_;
             }
         }
         io_uring_cqe_seen(&ring_, cqe);
@@ -86,10 +81,10 @@ public:
             auto cb = reinterpret_cast<Callback *>(cqes[i]->user_data);
             if (cb != nullptr) [[likely]] {
                 cb->result_ = cqes[i]->res;
-                if (cb->is_shared()) {
-                    tasks[shared_tasks++] = std::move(cb->handle_);
-                } else {
+                if (cb->is_exclusive_) {
                     tasks[--exclusive_tasks] = std::move(cb->handle_);
+                } else {
+                    tasks[shared_tasks++] = std::move(cb->handle_);
                 }
             }
         }
@@ -125,8 +120,14 @@ public:
         return io_uring_submit(&ring_);
     }
 
+    void push_waiting_coro(std::function<void(io_uring_sqe *sqe)> &&cb) {
+        waiting_coros_.push_back(std::move(cb));
+    }
+
 private:
-    io_uring                 ring_{};
+private:
+    io_uring                                          ring_{};
+    std::list<std::function<void(io_uring_sqe *sqe)>> waiting_coros_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::io::detail

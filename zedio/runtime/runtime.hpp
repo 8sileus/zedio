@@ -1,6 +1,5 @@
 #pragma once
 
-#include "zedio/async/operation.hpp"
 #include "zedio/runtime/worker.hpp"
 
 namespace zedio::async {
@@ -135,7 +134,7 @@ static inline auto add_timer_event(const std::function<void()>    &cb,
                                    const std::chrono::nanoseconds &delay,
                                    const std::chrono::nanoseconds &period
                                    = std::chrono::nanoseconds{0}) {
-    return async::detail::t_timer->add_timer_event(cb, delay, period);
+    return io::detail::t_timer->add_timer_event(cb, delay, period);
 }
 
 } // namespace zedio::async

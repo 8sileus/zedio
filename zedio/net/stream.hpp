@@ -1,13 +1,13 @@
 #pragma once
 
-#include "zedio/async/io.hpp"
+#include "zedio/io/io.hpp"
 
 namespace zedio::net::detail {
 
 template <class Stream, class Addr>
 class BaseStream {
 protected:
-    using IO = zedio::async::detail::IO;
+    using IO = zedio::io::IO;
 
     explicit BaseStream(IO &&io)
         : io_{std::move(io)} {}
@@ -17,7 +17,7 @@ public:
     auto operator=(BaseStream &&other) -> BaseStream & = default;
 
     [[nodiscard]]
-    auto shutdown(SHUTDOWN_OPTION how) const noexcept {
+    auto shutdown(io::Shutdown::How how) const noexcept {
         return io_.shutdown(how);
     }
 

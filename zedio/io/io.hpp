@@ -1,21 +1,24 @@
 #pragma once
 
 #include "zedio/async/coroutine/task.hpp"
-#include "zedio/async/operation.hpp"
+#include "zedio/common/concepts.hpp"
+#include "zedio/io/async_io/accept.hpp"
+#include "zedio/io/async_io/close.hpp"
+#include "zedio/io/async_io/connect.hpp"
+#include "zedio/io/async_io/fsync.hpp"
+#include "zedio/io/async_io/openat.hpp"
+#include "zedio/io/async_io/read.hpp"
+#include "zedio/io/async_io/read_vectored.hpp"
+#include "zedio/io/async_io/recv.hpp"
+#include "zedio/io/async_io/send.hpp"
+#include "zedio/io/async_io/shutdown.hpp"
+#include "zedio/io/async_io/statx.hpp"
+#include "zedio/io/async_io/write.hpp"
+#include "zedio/io/async_io/write_vectored.hpp"
 // Linux
 #include <netdb.h>
 
-namespace zedio {
-
-enum class SHUTDOWN_OPTION : int {
-    READ = SHUT_RD,
-    WRITE = SHUT_WR,
-    READ_WRITE = SHUT_RDWR,
-};
-
-}
-
-namespace zedio::async::detail {
+namespace zedio::io {
 
 class IO {
 private:
@@ -51,28 +54,34 @@ public:
     auto close() noexcept {
         auto fd = fd_;
         fd_ = -1;
-        return CloseAwaiter{fd};
+        return Close{fd};
     }
 
     [[nodiscard]]
-    auto shutdown(SHUTDOWN_OPTION how) const noexcept {
-        return ShutdownAwaiter<>{fd_, static_cast<int>(how)};
+    auto shutdown(Shutdown::How how) const noexcept {
+        return Shutdown{fd_, static_cast<int>(how)};
     }
 
     [[nodiscard]]
     auto read(std::span<char> buf) const noexcept {
-        return ReadAwaiter<>{fd_, buf.data(), buf.size_bytes(), static_cast<std::size_t>(-1)};
+        return Read{fd_, buf, static_cast<std::size_t>(-1)};
     }
+
+    // template <typename T>
+    // [[nodiscard]]
+    // auto read_type(T &buf) const noexcept {
+    //     return this->read{std::span<T>(std::addressof(buf), 1)};
+    // }
 
     template <typename... Ts>
     [[nodiscard]]
     auto read_vectored(Ts &...bufs) const noexcept {
         constexpr auto N = sizeof...(Ts);
 
-        class Awaiter : public ReadvAwaiter<> {
+        class Awaiter : public ReadVectored {
         public:
             Awaiter(int fd,Ts&...bufs)
-                : ReadvAwaiter{fd, iovecs_.data(),iovecs_.size(),static_cast<std::size_t>(-1)}
+                : ReadVectored{fd, iovecs_.data(),iovecs_.size(),static_cast<std::size_t>(-1)}
                 , iovecs_{ iovec{
                   .iov_base = std::span<char>(bufs).data(),
                   .iov_len = std::span<char>(bufs).size_bytes(),
@@ -86,14 +95,11 @@ public:
 
     [[nodiscard]]
     auto write(std::span<const char> buf) const noexcept {
-        return WriteAwaiter<>{fd_,
-                              buf.data(),
-                              static_cast<unsigned>(buf.size_bytes()),
-                              static_cast<std::size_t>(-1)};
+        return Write{fd_, buf, static_cast<std::size_t>(-1)};
     }
 
     [[nodiscard]]
-    auto write_all(std::span<const char> buf) const noexcept -> Task<Result<void>> {
+    auto write_all(std::span<const char> buf) const noexcept -> zedio::async::Task<Result<void>> {
         auto has_written_bytes{0uz};
         auto remaining_bytes{buf.size_bytes()};
         while (remaining_bytes > 0) {
@@ -107,113 +113,9 @@ public:
         co_return Result<void>{};
     }
 
-    template <typename... Ts>
-    [[nodiscard]]
-    auto write_vectored(Ts &...bufs) const noexcept {
-        constexpr auto N = sizeof...(Ts);
-
-        class Awaiter : public ReadvAwaiter<> {
-        public:
-            Awaiter(int fd,Ts&...bufs)
-                : ReadvAwaiter{fd, &iovecs_, N, static_cast<std::size_t>(-1)}
-                , iovecs_{ iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                }...} {}
-
-        private:
-            std::array<struct iovec, N> iovecs_;
-        };
-        return Awaiter{fd_, bufs...};
-    }
-
-    [[nodiscard]]
-    auto send(std::span<const char> buf) const noexcept {
-        return SendAwaiter<>(fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL);
-    }
-
-    template <typename Addr>
-        requires is_socket_address<Addr>
-    [[nodiscard]]
-    auto send_to(std::span<const char> buf, const Addr &addr) const noexcept {
-        return SendToAwaiter(fd_,
-                             buf.data(),
-                             buf.size_bytes(),
-                             MSG_NOSIGNAL,
-                             addr.sockaddr(),
-                             addr.length());
-    }
-
-    [[nodiscard]]
-    auto recv(std::span<char> buf, int flags = 0) const noexcept {
-        return RecvAwaiter<>{fd_, buf.data(), buf.size_bytes(), flags};
-    }
-
-    [[nodiscard]]
-    auto fd() const noexcept {
-        return fd_;
-    }
-
-    [[nodiscard]]
-    auto take_fd() noexcept {
-        auto ret = fd_;
-        fd_ = -1;
-        return ret;
-    }
-
-    template <typename Addr>
-        requires is_socket_address<Addr>
-    [[nodiscard]]
-    auto connect(const Addr &addr) const noexcept {
-        return ConnectAwaiter<>(fd_, addr.sockaddr(), addr.length());
-    }
-
-    template <typename Addr>
-        requires is_socket_address<Addr>
-    [[nodiscard]]
-    auto bind(const Addr &addr) const noexcept -> Result<void> {
-        if (::bind(fd_, addr.sockaddr(), addr.length()) == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return {};
-    }
-
-    [[nodiscard]]
-    auto listen(int n) const noexcept -> Result<void> {
-        if (::listen(fd_, n) == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return {};
-    }
-
-    [[nodiscard]]
-    auto fsync(int flags) const noexcept {
-        return FsyncAwaiter<>(fd_, flags);
-    }
-
-    [[nodiscard]]
-    auto metadata() const noexcept {
-        class Awaiter : public StatxAwaiter<> {
-        public:
-            Awaiter(int fd)
-                : StatxAwaiter{fd, "", AT_EMPTY_PATH | AT_STATX_SYNC_AS_STAT, STATX_ALL, &statx_} {}
-
-            auto await_resume() const noexcept -> Result<struct ::statx> {
-                if (auto ret = StatxAwaiter::await_resume(); !ret) [[unlikely]] {
-                    return std::unexpected{ret.error()};
-                }
-                return statx_;
-            }
-
-        private:
-            struct ::statx statx_ {};
-        };
-        return Awaiter{fd_};
-    }
-
     template <class T>
     [[nodiscard]]
-    auto read_to_end(T &buf) const noexcept -> Task<Result<void>> {
+    auto read_to_end(T &buf) const noexcept -> zedio::async::Task<Result<void>> {
         auto offset = buf.size();
         {
             auto ret = co_await this->metadata();
@@ -238,6 +140,92 @@ public:
             }
         }
         co_return Result<void>{};
+    }
+
+    template <typename... Ts>
+    [[nodiscard]]
+    auto write_vectored(Ts &...bufs) const noexcept {
+        constexpr auto N = sizeof...(Ts);
+
+        class Awaiter : public WriteVectored {
+        public:
+            Awaiter(int fd,Ts&...bufs)
+                : WriteVectored{fd, &iovecs_, N, static_cast<std::size_t>(-1)}
+                , iovecs_{ iovec{
+                  .iov_base = std::span<char>(bufs).data(),
+                  .iov_len = std::span<char>(bufs).size_bytes(),
+                }...} {}
+
+        private:
+            std::array<struct iovec, N> iovecs_;
+        };
+        return Awaiter{fd_, bufs...};
+    }
+
+    template <typename T>
+    [[nodiscard]]
+    auto send(std::span<const T> buf) const noexcept {
+        return Send{fd_, buf, MSG_NOSIGNAL};
+    }
+
+    template <typename T, typename Addr>
+        requires is_socket_address<Addr>
+    [[nodiscard]]
+    auto send_to(std::span<const T> buf, const Addr &addr) const noexcept {
+        return SendTo(fd_, buf, MSG_NOSIGNAL, addr);
+    }
+
+    template <typename T>
+    [[nodiscard]]
+    auto recv(std::span<T> buf, int flags = 0) const noexcept {
+        return Recv{fd_, buf, flags};
+    }
+
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return fd_;
+    }
+
+    [[nodiscard]]
+    auto take_fd() noexcept {
+        auto ret = fd_;
+        fd_ = -1;
+        return ret;
+    }
+
+    template <typename Addr>
+        requires is_socket_address<Addr>
+    [[nodiscard]]
+    auto connect(const Addr &addr) const noexcept {
+        return Connect(fd_, addr.sockaddr(), addr.length());
+    }
+
+    template <typename Addr>
+        requires is_socket_address<Addr>
+    [[nodiscard]]
+    auto bind(const Addr &addr) const noexcept -> Result<void> {
+        if (::bind(fd_, addr.sockaddr(), addr.length()) == -1) [[unlikely]] {
+            return std::unexpected{make_sys_error(errno)};
+        }
+        return {};
+    }
+
+    [[nodiscard]]
+    auto listen(int n) const noexcept -> Result<void> {
+        if (::listen(fd_, n) == -1) [[unlikely]] {
+            return std::unexpected{make_sys_error(errno)};
+        }
+        return {};
+    }
+
+    [[nodiscard]]
+    auto fsync(unsigned int fsync_flags) noexcept {
+        return Fsync{fd_, fsync_flags};
+    }
+
+    [[nodiscard]]
+    auto metadata() const noexcept {
+        return StatxToMetadata{fd_};
     }
 
     template <typename Addr>
@@ -504,7 +492,7 @@ private:
     }
 
     static auto async_close(int fd) noexcept -> bool {
-        auto sqe = t_poller->get_sqe();
+        auto sqe = detail::t_poller->get_sqe();
         if (sqe == nullptr) {
             LOG_WARN("async close fd failed, sqe is nullptr");
             return false;
@@ -527,17 +515,17 @@ public:
     template <class T>
     [[nodiscard]]
     static auto open(const std::string_view &path, int flags, mode_t mode) {
-        class Awaiter : public OpenAtAwaiter<> {
+        class Awaiter : public OpenAt {
         public:
             Awaiter(int fd, const std::string_view &path, int flags, mode_t mode)
-                : OpenAtAwaiter{fd, path.data(), flags, mode} {}
+                : OpenAt{fd, path.data(), flags, mode} {}
 
             auto await_resume() const noexcept -> Result<T> {
-                auto ret = OpenAtAwaiter::await_resume();
-                if (!ret) [[unlikely]] {
-                    return std::unexpected{ret.error()};
+                if (this->cb_.result_ >= 0) [[likely]] {
+                    return T{IO{this->cb_.result_}};
+                } else {
+                    return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }
-                return T{IO{ret.value()}};
             }
         };
         return Awaiter{AT_FDCWD, path, flags, mode};
@@ -552,4 +540,4 @@ private:
     int fd_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::io

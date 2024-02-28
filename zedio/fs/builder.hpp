@@ -1,7 +1,6 @@
 #pragma once
 
-#include "zedio/async/io.hpp"
-#include "zedio/async/operation.hpp"
+#include "zedio/io/io.hpp"
 
 namespace zedio::fs::detail {
 
@@ -44,7 +43,7 @@ public:
 
     auto open(std::string_view path) {
         adjust_flags();
-        return async::detail::IO::open<T>(path, flags_, permission_);
+        return io::IO::open<T>(path, flags_, permission_);
     }
 
 private:

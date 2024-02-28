@@ -1,8 +1,8 @@
 #pragma once
 
-#include <thread>
+#include <cinttypes>
 
-namespace zedio::async::detail {
+namespace zedio::io::detail {
 
 struct Config {
     // size of io_uring_queue entries
@@ -14,4 +14,4 @@ struct Config {
     static constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::io::detail

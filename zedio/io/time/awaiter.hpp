@@ -1,13 +1,15 @@
 #pragma once
 
-#include "zedio/async/time/timer.hpp"
 #include "zedio/common/concepts.hpp"
+#include "zedio/io/time/timer.hpp"
 
-namespace zedio::async::detail {
+using namespace std::chrono_literals;
 
-class [[REMEMBER_CO_AWAIT]] SleepAwaiter {
+namespace zedio::io {
+
+class [[REMEMBER_CO_AWAIT]] Sleep {
 public:
-    SleepAwaiter(const std::chrono::nanoseconds &timeout)
+    Sleep(const std::chrono::nanoseconds &timeout)
         : timeout_(timeout) {}
 
     auto await_ready() const noexcept -> bool {
@@ -16,7 +18,7 @@ public:
 
     void await_suspend(std::coroutine_handle<> handle) const noexcept {
         auto cb = [handle]() { handle.resume(); };
-        t_timer->add_timer_event(cb, timeout_);
+        detail::t_timer->add_timer_event(cb, timeout_);
     }
 
     void await_resume() const noexcept {};
@@ -31,7 +33,7 @@ class [[REMEMBER_CO_AWAIT]] TimeoutAwaiter : public IO {
 public:
     TimeoutAwaiter(IO &&io, const std::chrono::nanoseconds &timeout)
         : IO{io}
-        , event_handle_{t_timer->add_timer_event([this]() { cancel_op(); }, timeout)} {}
+        , event_handle_{detail::t_timer->add_timer_event([this]() { cancel_op(); }, timeout)} {}
 
     auto await_resume() -> decltype(IO::await_resume()) {
         event_handle_->cancel();
@@ -43,16 +45,16 @@ public:
 
 private:
     void cancel_op() {
-        auto sqe = t_poller->get_sqe();
+        auto sqe = detail::t_poller->get_sqe();
         if (sqe != nullptr) [[likely]] {
             io_uring_prep_cancel(sqe, &this->data_, 0);
             io_uring_sqe_set_data(sqe, nullptr);
-            t_poller->submit();
+            detail::t_poller->submit();
         }
     }
 
 private:
-    std::shared_ptr<TimerEvent> event_handle_;
+    std::shared_ptr<detail::TimerEvent> event_handle_;
 };
 
-} // namespace zedio::async::detail
+} // namespace zedio::io

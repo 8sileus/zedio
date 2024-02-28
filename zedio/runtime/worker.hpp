@@ -1,11 +1,11 @@
 #pragma once
 
-#include "zedio/async/poller.hpp"
-#include "zedio/async/time/timer.hpp"
-#include "zedio/async/waker.hpp"
 #include "zedio/common/debug.hpp"
 #include "zedio/common/rand.hpp"
 #include "zedio/common/util/thread.hpp"
+#include "zedio/io/base/poller.hpp"
+#include "zedio/io/base/waker.hpp"
+#include "zedio/io/time/timer.hpp"
 #include "zedio/runtime/config.hpp"
 #include "zedio/runtime/idle.hpp"
 #include "zedio/runtime/queue.hpp"
@@ -366,9 +366,9 @@ private:
     FastRand                               rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
-    async::detail::Poller                  poller_;
-    async::detail::Timer                   timer_{};
-    async::detail::Waker                   waker_{};
+    io::detail::Poller                     poller_;
+    io::detail::Timer                      timer_{};
+    io::detail::Waker                      waker_{};
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};

@@ -6,7 +6,7 @@ using namespace zedio::async;
 auto interval_print_message(std::string messge, std::chrono::seconds interval, std::size_t cnt)
     -> Task<void> {
     while (cnt--) {
-        co_await zedio::async::sleep(interval);
+        co_await zedio::io::Sleep(interval);
         std::cout << messge << "\n";
     }
 }
@@ -14,7 +14,7 @@ auto interval_print_message(std::string messge, std::chrono::seconds interval, s
 auto test() -> Task<void> {
     spawn(interval_print_message("sleep 3s", 3s, 3));
     spawn(interval_print_message("sleep 1s", 1s, 9));
-    co_await zedio::async::sleep(10s);
+    co_await zedio::io::Sleep(10s);
 }
 
 auto main() -> int {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "zedio/async/io.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/fs/builder.hpp"
+#include "zedio/io/io.hpp"
 // C++
 #include <filesystem>
 // Linux
@@ -11,7 +11,7 @@
 namespace zedio::fs {
 
 class File {
-    using IO = zedio::async::detail::IO;
+    using IO = zedio::io::IO;
     friend IO;
 
 private:
@@ -62,12 +62,12 @@ public:
     }
 
     [[nodiscard]]
-    auto fsync_all() const noexcept {
+    auto fsync_all() noexcept {
         return io_.fsync(0);
     }
 
     [[nodiscard]]
-    auto fsync_data() const noexcept {
+    auto fsync_data() noexcept {
         return io_.fsync(IORING_FSYNC_DATASYNC);
     }
 
