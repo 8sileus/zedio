@@ -1,7 +1,11 @@
 #include "zedio/async.hpp"
+#include "zedio/core.hpp"
+#include "zedio/io.hpp"
 #include <iostream>
 
 using namespace zedio::async;
+using namespace zedio::io;
+using namespace zedio;
 
 auto interval_print_message(std::string messge, std::chrono::seconds interval, std::size_t cnt)
     -> Task<void> {

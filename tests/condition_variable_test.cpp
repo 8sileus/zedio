@@ -1,4 +1,5 @@
 #include "zedio/async.hpp"
+#include "zedio/core.hpp"
 #include "zedio/log.hpp"
 
 // C++
@@ -6,6 +7,7 @@
 
 using namespace zedio::async;
 using namespace zedio::log;
+using namespace zedio;
 
 auto consumer(ConditionVariable &cv, [[maybe_unused]] Mutex &mutex, bool &run, std::queue<int> &q)
     -> Task<void> {

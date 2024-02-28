@@ -1,8 +1,11 @@
 #include "zedio/async.hpp"
+#include "zedio/core.hpp"
+#include "zedio/io.hpp"
 #include "zedio/log.hpp"
 
 using namespace zedio::async;
 using namespace zedio::log;
+using namespace zedio;
 
 auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum) -> Task<void> {
     while (n--) {

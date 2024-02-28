@@ -1,8 +1,9 @@
-#include "zedio/async.hpp"
+#include "zedio/core.hpp"
 #include "zedio/net.hpp"
 
 using namespace zedio::async;
 using namespace zedio::net;
+using namespace zedio;
 
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024];

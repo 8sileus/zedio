@@ -9,9 +9,9 @@ using namespace zedio::log;
 using namespace zedio;
 
 auto process(const SocketAddr &addr) -> Task<void> {
-    auto        stream = (co_await TcpStream::connect(addr)).value();
-    char        buf[5] = {"ping"};
-    while(true){
+    auto stream = (co_await TcpStream::connect(addr)).value();
+    char buf[5] = {"ping"};
+    while (true) {
         co_await stream.write_all(buf);
         co_await stream.read(buf);
         console.info("{}", buf);

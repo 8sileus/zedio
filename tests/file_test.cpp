@@ -1,9 +1,10 @@
-#include "zedio/async.hpp"
+#include "zedio/core.hpp"
 #include "zedio/fs/file.hpp"
 #include "zedio/log.hpp"
 
 using namespace zedio::async;
 using namespace zedio::fs;
+using namespace zedio;
 using namespace zedio::log;
 
 auto create_file() -> Task<void> {
