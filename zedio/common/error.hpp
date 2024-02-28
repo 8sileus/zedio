@@ -9,7 +9,6 @@ namespace zedio {
 
 enum class Error : int {
     NoError = 0,
-    NullSeq,
     AsyncTimeout,
     InvalidInput,
     InvalidOutput,
@@ -36,8 +35,6 @@ private:
         switch (error) {
         case Error::NoError:
             return "Successful";
-        case Error::NullSeq:
-            return "Null io_uring_seq";
         case Error::AsyncTimeout:
             return "Asychronous I/O timeout";
         case Error::InvalidInput:

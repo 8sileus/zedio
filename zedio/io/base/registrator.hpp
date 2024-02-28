@@ -29,7 +29,6 @@ public:
                 std::get<0>(this->args_) = sqe;
                 std::apply(f_, args_);
                 io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
-                cb_.result_ = t_poller->submit();
             });
             return true;
         }

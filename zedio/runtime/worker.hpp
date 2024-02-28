@@ -4,7 +4,6 @@
 #include "zedio/common/rand.hpp"
 #include "zedio/common/util/thread.hpp"
 #include "zedio/io/base/poller.hpp"
-#include "zedio/io/base/waker.hpp"
 #include "zedio/io/time/timer.hpp"
 #include "zedio/runtime/config.hpp"
 #include "zedio/runtime/idle.hpp"
@@ -154,7 +153,7 @@ public:
     }
 
     void wake_up() {
-        waker_.wake_up();
+        poller_.wake_up();
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {
@@ -368,7 +367,6 @@ private:
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     io::detail::Poller                     poller_;
     io::detail::Timer                      timer_{};
-    io::detail::Waker                      waker_{};
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};

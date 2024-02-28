@@ -15,6 +15,8 @@
 #include <queue>
 // Linux
 #include <liburing.h>
+#include <sys/eventfd.h>
+
 namespace zedio::io::detail {
 
 class Poller;
@@ -23,7 +25,14 @@ thread_local Poller *t_poller{nullptr};
 
 class Poller : util::Noncopyable {
 public:
-    Poller(const Config &config) {
+    Poller(const Config &config)
+        : waker_fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
+        if (waker_fd_ < 0) [[unlikely]] {
+            throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
+                                                 waker_fd_,
+                                                 strerror(errno)));
+        }
+
         if (auto ret = io_uring_queue_init(config.ring_entries_, &ring_, config.io_uring_flags_);
             ret < 0) [[unlikely]] {
             throw std::runtime_error(
@@ -34,6 +43,7 @@ public:
     }
 
     ~Poller() {
+        ::close(waker_fd_);
         io_uring_queue_exit(&ring_);
         t_poller = nullptr;
     }
@@ -41,9 +51,7 @@ public:
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
     auto wait(std::optional<std::coroutine_handle<>> &run_next) {
-        if (auto ret = submit(); ret < 0) {
-            LOG_ERROR("sub mit failed, error: {}", strerror(-ret));
-        }
+        wait_before();
 
         io_uring_cqe *cqe{nullptr};
         if (auto ret = io_uring_wait_cqe(&ring_, &cqe); ret != 0) [[unlikely]] {
@@ -121,13 +129,48 @@ public:
     }
 
     void push_waiting_coro(std::function<void(io_uring_sqe *sqe)> &&cb) {
+        LOG_DEBUG("push a waiting coros");
         waiting_coros_.push_back(std::move(cb));
     }
 
+    void wake_up() {
+        static constexpr uint64_t buf{1};
+        if (auto ret = ::write(this->waker_fd_, &buf, sizeof(buf)); ret != sizeof(buf))
+            [[unlikely]] {
+            LOG_ERROR("Waker write failed, error: {}.", strerror(errno));
+        }
+    }
+
 private:
+    void wait_before() {
+        std::function<void(io_uring_sqe *)> cb{nullptr};
+        io_uring_sqe                       *sqe;
+        if (waker_buf_ != 0) {
+            // waker_buf_ = 0;
+            sqe = this->get_sqe();
+            assert(sqe != nullptr);
+            io_uring_prep_read(sqe, waker_fd_, &waker_buf_, sizeof(waker_buf_), 0);
+            io_uring_sqe_set_data(sqe, nullptr);
+        }
+
+        while (!waiting_coros_.empty()) {
+            sqe = this->get_sqe();
+            if (sqe == nullptr) {
+                break;
+            }
+            cb = std::move(waiting_coros_.front());
+            waiting_coros_.pop_front();
+        }
+        if (auto ret = this->submit(); ret < 0) {
+            LOG_ERROR("sub mit failed, error: {}", strerror(-ret));
+        }
+    }
+
 private:
     io_uring                                          ring_{};
-    std::list<std::function<void(io_uring_sqe *sqe)>> waiting_coros_;
+    int                                               waker_fd_;
+    uint64_t                                          waker_buf_{1};
+    std::list<std::function<void(io_uring_sqe *sqe)>> waiting_coros_{};
 };
 
 } // namespace zedio::io::detail
