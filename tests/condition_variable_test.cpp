@@ -1,4 +1,3 @@
-#include "zedio/async.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 
