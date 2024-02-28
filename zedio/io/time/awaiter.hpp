@@ -47,7 +47,7 @@ private:
     void cancel_op() {
         auto sqe = detail::t_poller->get_sqe();
         if (sqe != nullptr) [[likely]] {
-            io_uring_prep_cancel(sqe, &this->data_, 0);
+            io_uring_prep_cancel(sqe, &this->cb_, 0);
             io_uring_sqe_set_data(sqe, nullptr);
             detail::t_poller->submit();
         }
