@@ -2,7 +2,7 @@
 
 #include "zedio/runtime/worker.hpp"
 
-namespace zedio::async {
+namespace zedio {
 
 class Runtime : util::Noncopyable {
 private:
@@ -58,8 +58,8 @@ private:
 public:
     // Waiting for the task to close
     void block_on(async::Task<void> &&main_coro) {
-        auto shutdown_coro
-            = [](runtime::detail::Worker::Shared &shared, Task<void> &&main_coro) -> Task<void> {
+        auto shutdown_coro = [](runtime::detail::Worker::Shared &shared,
+                                async::Task<void>              &&main_coro) -> async::Task<void> {
             try {
                 co_await main_coro;
             } catch (const std::exception &ex) {
@@ -109,24 +109,15 @@ template <typename... Ts>
 static inline void spawn(Ts &&...tasks) {
     using runtime::detail::t_worker;
 
-    if constexpr (sizeof...(Ts) == 1) {
-        (t_worker->schedule_task(std::move(tasks.take())), ...);
-    } else {
-        auto task = [](Ts... tasks) -> Task<void> {
-            ((co_await tasks), ...);
-            co_return;
-        }(std::forward<Ts>(tasks)...);
-        t_worker->schedule_task(std::move(task.take()));
-    }
-}
-
-template <typename... Ts>
-    requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
-[[nodiscard]] static inline auto join(Ts &&...tasks) -> Task<void> {
-    return [](Ts... tasks) -> Task<void> {
-        ((co_await tasks), ...);
-        co_return;
-    }(std::forward<Ts>(tasks)...);
+    // if constexpr (sizeof...(Ts) == 1) {
+    (t_worker->schedule_task(std::move(tasks.take())), ...);
+    // } else {
+    // auto task = [](Ts... tasks) -> Task<void> {
+    // ((co_await tasks), ...);
+    // co_return;
+    // }(std::forward<Ts>(tasks)...);
+    // t_worker->schedule_task(std::move(task.take()));
+    // }
 }
 
 [[nodiscard]]
@@ -137,4 +128,4 @@ static inline auto add_timer_event(const std::function<void()>    &cb,
     return io::detail::t_timer->add_timer_event(cb, delay, period);
 }
 
-} // namespace zedio::async
+} // namespace zedio

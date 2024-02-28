@@ -1,4 +1,5 @@
 #include "zedio/async.hpp"
+#include "zedio/core.hpp"
 #include "zedio/log.hpp"
 #include "zedio/net.hpp"
 
@@ -7,6 +8,7 @@
 using namespace zedio::async;
 using namespace zedio::net;
 using namespace zedio::log;
+using namespace zedio;
 
 constexpr std::string_view response = R"(
 HTTP/1.1 200 OK
