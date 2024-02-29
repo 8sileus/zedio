@@ -4,13 +4,13 @@
 
 namespace zedio::io {
 
-struct WriteVectored : public detail::IORegistrator<WriteVectored, decltype(io_uring_prep_writev)> {
+struct WriteVectored : public detail::IORegistrator<WriteVectored, decltype(io_uring_prep_writev2)> {
 private:
-    using Super = detail::IORegistrator<WriteVectored, decltype(io_uring_prep_writev)>;
+    using Super = detail::IORegistrator<WriteVectored, decltype(io_uring_prep_writev2)>;
 
 public:
-    WriteVectored(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset)
-        : Super{io_uring_prep_writev, fd, iovecs, nr_vecs, offset} {}
+    WriteVectored(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0)
+        : Super{io_uring_prep_writev2, fd, iovecs, nr_vecs, offset, flags} {}
 
     auto await_resume() const noexcept -> Result<std::size_t> {
         if (this->cb_.result_ >= 0) [[likely]] {

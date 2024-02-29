@@ -4,13 +4,13 @@
 
 namespace zedio::io {
 
-class ReadVectored : public detail::IORegistrator<ReadVectored, decltype(io_uring_prep_readv2)> {
+class CmdSock : public detail::IORegistrator<CmdSock, decltype(io_uring_prep_cmd_sock)> {
 private:
-    using Super = detail::IORegistrator<ReadVectored, decltype(io_uring_prep_readv2)>;
+    using Super = detail::IORegistrator<CmdSock, decltype(io_uring_prep_cmd_sock)>;
 
 public:
-    ReadVectored(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0)
-        : Super{io_uring_prep_readv2, fd, iovecs, nr_vecs, offset, flags} {}
+    CmdSock(int cmd_op, int fd, int level, int optname, void *optval, int optlen)
+        : Super{io_uring_prep_cmd_sock, cmd_op, fd, level, optname, optval, optlen} {}
 
     auto await_resume() const noexcept -> Result<std::size_t> {
         if (this->cb_.result_ >= 0) [[likely]] {

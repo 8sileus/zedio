@@ -24,9 +24,9 @@ public:
     // Delete copy
     IORegistrator(const IORegistrator &other) = delete;
     auto operator=(const IORegistrator &other) -> IORegistrator & = delete;
-    // Allow move
-    IORegistrator(IORegistrator &&other) = default;
-    auto operator=(IORegistrator &&other) -> IORegistrator & = default;
+    // Delete move
+    IORegistrator(IORegistrator &&other) = delete;
+    auto operator=(IORegistrator &&other) -> IORegistrator & = delete;
 
     auto await_ready() const noexcept -> bool {
         return false;

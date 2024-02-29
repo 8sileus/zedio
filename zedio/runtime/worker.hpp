@@ -23,10 +23,10 @@ public:
     struct Shared {
         Shared(Config config)
             : config_{config}
-            , idle_{config.num_worker_}
-            , shutdown_{static_cast<std::ptrdiff_t>(config.num_worker_)} {
-            LOG_TRACE("runtime with {} threads", config_.num_worker_);
-            for (std::size_t i = 0; i < config_.num_worker_; ++i) {
+            , idle_{config.num_workers_}
+            , shutdown_{static_cast<std::ptrdiff_t>(config.num_workers_)} {
+            LOG_TRACE("runtime with {} threads", config_.num_workers_);
+            for (std::size_t i = 0; i < config_.num_workers_; ++i) {
                 // Make sure all threads have started
                 std::barrier sync(2);
                 threads_.emplace_back([this, i, &sync]() {
@@ -348,7 +348,6 @@ private:
         check_shutdown();
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
-                LOG_TRACE("sleep {}", tick_);
                 poller_.wait(run_next_);
                 check_shutdown();
                 if (transition_from_sleeping()) {

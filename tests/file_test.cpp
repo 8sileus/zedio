@@ -57,6 +57,7 @@ auto open_file() -> Task<void> {
     std::string buf = "nono\n";
     co_await ret.value().read_to_string(buf);
     console.info("{}", buf);
+    co_return;
 }
 
 auto test() -> Task<void> {
@@ -65,7 +66,7 @@ auto test() -> Task<void> {
 }
 
 auto main() -> int {
-    auto runtime = Runtime::options().set_num_worker(1).build();
+    auto runtime = Runtime::options().set_num_workers(1).build();
     runtime.block_on(test());
     return 0;
 }

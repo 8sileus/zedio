@@ -9,8 +9,8 @@ private:
     class Builder {
     public:
         [[nodiscard]]
-        auto set_num_worker(std::size_t num_worker) -> Builder & {
-            config_.num_worker_ = num_worker;
+        auto set_num_workers(std::size_t num_workers) -> Builder & {
+            config_.num_workers_ = num_workers;
             return *this;
         }
 
@@ -57,9 +57,9 @@ private:
 
 public:
     // Waiting for the task to close
-    void block_on(async::Task<void> &&main_coro) {
-        auto shutdown_coro = [](runtime::detail::Worker::Shared &shared,
-                                async::Task<void>              &&main_coro) -> async::Task<void> {
+    void block_on(async::Task<void> &&first_coro) {
+        auto main_coro = [](runtime::detail::Worker::Shared &shared,
+                            async::Task<void>              &&main_coro) -> async::Task<void> {
             try {
                 co_await main_coro;
             } catch (const std::exception &ex) {
@@ -69,10 +69,10 @@ public:
             }
             shared.close();
             co_return;
-        }(shared_, std::move(main_coro));
+        }(shared_, std::move(first_coro));
 
-        shared_.workers_[0]->schedule_task(shutdown_coro.take());
-        shared_.workers_[0]->wake_up();
+        shared_.push_global_task(main_coro.take());
+        shared_.wake_up_one();
 
         wait_workers();
     }
@@ -104,13 +104,13 @@ private:
     runtime::detail::Worker::Shared shared_;
 };
 
-template <typename... Ts>
-    requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
-static inline void spawn(Ts &&...tasks) {
+// template <typename... Ts>
+//     requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
+static inline void spawn(async::Task<void> &&task) {
     using runtime::detail::t_worker;
 
     // if constexpr (sizeof...(Ts) == 1) {
-    (t_worker->schedule_task(std::move(tasks.take())), ...);
+    t_worker->schedule_task(std::move(task.take()));
     // } else {
     // auto task = [](Ts... tasks) -> Task<void> {
     // ((co_await tasks), ...);

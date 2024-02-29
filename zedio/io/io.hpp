@@ -4,6 +4,7 @@
 #include "zedio/io/awaiter/accept.hpp"
 #include "zedio/io/awaiter/cancel.hpp"
 #include "zedio/io/awaiter/close.hpp"
+#include "zedio/io/awaiter/cmd_sock.hpp"
 #include "zedio/io/awaiter/connect.hpp"
 #include "zedio/io/awaiter/fsync.hpp"
 #include "zedio/io/awaiter/link.hpp"
@@ -15,6 +16,7 @@
 #include "zedio/io/awaiter/rename.hpp"
 #include "zedio/io/awaiter/send.hpp"
 #include "zedio/io/awaiter/shutdown.hpp"
+#include "zedio/io/awaiter/socket.hpp"
 #include "zedio/io/awaiter/statx.hpp"
 #include "zedio/io/awaiter/tee.hpp"
 #include "zedio/io/awaiter/unlink.hpp"
@@ -65,7 +67,10 @@ public:
 
     [[nodiscard]]
     auto read(std::span<char> buf) const noexcept {
-        return Read{fd_, buf, static_cast<std::size_t>(-1)};
+        return Read{fd_,
+                    buf.data(),
+                    static_cast<unsigned int>(buf.size_bytes()),
+                    static_cast<std::size_t>(-1)};
     }
 
     template <typename... Ts>
@@ -111,35 +116,6 @@ public:
         co_return Result<void>{};
     }
 
-    template <class T>
-    [[nodiscard]]
-    auto read_to_end(T &buf) const noexcept -> zedio::async::Task<Result<void>> {
-        auto offset = buf.size();
-        {
-            auto ret = co_await this->metadata();
-            if (!ret) {
-                co_return std::unexpected{ret.error()};
-            }
-            buf.resize(offset + ret.value().stx_size);
-        }
-        auto span = std::span<char>{buf}.subspan(offset);
-        auto ret = Result<std::size_t>{};
-        while (true) {
-            ret = co_await this->read(span);
-            if (!ret) [[unlikely]] {
-                co_return std::unexpected{ret.error()};
-            }
-            if (ret.value() == 0) {
-                break;
-            }
-            span = span.subspan(ret.value());
-            if (span.empty()) {
-                break;
-            }
-        }
-        co_return Result<void>{};
-    }
-
     template <typename... Ts>
     [[nodiscard]]
     auto write_vectored(Ts &...bufs) const noexcept {
@@ -170,16 +146,6 @@ public:
         auto ret = fd_;
         fd_ = -1;
         return ret;
-    }
-
-    [[nodiscard]]
-    auto fsync(unsigned int fsync_flags) noexcept {
-        return Fsync{fd_, fsync_flags};
-    }
-
-    [[nodiscard]]
-    auto metadata() const noexcept {
-        return StatxToMetadata{fd_};
     }
 
     [[nodiscard]]
@@ -249,31 +215,6 @@ private:
         io_uring_prep_close(sqe, fd);
         io_uring_sqe_set_data(sqe, nullptr);
         return true;
-    }
-
-public:
-    template <class T>
-    [[nodiscard]]
-    static auto open(const std::string_view &path, int flags, mode_t mode) {
-        class Awaiter : public Open {
-        public:
-            Awaiter(int fd, const std::string_view &path, int flags, mode_t mode)
-                : Open{fd, path.data(), flags, mode} {}
-
-            auto await_resume() const noexcept -> Result<T> {
-                if (this->cb_.result_ >= 0) [[likely]] {
-                    return T{IO{this->cb_.result_}};
-                } else {
-                    return std::unexpected{make_sys_error(-this->cb_.result_)};
-                }
-            }
-        };
-        return Awaiter{AT_FDCWD, path, flags, mode};
-    }
-
-    [[nodiscard]]
-    static auto from_fd(int fd) -> IO {
-        return IO{fd};
     }
 
 protected:

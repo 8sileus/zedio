@@ -67,7 +67,7 @@ auto test() -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
-    auto runtime = Runtime::options().set_num_worker(1).build();
+    auto runtime = Runtime::options().set_num_workers(1).build();
     runtime.block_on(test());
     return 0;
 }

@@ -14,8 +14,8 @@ auto client(const SocketAddr &addr) -> Task<void> {
         co_return;
     }
     std::string_view str = "tcp_test ping";
-    char buf[1024];
-    auto stream = std::move(ret.value());
+    char             buf[1024];
+    auto             stream = std::move(ret.value());
     while (true) {
         auto ret = co_await stream.write(str);
         if (!ret) {
@@ -41,7 +41,7 @@ auto server(const SocketAddr &addr) -> Task<void> {
     auto [stream, peer_addr] = (co_await listener.accept()).value();
     console.info("{}", peer_addr.to_string());
     std::string_view str = "tcp_test pong";
-    char buf[1024];
+    char             buf[1024];
     while (true) {
         auto ret = co_await stream.read(buf);
         if (!ret || ret.value() == 0) {
@@ -68,7 +68,7 @@ auto test() -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
-    auto runtime = Runtime::options().set_num_worker(1).build();
+    auto runtime = Runtime::options().set_num_workers(1).build();
     runtime.block_on(test());
     return 0;
 }

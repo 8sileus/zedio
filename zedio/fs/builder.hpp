@@ -1,10 +1,10 @@
 #pragma once
 
-#include "zedio/io/io.hpp"
+#include "zedio/fs/io.hpp"
 
 namespace zedio::fs::detail {
 
-template <class T>
+template <class FileType>
 class Builder {
 public:
     auto read(bool on) noexcept -> Builder & {
@@ -43,7 +43,7 @@ public:
 
     auto open(std::string_view path) {
         adjust_flags();
-        return io::IO::open<T>(path, flags_, permission_);
+        return FileIO::open<FileType>(path, flags_, permission_);
     }
 
 private:

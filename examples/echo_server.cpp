@@ -65,12 +65,12 @@ auto server() -> Task<void> {
 
 auto main(int argc, char **argv) -> int {
     if (argc != 2) {
-        std::cerr << "usage: echo_server thread_num\n";
+        std::cerr << "usage: echo_server num_threas\n";
         return -1;
     }
     SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
-    auto thread_num = std::stoi(argv[1]);
-    auto runtime = Runtime::options().set_num_worker(thread_num).build();
+    auto num_threas = std::stoi(argv[1]);
+    auto runtime = Runtime::options().set_num_workers(num_threas).build();
     runtime.block_on(server());
     return 0;
 }

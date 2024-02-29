@@ -51,8 +51,8 @@ public:
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
     void wait(std::optional<std::coroutine_handle<>> &run_next) {
-        assert(!run_next);
-        
+        assert(!run_next.has_value());
+
         io_uring_cqe *cqe{nullptr};
         if (auto ret = io_uring_wait_cqe(&ring_, &cqe); ret != 0) [[unlikely]] {
             LOG_DEBUG("io_uring_wait_cqe failed {}", strerror(-ret));

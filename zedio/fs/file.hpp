@@ -2,25 +2,20 @@
 
 #include "zedio/common/error.hpp"
 #include "zedio/fs/builder.hpp"
-#include "zedio/io/io.hpp"
-// C++
-#include <filesystem>
+#include "zedio/fs/io.hpp"
 // Linux
 #include <fcntl.h>
 
 namespace zedio::fs {
 
 class File {
-    using IO = zedio::io::IO;
-    friend IO;
+    friend detail::FileIO;
 
 private:
-    File(IO &&io)
+    File(detail::FileIO &&io)
         : io_{std::move(io)} {}
 
 public:
-    File(File &&other) noexcept = default;
-    auto operator=(File &&other) -> File & = default;
 
     [[nodiscard]]
     auto write_all(std::span<const char> buf) const noexcept {
@@ -95,7 +90,7 @@ public:
     }
 
 private:
-    IO io_;
+    detail::FileIO io_;
 };
 
 } // namespace zedio::fs
