@@ -26,7 +26,8 @@ thread_local Poller *t_poller{nullptr};
 class Poller : util::Noncopyable {
 public:
     Poller(const Config &config)
-        : waker_fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
+        : config_{config}
+        , waker_fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
         if (waker_fd_ < 0) [[unlikely]] {
             throw std::runtime_error(std::format("call eventfd failed, errorno: {} message: {}",
                                                  waker_fd_,
@@ -71,6 +72,8 @@ public:
 
     [[nodiscard]]
     auto poll(runtime::detail::LocalQueue &queue) -> bool {
+        this->force_submit();
+
         constexpr const auto                      SIZE = Config::LOCAL_QUEUE_CAPACITY;
         std::array<io_uring_cqe *, SIZE>          cqes;
         std::array<std::coroutine_handle<>, SIZE> tasks;
@@ -120,9 +123,16 @@ public:
         return io_uring_get_sqe(&ring_);
     }
 
-    [[nodiscard]]
-    auto submit() -> int {
-        return io_uring_submit(&ring_);
+    void submit() {
+        if (!config_.deffer_submit_) {
+            force_submit();
+        }
+    }
+
+    void force_submit() {
+        if (auto ret = io_uring_submit(&ring_); ret < 0) {
+            LOG_ERROR("submit sqes failed, {}", strerror(-ret));
+        }
     }
 
     void push_waiting_coro(std::function<void(io_uring_sqe *sqe)> &&cb) {
@@ -158,12 +168,11 @@ private:
             cb = std::move(waiting_coros_.front());
             waiting_coros_.pop_front();
         }
-        if (auto ret = this->submit(); ret < 0) {
-            LOG_ERROR("sub mit failed, error: {}", strerror(-ret));
-        }
+        force_submit();
     }
 
 private:
+    const Config                                     &config_;
     io_uring                                          ring_{};
     int                                               waker_fd_;
     uint64_t                                          waker_buf_{1};

@@ -24,15 +24,15 @@ public:
     // Delete copy
     IORegistrator(const IORegistrator &other) = delete;
     auto operator=(const IORegistrator &other) -> IORegistrator & = delete;
-    // Delete move
-    IORegistrator(IORegistrator &&other) = delete;
-    auto operator=(IORegistrator &&other) -> IORegistrator & = delete;
+    // Allow move
+    IORegistrator(IORegistrator &&other) = default;
+    auto operator=(IORegistrator &&other) -> IORegistrator & = default;
 
     auto await_ready() const noexcept -> bool {
         return false;
     }
 
-    auto await_suspend(std::coroutine_handle<> handle) -> bool {
+    void await_suspend(std::coroutine_handle<> handle) {
         cb_.handle_ = std::move(handle);
         if (std::get<0>(args_) == nullptr) [[unlikely]] {
             t_poller->push_waiting_coro([this](io_uring_sqe *sqe) {
@@ -40,12 +40,11 @@ public:
                 std::apply(f_, args_);
                 io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
             });
-            return true;
+        } else {
+            std::apply(f_, args_);
+            io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
+            t_poller->submit();
         }
-        std::apply(f_, args_);
-        io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
-        cb_.result_ = t_poller->submit();
-        return cb_.result_ >= 0;
     }
 
     [[REMEMBER_CO_AWAIT]]

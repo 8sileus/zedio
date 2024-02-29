@@ -9,6 +9,8 @@ struct Config {
     std::size_t ring_entries_{1024};
     // io_uring flags
     uint32_t io_uring_flags_{0};
+    // deffred do io_uring_submit
+    bool deffer_submit_{true};
 
     // static
     static constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};

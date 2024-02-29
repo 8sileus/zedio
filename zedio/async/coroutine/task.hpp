@@ -29,7 +29,7 @@ namespace detail {
                 if (callee.promise().caller_) {
                     return callee.promise().caller_;
                 } else {
-#ifdef NEED_zedio_LOG
+#ifdef NEED_ZEDLOG_LOG
                     if (callee.promise().ex_ != nullptr) [[unlikely]] {
                         try {
                             std::rethrow_exception(callee.promise().ex_);

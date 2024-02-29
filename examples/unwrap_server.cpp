@@ -11,15 +11,17 @@ using namespace zedio::io;
 auto process(int fd) -> Task<void> {
     char buf[1024];
     while (true) {
-        if (auto ret = co_await Recv{fd, buf, sizeof(buf), 0}; ret) {
+        if (auto ret = co_await Recv{fd, buf, sizeof(buf), 0}; ret && ret.value() > 0) {
             ret = co_await Send(fd, buf, ret.value(), MSG_NOSIGNAL);
             if (!ret) {
-                LOG_ERROR("recv failed, {}", ret.error().message());
+                LOG_ERROR("send failed, {}", ret.error().message());
                 break;
             }
             LOG_INFO("{}", std::string_view{buf, ret.value()});
         } else {
-            LOG_ERROR("send failed, {}", ret.error().message());
+            if (!ret) {
+                LOG_ERROR("recv failed, {}", ret.error().message());
+            }
             break;
         }
     }

@@ -13,9 +13,9 @@ public:
         : IO{std::move(io)}
         , timeout_{timeout} {}
 
-    auto await_suspend(std::coroutine_handle<> handle) -> bool {
+    void await_suspend(std::coroutine_handle<> handle) {
         event_handle_ = t_timer->add_timer_event([this]() { cancel_op(); }, timeout_);
-        return IO::await_suspend(handle);
+        IO::await_suspend(handle);
     }
 
     auto await_resume() -> decltype(IO::await_resume()) {
@@ -35,9 +35,7 @@ private:
         if (sqe != nullptr) [[likely]] {
             io_uring_prep_cancel(sqe, &this->cb_, 0);
             io_uring_sqe_set_data(sqe, nullptr);
-            if (auto ret = detail::t_poller->submit(); ret < 0) [[unlikely]] {
-                LOG_ERROR("cancel io failed, error: {}", strerror(-ret));
-            }
+            t_poller->submit();
         }
     }
 

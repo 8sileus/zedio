@@ -157,9 +157,7 @@ private:
             auto sqe = t_poller->get_sqe();
             io_uring_prep_read(sqe, fd_, buf, sizeof(buf), 0);
             io_uring_sqe_set_data(sqe, &cb);
-            if (auto ret = t_poller->submit(); ret < 0) [[unlikely]] {
-                LOG_FATAL("register timer failed: {}", strerror(-ret));
-            }
+            t_poller->force_submit();
             co_await std::suspend_always{};
 
             // if (auto result = co_await Read{fd_, buf, sizeof(buf), 0}.set_exclusion();

@@ -33,6 +33,12 @@ private:
         }
 
         [[nodiscard]]
+        auto set_deffer_submission(bool on) -> Builder & {
+            config_.deffer_submit_ = on;
+            return *this;
+        }
+
+        [[nodiscard]]
         auto set_io_uring_sqpoll(bool on) -> Builder & {
             if (on) {
                 config_.io_uring_flags_ |= IORING_SETUP_SQPOLL;

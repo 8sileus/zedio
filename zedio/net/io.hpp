@@ -311,7 +311,8 @@ public:
                 }
                 std::get<1>(this->args_) = io_.fd();
                 std::get<2>(this->args_) = addr_.sockaddr();
-                return Super::await_suspend(handle);
+                Super::await_suspend(handle);
+                return true;
             }
 
             auto await_resume() noexcept -> Result<Stream> {
