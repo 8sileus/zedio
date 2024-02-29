@@ -46,7 +46,9 @@ public:
         return cur_ == data_;
     }
 
-    void reset() noexcept { cur_ = data_; }
+    void reset() noexcept {
+        cur_ = data_;
+    }
 
 private:
     char  data_[SIZE]{};

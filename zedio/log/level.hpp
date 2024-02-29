@@ -34,7 +34,7 @@ consteval auto level_to_string(LogLevel level) noexcept -> std::string_view {
     case LogLevel::FATAL:
         return "FATAL";
     default:
-        return "Remenber implement for LogLevel";
+        return "Remember implement for LogLevel";
     }
 }
 
