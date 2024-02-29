@@ -115,7 +115,7 @@ class ConsoleLogger : public BaseLogger<ConsoleLogger> {
 public:
     template <LogLevel level>
     void log(std::string &&msg) {
-        std::cout << std::format("{}{}", level_to_color(level), msg);
+        std::cout << std::format("{}{}{}", level_to_color(level), msg, reset_format());
     }
 };
 
