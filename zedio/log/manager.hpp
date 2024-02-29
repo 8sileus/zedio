@@ -18,7 +18,7 @@ namespace detail {
 
         void delete_logger(const std::string &logger_name) { loggers_.erase(logger_name); }
 
-        /// Remenber to check whether the return value is nullptr
+        /// Remember to check whether the return value is nullptr
         [[nodiscard]]
         auto get_logger(const std::string &logger_name) -> FileLogger * {
             if (this->contains_logger(logger_name)) {

@@ -1,8 +1,12 @@
 #pragma once
 
+#include <liburing.h>
+#ifdef IORING_OP_WAITID
+
 #include "zedio/io/base/registrator.hpp"
 
 namespace zedio::io {
+
 
 class Waitid : public detail::IORegistrator<Waitid, decltype(io_uring_prep_waitid)> {
 private:
@@ -22,3 +26,5 @@ public:
 };
 
 } // namespace zedio::io
+
+#endif

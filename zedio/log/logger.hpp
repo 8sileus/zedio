@@ -115,7 +115,7 @@ class ConsoleLogger : public BaseLogger<ConsoleLogger> {
 public:
     template <LogLevel level>
     void log(std::string &&msg) {
-        std::cout << std::format("{}{}", level_to_color(level), msg);
+        std::cout << std::format("{}{}{}", level_to_color(level), msg, reset_format());
     }
 };
 
@@ -131,14 +131,14 @@ public:
     }
 
     ~FileLogger() {
-        ruinning_ = false;
+        running_ = false;
         cond_.notify_one();
         thread_.join();
     }
 
     template <LogLevel level>
     void log(std::string &&msg) {
-        if (!ruinning_) [[unlikely]] {
+        if (!running_) [[unlikely]] {
             return;
         }
         std::lock_guard<std::mutex> lock(mutex_);
@@ -165,11 +165,11 @@ private:
     void work() {
         constexpr std::size_t max_buffer_list_size = 15;
 
-        while (ruinning_) {
+        while (running_) {
             {
                 std::unique_lock<std::mutex> lock(mutex_);
                 cond_.wait_for(lock, std::chrono::milliseconds(3),
-                               [this] -> bool { return !this->full_buffers_.empty(); });
+                               [this]() -> bool { return !this->full_buffers_.empty(); });
                 // if (full_buffers_.empty()) {
                 // cond_.wait_for(lock, std::chrono::seconds(3));
                 // }
@@ -220,7 +220,7 @@ private:
     std::mutex              mutex_{};
     std::condition_variable cond_{};
     std::thread             thread_{};
-    std::atomic<bool>       ruinning_{true};
+    std::atomic<bool>       running_{true};
 };
 
 } // namespace zedio::log::detail

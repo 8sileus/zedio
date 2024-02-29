@@ -34,7 +34,7 @@ consteval auto level_to_string(LogLevel level) noexcept -> std::string_view {
     case LogLevel::FATAL:
         return "FATAL";
     default:
-        return "Remenber implement for LogLevel";
+        return "Remember implement for LogLevel";
     }
 }
 
@@ -56,6 +56,10 @@ consteval auto level_to_color(LogLevel level) noexcept -> std::string_view {
     default:
         return "NOT DEFINE COLOR";
     }
+}
+
+consteval auto reset_format() noexcept -> std::string_view {
+    return "\033[0m";
 }
 
 } // namespace zedio::log::detail
