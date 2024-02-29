@@ -1,23 +1,18 @@
 #pragma once
 
-#include "zedio/io/io.hpp"
+#include "zedio/net/io.hpp"
 
 namespace zedio::net::detail {
 
 template <class Stream, class Addr>
 class BaseStream {
 protected:
-    using IO = zedio::io::IO;
-
-    explicit BaseStream(IO &&io)
+    BaseStream(detail::SocketIO &&io)
         : io_{std::move(io)} {}
 
 public:
-    BaseStream(BaseStream &&other) = default;
-    auto operator=(BaseStream &&other) -> BaseStream & = default;
-
     [[nodiscard]]
-    auto shutdown(io::Shutdown::How how) const noexcept {
+    auto shutdown(io::Shutdown::How how) noexcept {
         return io_.shutdown(how);
     }
 
@@ -38,20 +33,19 @@ public:
     }
 
     [[nodiscard]]
-    auto write(std::span<const char> buf) const noexcept {
+    auto write(std::span<const char> buf) noexcept {
         return io_.send(buf);
-    }
-
-    [[nodiscard]]
-    auto write_all(std::span<const char> buf) const noexcept {
-        // TODO use sendmsg
-        return io_.write_all(buf);
     }
 
     template <typename... Ts>
     [[nodiscard]]
-    auto write_vectored(Ts &...bufs) const noexcept {
+    auto write_vectored(Ts &...bufs) noexcept {
         return io_.write_vectored(bufs...);
+    }
+
+    [[nodiscard]]
+    auto write_all(std::span<const char> buf) noexcept {
+        return io_.write_all(buf);
     }
 
     [[nodiscard]]
@@ -71,19 +65,12 @@ public:
 
 public:
     [[nodiscard]]
-    static auto connect(const Addr &address) -> async::Task<Result<Stream>> {
-        auto sock = IO::socket(address.family(), SOCK_STREAM, 0);
-        if (!sock) [[unlikely]] {
-            co_return std::unexpected{sock.error()};
-        }
-        if (auto ret = co_await sock.value().connect(address); !ret) [[unlikely]] {
-            co_return std::unexpected{ret.error()};
-        }
-        co_return Stream{std::move(sock.value())};
+    static auto connect(const Addr &addr) {
+        return detail::SocketIO::build_stream<Stream, Addr>(addr);
     };
 
 protected:
-    IO io_;
+    detail::SocketIO io_;
 };
 
 } // namespace zedio::net::detail

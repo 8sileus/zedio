@@ -1,6 +1,5 @@
 #pragma once
 
-#include "zedio/common/concepts.hpp"
 #include "zedio/io/base/registrator.hpp"
 
 namespace zedio::io {
@@ -17,16 +16,6 @@ public:
            const struct sockaddr *addr,
            socklen_t              addrlen)
         : Super{io_uring_prep_sendto, sockfd, buf, len, flags, addr, addrlen} {}
-
-    template <typename Addr>
-    SendTo(int sockfd, std::span<const char> buf, int flags, const Addr &addr)
-        : Super{io_uring_prep_sendto,
-                sockfd,
-                buf.data(),
-                buf.size_bytes(),
-                flags,
-                addr.sockaddr(),
-                addr.length()} {}
 
     auto await_resume() const noexcept -> Result<std::size_t> {
         if (this->cb_.result_ >= 0) [[likely]] {

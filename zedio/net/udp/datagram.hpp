@@ -9,12 +9,12 @@ class UdpDatagram : public detail::BaseDatagram<UdpDatagram, SocketAddr> {
     friend class BaseDatagram;
 
 private:
-    UdpDatagram(IO &&io)
+    UdpDatagram(detail::SocketIO &&io)
         : BaseDatagram{std::move(io)} {}
 
 public:
     [[nodiscard]]
-    auto set_broadcast(bool on) const noexcept {
+    auto set_broadcast(bool on) noexcept {
         return io_.set_broadcast(on);
     }
 
@@ -24,7 +24,7 @@ public:
     }
 
     [[nodiscard]]
-    auto set_ttl(uint32_t ttl) const noexcept {
+    auto set_ttl(uint32_t ttl) noexcept {
         return io_.set_ttl(ttl);
     }
 
@@ -35,8 +35,17 @@ public:
 
 public:
     [[nodiscard]]
-    static auto unbound(bool is_ipv6 = false) -> Result<UdpDatagram> {
-        auto io = IO::socket(is_ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, 0);
+    static auto v4() -> Result<UdpDatagram> {
+        auto io = detail::SocketIO::build_socket(AF_INET, SOCK_DGRAM, 0);
+        if (!io) [[unlikely]] {
+            return std::unexpected{io.error()};
+        }
+        return UdpDatagram{std::move(io.value())};
+    }
+
+    [[nodiscard]]
+    static auto v6() -> Result<UdpDatagram> {
+        auto io = detail::SocketIO::build_socket(AF_INET6, SOCK_DGRAM, 0);
         if (!io) [[unlikely]] {
             return std::unexpected{io.error()};
         }

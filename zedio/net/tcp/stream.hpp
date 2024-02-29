@@ -2,24 +2,20 @@
 
 #include "zedio/net/addr.hpp"
 #include "zedio/net/stream.hpp"
-// C++
-#include <chrono>
-#include <optional>
 
 namespace zedio::net {
 
 class TcpStream : public detail::BaseStream<TcpStream, SocketAddr> {
-public:
-    explicit TcpStream(IO &&io)
+    friend class detail::SocketIO;
+
+    explicit TcpStream(detail::SocketIO &&io)
         : BaseStream{std::move(io)} {
         LOG_TRACE("Build a TcpStream{{fd: {}}}", io_.fd());
     }
 
-    TcpStream(TcpStream &&other) = default;
-    auto operator=(TcpStream &&other) -> TcpStream & = default;
-
+public:
     [[nodiscard]]
-    auto set_nodelay(bool need_delay) const noexcept {
+    auto set_nodelay(bool need_delay) noexcept {
         return io_.set_nodelay(need_delay);
     }
 
@@ -29,7 +25,7 @@ public:
     }
 
     [[nodiscard]]
-    auto set_linger(std::optional<std::chrono::seconds> duration) const noexcept {
+    auto set_linger(std::optional<std::chrono::seconds> duration) noexcept {
         return io_.set_linger(duration);
     }
 
@@ -39,7 +35,7 @@ public:
     }
 
     [[nodiscard]]
-    auto set_ttl(uint32_t ttl) const noexcept {
+    auto set_ttl(uint32_t ttl) noexcept {
         return io_.set_ttl(ttl);
     }
 

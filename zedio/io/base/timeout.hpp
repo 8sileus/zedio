@@ -23,6 +23,12 @@ public:
         return IO::await_resume();
     }
 
+    [[REMEMBER_CO_AWAIT]]
+    auto set_exclusion() -> TimeoutIO & {
+        this->cb_.is_exclusive_ = true;
+        return *this;
+    }
+
 private:
     void cancel_op() {
         auto sqe = detail::t_poller->get_sqe();

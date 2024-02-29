@@ -60,9 +60,7 @@ public:
     }
 
 protected:
-    Callback cb_{};
-
-private:
+    Callback             cb_{};
     std::decay_t<IOFunc> f_;
     Tuple                args_;
 };

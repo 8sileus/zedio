@@ -1,23 +1,18 @@
 #pragma once
 
-#include "zedio/io/io.hpp"
+#include "zedio/net/io.hpp"
 
 namespace zedio::net::detail {
 
 template <class Listener, class Stream, class Addr>
 class BaseSocket {
 protected:
-    using IO = zedio::io::IO;
-
-    explicit BaseSocket(IO &&io)
+    explicit BaseSocket(SocketIO &&io)
         : io_{std::move(io)} {}
 
 public:
-    BaseSocket(BaseSocket &&other) = default;
-    auto operator=(BaseSocket &&other) -> BaseSocket & = default;
-
     [[nodiscard]]
-    auto bind(const Addr &address) const noexcept {
+    auto bind(const Addr &address) noexcept {
         return io_.bind<Addr>(address);
     }
 
@@ -40,9 +35,10 @@ public:
     auto connect(const Addr &addr) {
         class Awaiter : public io::Connect {
         public:
-            Awaiter(IO io, const Addr &addr)
-                : Connect{io.fd(), addr.sockaddr(), addr.length()}
-                , io_{std::move(io)} {}
+            Awaiter(detail::SocketIO &&io, const Addr &addr)
+                : Connect{io.fd(), addr_.sockaddr(), addr.length()}
+                , io_{std::move(io)}
+                , addr_{addr} {}
 
             auto await_resume() const noexcept -> Result<Stream> {
                 if (this->cb_.result_ >= 0) [[likely]] {
@@ -51,14 +47,16 @@ public:
                     return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }
             }
+
         private:
-            IO io_;
+            detail::SocketIO io_;
+            Addr             addr_;
         };
         return Awaiter{std::move(io_), addr};
     }
 
 protected:
-    IO io_;
+    SocketIO io_;
 };
 
 } // namespace zedio::net::detail

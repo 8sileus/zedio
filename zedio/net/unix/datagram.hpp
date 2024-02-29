@@ -9,17 +9,17 @@ class UnixDatagram : public detail::BaseDatagram<UnixDatagram, UnixSocketAddr> {
     friend class BaseDatagram;
 
 private:
-    UnixDatagram(IO &&io)
+    UnixDatagram(detail::SocketIO &&io)
         : BaseDatagram{std::move(io)} {}
 
 public:
     [[nodiscard]]
-    auto set_mark(uint32_t mark) const noexcept {
+    auto set_mark(uint32_t mark) noexcept {
         return io_.set_mark(mark);
     }
 
     [[nodiscard]]
-    auto set_passcred(bool on)const noexcept {
+    auto set_passcred(bool on) noexcept {
         return io_.set_passcred(on);
     }
 
@@ -31,7 +31,7 @@ public:
 public:
     [[nodiscard]]
     static auto unbound() -> Result<UnixDatagram> {
-        auto io = IO::socket(AF_UNIX, SOCK_DGRAM, 0);
+        auto io = detail::SocketIO::build_socket(AF_UNIX, SOCK_DGRAM, 0);
         if (!io) [[unlikely]] {
             return std::unexpected{io.error()};
         }

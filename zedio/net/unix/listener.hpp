@@ -9,11 +9,10 @@
 namespace zedio::net {
 
 class UnixListener : public detail::BaseListener<UnixListener, UnixStream, UnixSocketAddr> {
-    friend class UnixSocket;
-    friend class BaseListener;
+    friend class detail::SocketIO;
 
 private:
-    UnixListener(IO &&io)
+    UnixListener(detail::SocketIO &&io)
         : BaseListener{std::move(io)} {
         LOG_TRACE("Build a UnixListener {{fd: {}}}", io_.fd());
     }

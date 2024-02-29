@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/error.hpp"
-#include "zedio/net/listener.hpp"
+#include "zedio/net/io.hpp"
 // Linux
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -110,8 +110,7 @@ private:
 };
 
 class SocketAddr {
-    template <class T1, class T2, class T3>
-    friend class detail::BaseListener;
+    friend class detail::SocketIO;
 
 private:
     SocketAddr() = default;
@@ -231,16 +230,14 @@ private:
 };
 
 class UnixSocketAddr {
+    friend class detail::SocketIO;
 
-    template <class T1, class T2, class T3>
-    friend class detail::BaseListener;
+    UnixSocketAddr() = default;
 
     UnixSocketAddr(const std::string_view &path) {
         addr_.sun_family = AF_UNIX;
         std::memcpy(addr_.sun_path, path.data(), path.size());
     }
-
-    UnixSocketAddr() = default;
 
 public:
     UnixSocketAddr(const sockaddr *addr, std::size_t len) {

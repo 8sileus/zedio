@@ -50,9 +50,9 @@ public:
 
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
-    auto wait(std::optional<std::coroutine_handle<>> &run_next) {
-        wait_before();
-
+    void wait(std::optional<std::coroutine_handle<>> &run_next) {
+        assert(!run_next);
+        
         io_uring_cqe *cqe{nullptr};
         if (auto ret = io_uring_wait_cqe(&ring_, &cqe); ret != 0) [[unlikely]] {
             LOG_DEBUG("io_uring_wait_cqe failed {}", strerror(-ret));
@@ -64,11 +64,7 @@ public:
         auto cb = reinterpret_cast<Callback *>(cqe->user_data);
         if (cb != nullptr) [[likely]] {
             cb->result_ = cqe->res;
-            if (cb->is_exclusive_) {
-                cb->handle_.resume();
-            } else {
-                run_next = cb->handle_;
-            }
+            run_next = cb->handle_;
         }
         io_uring_cqe_seen(&ring_, cqe);
     }
@@ -83,6 +79,7 @@ public:
 
         std::size_t cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), queue.remaining_slots());
         if (cnt == 0) {
+            wait_before();
             return false;
         }
         for (auto i = 0uz; i < cnt; i += 1) {

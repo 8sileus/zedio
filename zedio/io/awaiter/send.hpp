@@ -12,9 +12,6 @@ public:
     Send(int sockfd, const void *buf, size_t len, int flags)
         : Super{io_uring_prep_send, sockfd, buf, len, flags} {}
 
-    Send(int sockfd, std::span<const char> buf, int flags)
-        : Super{io_uring_prep_send, sockfd, buf.data(), buf.size_bytes(), flags} {}
-
     auto await_resume() const noexcept -> Result<std::size_t> {
         if (this->cb_.result_ >= 0) [[likely]] {
             return static_cast<std::size_t>(this->cb_.result_);

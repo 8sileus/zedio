@@ -49,8 +49,8 @@ auto server() -> Task<void> {
     }
     auto listener = std::move(has_listener.value());
     while (true) {
-        auto has_stream = co_await listener.accept().set_timeout(3s);
-        // auto has_stream = co_await listener.accept();
+        // auto has_stream = co_await listener.accept().set_timeout(3s).set_exclusion();
+        auto has_stream = co_await listener.accept();
 
         if (has_stream) {
             auto &[stream, peer_addr] = has_stream.value();
