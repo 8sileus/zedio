@@ -2,16 +2,23 @@
 
 #include "zedio/async/coroutine/task.hpp"
 #include "zedio/io/awaiter/accept.hpp"
+#include "zedio/io/awaiter/cancel.hpp"
 #include "zedio/io/awaiter/close.hpp"
 #include "zedio/io/awaiter/connect.hpp"
 #include "zedio/io/awaiter/fsync.hpp"
-#include "zedio/io/awaiter/openat.hpp"
+#include "zedio/io/awaiter/link.hpp"
+#include "zedio/io/awaiter/mkdir.hpp"
+#include "zedio/io/awaiter/open.hpp"
 #include "zedio/io/awaiter/read.hpp"
 #include "zedio/io/awaiter/read_vectored.hpp"
 #include "zedio/io/awaiter/recv.hpp"
+#include "zedio/io/awaiter/rename.hpp"
 #include "zedio/io/awaiter/send.hpp"
 #include "zedio/io/awaiter/shutdown.hpp"
 #include "zedio/io/awaiter/statx.hpp"
+#include "zedio/io/awaiter/tee.hpp"
+#include "zedio/io/awaiter/unlink.hpp"
+#include "zedio/io/awaiter/waitid.hpp"
 #include "zedio/io/awaiter/write.hpp"
 #include "zedio/io/awaiter/write_vectored.hpp"
 // Linux
@@ -83,7 +90,10 @@ public:
 
     [[nodiscard]]
     auto write(std::span<const char> buf) const noexcept {
-        return Write{fd_, buf, static_cast<std::size_t>(-1)};
+        return Write{fd_,
+                     buf.data(),
+                     static_cast<unsigned int>(buf.size_bytes()),
+                     static_cast<std::size_t>(-1)};
     }
 
     [[nodiscard]]
@@ -245,10 +255,10 @@ public:
     template <class T>
     [[nodiscard]]
     static auto open(const std::string_view &path, int flags, mode_t mode) {
-        class Awaiter : public OpenAt {
+        class Awaiter : public Open {
         public:
             Awaiter(int fd, const std::string_view &path, int flags, mode_t mode)
-                : OpenAt{fd, path.data(), flags, mode} {}
+                : Open{fd, path.data(), flags, mode} {}
 
             auto await_resume() const noexcept -> Result<T> {
                 if (this->cb_.result_ >= 0) [[likely]] {

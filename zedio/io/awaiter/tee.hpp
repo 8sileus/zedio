@@ -4,13 +4,13 @@
 
 namespace zedio::io {
 
-class Write : public detail::IORegistrator<Write, decltype(io_uring_prep_write)> {
+class Tee : public detail::IORegistrator<Tee, decltype(io_uring_prep_tee)> {
 private:
-    using Super = detail::IORegistrator<Write, decltype(io_uring_prep_write)>;
+    using Super = detail::IORegistrator<Tee, decltype(io_uring_prep_tee)>;
 
 public:
-    Write(int fd, const void *buf, unsigned nbytes, __u64 offset)
-        : Super{io_uring_prep_write, fd, buf, nbytes, offset} {}
+    Tee(int fd_in, int fd_out, unsigned int nbytes, unsigned int splice_flags)
+        : Super{io_uring_prep_tee, fd_in, fd_out, nbytes, splice_flags} {}
 
     auto await_resume() const noexcept -> Result<std::size_t> {
         if (this->cb_.result_ >= 0) [[likely]] {
