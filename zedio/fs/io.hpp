@@ -10,12 +10,12 @@ private:
         : IO{fd} {}
 
 public:
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto fsync(unsigned int fsync_flags) noexcept {
         return io::Fsync{fd_, fsync_flags};
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto metadata() const noexcept {
         class Statx : public io::detail::IORegistrator<Statx, decltype(io_uring_prep_statx)> {
         private:
@@ -45,7 +45,7 @@ public:
     }
 
     template <class T>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto read_to_end(T &buf) const noexcept -> zedio::async::Task<Result<void>> {
         auto offset = buf.size();
         {
@@ -75,7 +75,7 @@ public:
 
 public:
     template <class FileType>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     static auto open(const std::string_view &path, int flags, mode_t mode) {
         class Open : public io::detail::IORegistrator<Open, decltype(io_uring_prep_openat)> {
         private:

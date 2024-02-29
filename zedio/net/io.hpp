@@ -11,19 +11,19 @@ private:
         : IO{fd} {}
 
 public:
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto shutdown(io::Shutdown::How how) noexcept {
         return io::Shutdown{fd_, static_cast<int>(how)};
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto send(std::span<const char> buf) noexcept {
         return io::Send{fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL};
     }
 
     template <typename Addr>
         requires is_socket_address<Addr>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto send_to(std::span<const char> buf, const Addr &addr) noexcept {
         return SendTo(fd_,
                       buf.data(),
@@ -33,14 +33,14 @@ public:
                       addr.length());
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto recv(std::span<char> buf, int flags = 0) const noexcept {
         return io::Recv{fd_, buf.data(), buf.size_bytes(), flags};
     }
 
     template <typename Stream, typename Addr>
         requires is_socket_address<Addr>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto accept() noexcept {
         class Accept : public io::detail::IORegistrator<Accept, decltype(io_uring_prep_accept)> {
             using Super = io::detail::IORegistrator<Accept, decltype(io_uring_prep_accept)>;
@@ -70,7 +70,7 @@ public:
 
     template <typename Addr>
         requires is_socket_address<Addr>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto connect(const Addr &addr) noexcept {
         return io::Connect(fd_, addr.sockaddr(), addr.length());
     }
@@ -290,7 +290,7 @@ public:
 
     template <typename Stream, typename Addr>
         requires is_socket_address<Addr>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     static auto build_stream(const Addr &addr) {
         class Connect : public io::detail::IORegistrator<Connect, decltype(io_uring_prep_connect)> {
         private:
@@ -331,6 +331,7 @@ public:
 
     template <typename Listener, typename Addr>
         requires is_socket_address<Addr>
+    [[REMEMBER_CO_AWAIT]]
     static auto build_listener(const Addr &addr) -> Result<Listener> {
         auto io = SocketIO::build_socket(addr.family(), SOCK_STREAM, 0);
         if (!io) [[unlikely]] {

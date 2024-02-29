@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/debug.hpp"
-#include "zedio/common/rand.hpp"
+#include "zedio/common/util/rand.hpp"
 #include "zedio/common/util/thread.hpp"
 #include "zedio/io/base/poller.hpp"
 #include "zedio/io/time/timer.hpp"
@@ -361,7 +361,7 @@ private:
 private:
     Shared                                &shared_;
     std::size_t                            index_;
-    FastRand                               rand_{};
+    util::FastRand                         rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     io::detail::Poller                     poller_;

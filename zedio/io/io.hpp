@@ -58,14 +58,14 @@ public:
         return *this;
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto close() noexcept {
         auto fd = fd_;
         fd_ = -1;
         return Close{fd};
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto read(std::span<char> buf) const noexcept {
         return Read{fd_,
                     buf.data(),
@@ -74,7 +74,7 @@ public:
     }
 
     template <typename... Ts>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto read_vectored(Ts &...bufs) const noexcept {
         constexpr auto N = sizeof...(Ts);
 
@@ -93,7 +93,7 @@ public:
         return Awaiter{fd, bufs...};
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto write(std::span<const char> buf) const noexcept {
         return Write{fd_,
                      buf.data(),
@@ -101,7 +101,7 @@ public:
                      static_cast<std::size_t>(-1)};
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto write_all(std::span<const char> buf) const noexcept -> zedio::async::Task<Result<void>> {
         auto has_written_bytes{0uz};
         auto remaining_bytes{buf.size_bytes()};
@@ -117,7 +117,7 @@ public:
     }
 
     template <typename... Ts>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto write_vectored(Ts &...bufs) const noexcept {
         constexpr auto N = sizeof...(Ts);
 

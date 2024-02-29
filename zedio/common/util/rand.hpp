@@ -7,7 +7,7 @@
 // C
 #include <cinttypes>
 
-namespace zedio {
+namespace zedio::util {
 
 class FastRand {
 public:
@@ -18,9 +18,8 @@ public:
     }
 
     auto fastrand_n(uint32_t n) -> uint32_t {
-        return fastrand() % n;
-        // auto result = static_cast<uint64_t>(fastrand()) * static_cast<uint64_t>(n);
-        // return static_cast<uint32_t>(result >> 32);
+        auto result = static_cast<uint64_t>(fastrand()) * static_cast<uint64_t>(n);
+        return static_cast<uint32_t>(result >> 32);
     }
 
 private:
@@ -39,4 +38,4 @@ private:
     uint32_t two_;
 };
 
-} // namespace zedio
+} // namespace zedio::util
