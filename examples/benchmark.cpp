@@ -45,7 +45,7 @@ auto server() -> Task<void> {
         auto has_stream = co_await listener.accept();
         if (has_stream) {
             auto &[stream, peer_addr] = has_stream.value();
-            LOG_INFO("Accept a connection from {}", peer_addr.to_string());
+            LOG_INFO("Accept a connection from {}", peer_addr);
             spawn(process(std::move(stream)));
         } else {
             console.error(has_stream.error().message());

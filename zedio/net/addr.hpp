@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstring>
 // C++
+#include <format>
 #include <string_view>
 
 namespace zedio::net {
@@ -288,3 +289,49 @@ private:
 };
 
 } // namespace zedio::net
+
+namespace std {
+
+template <>
+class formatter<zedio::net::SocketAddr> {
+public:
+    constexpr auto parse(format_parse_context &context) {
+        auto it{context.begin()};
+        auto end{context.end()};
+        if (it == end || *it == '}') {
+            return it;
+        }
+        ++it;
+        if (it != end && *it != '}') {
+            throw format_error("Invalid format specifier for SocketAddr");
+        }
+        return it;
+    }
+
+    auto format(const zedio::net::SocketAddr &addr, auto &context) const noexcept {
+        return format_to(context.out(), "{}", addr.to_string());
+    }
+};
+
+template <>
+class formatter<zedio::net::UnixSocketAddr> {
+public:
+    constexpr auto parse(format_parse_context &context) {
+        auto it{context.begin()};
+        auto end{context.end()};
+        if (it == end || *it == '}') {
+            return it;
+        }
+        ++it;
+        if (it != end && *it != '}') {
+            throw format_error("Invalid format specifier for SocketAddr");
+        }
+        return it;
+    }
+
+    auto format(const zedio::net::UnixSocketAddr &addr, auto &context) const noexcept {
+        return format_to(context.out(), "{}", addr.pathname());
+    }
+};
+
+} // namespace std
