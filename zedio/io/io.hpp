@@ -6,6 +6,7 @@
 #include "zedio/io/awaiter/close.hpp"
 #include "zedio/io/awaiter/cmd_sock.hpp"
 #include "zedio/io/awaiter/connect.hpp"
+#include "zedio/io/awaiter/fadvise.hpp"
 #include "zedio/io/awaiter/fallocate.hpp"
 #include "zedio/io/awaiter/fsync.hpp"
 #include "zedio/io/awaiter/link.hpp"
