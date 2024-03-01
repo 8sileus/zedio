@@ -71,42 +71,32 @@ public:
     }
 
     [[nodiscard]]
-    auto poll(runtime::detail::LocalQueue &queue) -> bool {
+    auto poll(runtime::detail::LocalQueue &local_queue, runtime::detail::GlobalQueue &global_queue)
+        -> bool {
         constexpr const auto                      SIZE = Config::LOCAL_QUEUE_CAPACITY;
-        std::array<io_uring_cqe *, SIZE>          cqes;
-        std::array<std::coroutine_handle<>, SIZE> tasks;
-        std::size_t                               shared_tasks = 0;
-        std::size_t                               exclusive_tasks = SIZE;
+        std::array<io_uring_cqe *, SIZE * 2>      cqes;
+        std::size_t                               num_ex{0};
 
-        std::size_t cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), queue.remaining_slots());
+        std::size_t cnt = io_uring_peek_batch_cqe(&ring_, cqes.data(), sizeof(cqes.data()));
         if (cnt == 0) {
             wait_before();
             return false;
         }
-        for (auto i = 0uz; i < cnt; i += 1) {
+        for (auto i = 0uz; i < cnt;i+=1) {
             auto cb = reinterpret_cast<Callback *>(cqes[i]->user_data);
             if (cb != nullptr) [[likely]] {
                 cb->result_ = cqes[i]->res;
                 if (cb->is_exclusive_) {
-                    tasks[--exclusive_tasks] = std::move(cb->handle_);
+                    cqes[num_ex++] = reinterpret_cast<io_uring_cqe *>(std::addressof(cb->handle_));
                 } else {
-                    tasks[shared_tasks++] = std::move(cb->handle_);
+                    local_queue.push_back_or_overflow(std::move(cb->handle_), global_queue);
                 }
             }
         }
-        assert(shared_tasks <= exclusive_tasks);
-        LOG_TRACE("poll {} tasks {{shared: {}, private: {}}}",
-                  cnt,
-                  shared_tasks,
-                  SIZE - exclusive_tasks);
         io_uring_cq_advance(&ring_, cnt);
-        if (shared_tasks > 0) {
-            queue.push_batch(
-                std::span<std::coroutine_handle<>>{tasks.begin(), tasks.begin() + shared_tasks},
-                shared_tasks);
-        }
-        while (exclusive_tasks < SIZE) {
-            tasks[exclusive_tasks++].resume();
+        LOG_DEBUG("poll shared: {}, private: {}", cnt - num_ex, num_ex);
+        for (auto i = 0uz; i < num_ex; i += 1) {
+            reinterpret_cast<std::coroutine_handle<> *>(cqes[i])->resume();
         }
         this->force_submit();
         return true;

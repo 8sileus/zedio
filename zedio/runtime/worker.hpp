@@ -334,7 +334,7 @@ private:
     // poll I/O events
     [[nodiscard]]
     auto poll() -> bool {
-        if (!driver_.poll(local_queue_)) {
+        if (!driver_.poll(local_queue_, shared_.global_queue_)) {
             return false;
         }
         if (should_notify_others()) {

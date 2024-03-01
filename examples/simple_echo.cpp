@@ -26,7 +26,6 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    auto runtime = Runtime::create();
-    runtime.block_on(server());
+    Runtime::create().block_on(server());
     return 0;
 }
