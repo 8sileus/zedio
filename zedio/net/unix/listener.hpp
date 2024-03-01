@@ -22,7 +22,6 @@ public:
 
     ~UnixListener() {
         if (io_.fd() >= 0) {
-            // TODO register unlink
             if (auto ret = io_.local_addr<UnixSocketAddr>(); ret) [[likely]] {
                 if (::unlink(ret.value().pathname().data()) != 0) [[unlikely]] {
                     LOG_ERROR("{}", strerror(errno));

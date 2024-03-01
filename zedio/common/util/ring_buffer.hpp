@@ -6,7 +6,7 @@
 #include <optional>
 #include <vector>
 
-namespace zedio {
+namespace zedio::util {
 
 template <typename T, std::size_t SIZE>
 class StackRingBuffer {
@@ -68,6 +68,20 @@ public:
         return (end_ + 1) % data_.size() == start_;
     }
 
+    void unchecked_push(const T &val) {
+        assert(!is_fill());
+        data_[end_++] = val;
+        end_ %= data_.size();
+    }
+
+    [[nodiscard]]
+    auto unchecked_pop() -> T {
+        assert(!is_empty());
+        auto ret = std::move(data_[start_++]);
+        start_ %= data_.size();
+        return ret;
+    }
+
     auto push(const T &val) -> bool {
         if (is_fill()) {
             return false;
@@ -127,4 +141,4 @@ private:
     std::vector<T> data_{};
 };
 
-} // namespace zedio
+} // namespace zedio::util

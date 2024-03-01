@@ -6,6 +6,7 @@
 #include <limits>
 #include <list>
 #include <optional>
+#include <unordered_set>
 #include <utility>
 
 namespace zedio::runtime::detail {
@@ -75,7 +76,7 @@ private:
 };
 
 class Idle {
-    
+
 public:
     Idle(std::size_t num_workers)
         : state_{num_workers}
@@ -94,17 +95,16 @@ public:
         }
 
         state_.wake_up_one(1);
-
-        auto result = sleepers_.front();
-        sleepers_.pop_front();
+        auto result = *sleeping_workers.begin();
+        sleeping_workers.erase(result);
         return result;
     }
 
     [[nodiscard]]
     auto transition_worker_to_sleeping(std::size_t worker, bool is_searching) -> bool {
         std::lock_guard lock(mutex_);
-        auto result = state_.dec_num_working(is_searching);
-        sleepers_.push_back(worker);
+        auto            result = state_.dec_num_working(is_searching);
+        sleeping_workers.emplace(worker);
         return result;
     }
 
@@ -126,12 +126,9 @@ public:
     [[nodiscard]]
     auto remove(std::size_t worker) -> bool {
         std::lock_guard lock(mutex_);
-        for (auto it = sleepers_.begin(); it != sleepers_.end(); ++it) {
-            if (*it == worker) {
-                sleepers_.erase(it);
-                state_.wake_up_one(0);
-                return true;
-            }
+        if (sleeping_workers.erase(worker) > 0) {
+            state_.wake_up_one(0);
+            return true;
         }
         return false;
     }
@@ -139,7 +136,7 @@ public:
     [[nodiscard]]
     auto contains(std::size_t worker) -> bool {
         std::lock_guard lock(mutex_);
-        return std::find(sleepers_.begin(), sleepers_.end(), worker) != sleepers_.end();
+        return sleeping_workers.find(worker) != sleeping_workers.end();
     }
 
 private:
@@ -151,10 +148,10 @@ private:
     }
 
 private:
-    IdleState               state_;
-    std::size_t             num_workers_;
-    std::list<std::size_t>  sleepers_;
-    std::mutex              mutex_;
+    IdleState                       state_;
+    std::size_t                     num_workers_;
+    std::unordered_set<std::size_t> sleeping_workers;
+    std::mutex                      mutex_;
 };
 
 } // namespace zedio::runtime::detail
