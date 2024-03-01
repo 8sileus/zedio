@@ -7,6 +7,7 @@
 // C++
 #include <coroutine>
 #include <optional>
+// #include <stacktrace>
 #include <stdexcept>
 #include <variant>
 
@@ -29,14 +30,14 @@ namespace detail {
                 if (callee.promise().caller_) {
                     return callee.promise().caller_;
                 } else {
-#ifdef NEED_ZEDIO_LOG
+#ifndef ZEDIO_ALLOW_CORO_EXCEPTION
                     if (callee.promise().ex_ != nullptr) [[unlikely]] {
                         try {
                             std::rethrow_exception(callee.promise().ex_);
                         } catch (const std::exception &ex) {
-                            LOG_ERROR("catch a exception {}", ex.what());
+                            std::terminate();
                         } catch (...) {
-                            LOG_ERROR("catch a unknown exception");
+                            std::terminate();
                         }
                     }
 #endif

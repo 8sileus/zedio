@@ -94,7 +94,7 @@ public:
             }
         }
         io_uring_cq_advance(&ring_, cnt);
-        LOG_DEBUG("poll shared: {}, private: {}", cnt - num_ex, num_ex);
+        LOG_TRACE("poll shared: {}, private: {}", cnt - num_ex, num_ex);
         for (auto i = 0uz; i < num_ex; i += 1) {
             reinterpret_cast<std::coroutine_handle<> *>(cqes[i])->resume();
         }

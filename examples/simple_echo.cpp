@@ -20,7 +20,7 @@ auto server() -> Task<void> {
     auto addr = SocketAddr::parse("localhost", 9898).value();
     auto listener = TcpListener::bind(addr).value();
     while (true) {
-        auto [stream, peer_addr] = (co_await listener.accept().set_timeout(3s)).value();
+        auto [stream, peer_addr] = (co_await listener.accept()).value();
         spawn(process(std::move(stream)));
     }
 }
