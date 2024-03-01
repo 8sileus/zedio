@@ -34,8 +34,20 @@ public:
     IORegistrator(const IORegistrator &other) = delete;
     auto operator=(const IORegistrator &other) -> IORegistrator & = delete;
     // Allow move
-    IORegistrator(IORegistrator &&other) = default;
-    auto operator=(IORegistrator &&other) -> IORegistrator & = default;
+    IORegistrator(IORegistrator &&other)
+        : cb_{std::move(other.cb_)}
+        , sqe_{std::move(other.sqe_)} {
+        io_uring_sqe_set_data(sqe_, &this->cb_);
+        other.sqe_ = nullptr;
+    }
+
+    auto operator=(IORegistrator &&other) -> IORegistrator & {
+        cb_ = std::move(other.cb_);
+        sqe_ = std::move(other.sqe_);
+        io_uring_sqe_set_data(sqe_, &this->cb_);
+        other.sqe_ = nullptr;
+        return *this;
+    };
 
     auto await_ready() const noexcept -> bool {
         return false;
