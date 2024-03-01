@@ -41,14 +41,15 @@ ctest .
 ## Example
 Writing an echo server using Zedio  
 ``` C++
-// Ignore all errors
-#include "zedio/async.hpp"
+#include "zedio/core.hpp"
 #include "zedio/net.hpp"
 
 using namespace zedio::async;
 using namespace zedio::net;
+using namespace zedio;
 
 auto process(TcpStream stream) -> Task<void> {
+    throw "123";
     char buf[1024];
     while (true) {
         auto len = (co_await stream.read(buf)).value();
@@ -69,8 +70,7 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    auto runtime = Runtime::create();
-    runtime.block_on(server());
+    Runtime::options().set_num_workers(4).build().block_on(server());
     return 0;
 }
 ```
