@@ -49,7 +49,6 @@ using namespace zedio::net;
 using namespace zedio;
 
 auto process(TcpStream stream) -> Task<void> {
-    throw "123";
     char buf[1024];
     while (true) {
         auto len = (co_await stream.read(buf)).value();

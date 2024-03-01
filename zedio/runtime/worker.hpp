@@ -349,6 +349,7 @@ private:
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
                 driver_.wait(run_next_);
+                LOG_TRACE("{}", tick_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
                     LOG_TRACE("awaken");
