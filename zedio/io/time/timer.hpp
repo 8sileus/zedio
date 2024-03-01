@@ -126,6 +126,10 @@ public:
 
 private:
     void update_expired_time() {
+        while (!events_.empty() && (*events_.begin())->is_canceled()) {
+            events_.erase(events_.begin());
+        }
+
         if (events_.empty()) {
             return;
         }
