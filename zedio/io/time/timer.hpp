@@ -4,7 +4,7 @@
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 #include "zedio/io/base/callback.hpp"
-#include "zedio/io/base/poller.hpp"
+#include "zedio/io/base/driver.hpp"
 // Linux
 #include <sys/timerfd.h>
 // C
@@ -100,7 +100,7 @@ public:
     }
 
     ~Timer() {
-        // t_poller->unregister_file(idx_);
+        // t_driver->unregister_file(idx_);
         t_timer = nullptr;
         ::close(fd_);
     }
@@ -154,10 +154,10 @@ private:
         char     buf[8]{};
         Callback cb{.handle_ = loop_.handle(), .result_ = 0, .is_exclusive_ = true};
         while (true) {
-            auto sqe = t_poller->get_sqe();
+            auto sqe = t_driver->get_sqe();
             io_uring_prep_read(sqe, fd_, buf, sizeof(buf), 0);
             io_uring_sqe_set_data(sqe, &cb);
-            t_poller->force_submit();
+            t_driver->force_submit();
             co_await std::suspend_always{};
 
             // if (auto result = co_await Read{fd_, buf, sizeof(buf), 0}.set_exclusion();

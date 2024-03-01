@@ -3,7 +3,7 @@
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/rand.hpp"
 #include "zedio/common/util/thread.hpp"
-#include "zedio/io/base/poller.hpp"
+#include "zedio/io/base/driver.hpp"
 #include "zedio/io/time/timer.hpp"
 #include "zedio/runtime/config.hpp"
 #include "zedio/runtime/idle.hpp"
@@ -108,7 +108,7 @@ public:
     Worker(Shared &shared, std::size_t index)
         : shared_{shared}
         , index_{index}
-        , poller_{shared.config_} {
+        , driver_{shared.config_} {
         current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
         LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}",
                   current_thread::get_thread_name(),
@@ -153,7 +153,7 @@ public:
     }
 
     void wake_up() {
-        poller_.wake_up();
+        driver_.wake_up();
     }
 
     void schedule_task(std::coroutine_handle<> &&task) {
@@ -334,7 +334,7 @@ private:
     // poll I/O events
     [[nodiscard]]
     auto poll() -> bool {
-        if (!poller_.poll(local_queue_)) {
+        if (!driver_.poll(local_queue_)) {
             return false;
         }
         if (should_notify_others()) {
@@ -348,7 +348,7 @@ private:
         check_shutdown();
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
-                poller_.wait(run_next_);
+                driver_.wait(run_next_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
                     LOG_TRACE("awaken");
@@ -364,7 +364,7 @@ private:
     util::FastRand                         rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
-    io::detail::Poller                     poller_;
+    io::detail::Driver                     driver_;
     io::detail::Timer                      timer_{};
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};

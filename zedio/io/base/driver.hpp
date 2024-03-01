@@ -19,13 +19,13 @@
 
 namespace zedio::io::detail {
 
-class Poller;
+class Driver;
 
-thread_local Poller *t_poller{nullptr};
+thread_local Driver *t_driver{nullptr};
 
-class Poller : util::Noncopyable {
+class Driver : util::Noncopyable {
 public:
-    Poller(const Config &config)
+    Driver(const Config &config)
         : config_{config}
         , waker_fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
         if (waker_fd_ < 0) [[unlikely]] {
@@ -39,14 +39,14 @@ public:
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }
-        assert(t_poller == nullptr);
-        t_poller = this;
+        assert(t_driver == nullptr);
+        t_driver = this;
     }
 
-    ~Poller() {
+    ~Driver() {
         ::close(waker_fd_);
         io_uring_queue_exit(&ring_);
-        t_poller = nullptr;
+        t_driver = nullptr;
     }
 
     // Current worker thread will be blocked on io_uring_wait_cqe
@@ -72,8 +72,6 @@ public:
 
     [[nodiscard]]
     auto poll(runtime::detail::LocalQueue &queue) -> bool {
-        this->force_submit();
-
         constexpr const auto                      SIZE = Config::LOCAL_QUEUE_CAPACITY;
         std::array<io_uring_cqe *, SIZE>          cqes;
         std::array<std::coroutine_handle<>, SIZE> tasks;
@@ -110,6 +108,7 @@ public:
         while (exclusive_tasks < SIZE) {
             tasks[exclusive_tasks++].resume();
         }
+        this->force_submit();
         return true;
     }
 
@@ -124,12 +123,14 @@ public:
     }
 
     void submit() {
-        if (!config_.deffer_submit_) {
+        num_submissions_ += 1;
+        if (num_submissions_ == config_.num_weak_submissions_) {
             force_submit();
         }
     }
 
     void force_submit() {
+        num_submissions_ = 0;
         if (auto ret = io_uring_submit(&ring_); ret < 0) {
             LOG_ERROR("submit sqes failed, {}", strerror(-ret));
         }
@@ -175,6 +176,7 @@ private:
     const Config                                     &config_;
     io_uring                                          ring_{};
     int                                               waker_fd_;
+    uint32_t                                          num_submissions_{0};
     uint64_t                                          waker_buf_{1};
     std::list<std::function<void(io_uring_sqe *sqe)>> waiting_coros_{};
 };

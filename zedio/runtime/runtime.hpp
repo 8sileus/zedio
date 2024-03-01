@@ -33,8 +33,8 @@ private:
         }
 
         [[nodiscard]]
-        auto set_deffer_submission(bool on) -> Builder & {
-            config_.deffer_submit_ = on;
+        auto set_num_weak_submissions_(uint32_t num) -> Builder & {
+            config_.num_weak_submissions_ = num;
             return *this;
         }
 

@@ -305,6 +305,8 @@ public:
                 if (auto ret = SocketIO::build_socket(addr_.family(), SOCK_STREAM, 0); !ret)
                     [[unlikely]] {
                     this->cb_.result_ = ret.error().value();
+                    io_uring_prep_nop(std::get<0>(this->args_));
+                    io_uring_sqe_set_data(std::get<0>(this->args_), nullptr);
                     return false;
                 } else {
                     io_ = std::move(ret.value());

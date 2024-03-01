@@ -207,7 +207,7 @@ private:
     }
 
     static auto async_close(int fd) noexcept -> bool {
-        auto sqe = detail::t_poller->get_sqe();
+        auto sqe = detail::t_driver->get_sqe();
         if (sqe == nullptr) {
             LOG_WARN("async close fd failed, sqe is nullptr");
             return false;

@@ -9,8 +9,9 @@ struct Config {
     std::size_t ring_entries_{1024};
     // io_uring flags
     uint32_t io_uring_flags_{0};
-    // deffred do io_uring_submit
-    bool deffer_submit_{true};
+    // how many weak submissions are merged into one strong submission
+    // 0: Merge all submission
+    uint32_t num_weak_submissions_{4};
 
     // static
     static constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};

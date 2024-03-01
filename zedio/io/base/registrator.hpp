@@ -5,7 +5,7 @@
 #include "zedio/common/util/get_func_args.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 #include "zedio/io/base/callback.hpp"
-#include "zedio/io/base/poller.hpp"
+#include "zedio/io/base/driver.hpp"
 #include "zedio/io/base/timeout.hpp"
 
 namespace zedio::io::detail {
@@ -19,7 +19,7 @@ public:
         requires std::is_invocable_v<IOFunc, io_uring_sqe *, Args...>
     IORegistrator(IOFunc &&f, Args... args)
         : f_{f}
-        , args_{t_poller->get_sqe(), std::forward<Args>(args)...} {}
+        , args_{t_driver->get_sqe(), std::forward<Args>(args)...} {}
 
     // Delete copy
     IORegistrator(const IORegistrator &other) = delete;
@@ -35,7 +35,7 @@ public:
     void await_suspend(std::coroutine_handle<> handle) {
         cb_.handle_ = std::move(handle);
         if (std::get<0>(args_) == nullptr) [[unlikely]] {
-            t_poller->push_waiting_coro([this](io_uring_sqe *sqe) {
+            t_driver->push_waiting_coro([this](io_uring_sqe *sqe) {
                 std::get<0>(this->args_) = sqe;
                 std::apply(f_, args_);
                 io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
@@ -43,12 +43,12 @@ public:
         } else {
             std::apply(f_, args_);
             io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
-            t_poller->submit();
+            t_driver->submit();
         }
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto set_exclusion() -> IO & {
+    auto set_exclusive() -> IO & {
         cb_.is_exclusive_ = true;
         return static_cast<IO &>(*this);
     }
