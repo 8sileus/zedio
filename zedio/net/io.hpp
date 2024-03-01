@@ -25,12 +25,12 @@ public:
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
     auto send_to(std::span<const char> buf, const Addr &addr) noexcept {
-        return SendTo(fd_,
-                      buf.data(),
-                      buf.size_bytes(),
-                      MSG_NOSIGNAL,
-                      addr.sockaddr(),
-                      addr.length());
+        return io::SendTo(fd_,
+                          buf.data(),
+                          buf.size_bytes(),
+                          MSG_NOSIGNAL,
+                          addr.sockaddr(),
+                          addr.length());
     }
 
     [[REMEMBER_CO_AWAIT]]
@@ -38,10 +38,54 @@ public:
         return io::Recv{fd_, buf.data(), buf.size_bytes(), flags};
     }
 
+    template <typename Addr>
+        requires is_socket_address<Addr>
+    [[REMEMBER_CO_AWAIT]]
+    auto recv_from(std::span<char> buf, unsigned flags = 0) const noexcept {
+        class RecvFrom
+            : public io::detail::IORegistrator<RecvFrom, decltype(io_uring_prep_recvmsg)> {
+        private:
+            using Super = io::detail::IORegistrator<RecvFrom, decltype(io_uring_prep_recvmsg)>;
+
+        public:
+            RecvFrom(int fd, std::span<char> buf, unsigned flags)
+                : Super{io_uring_prep_recvmsg, fd, &msg_, flags}
+                , iovecs_{.iov_base = buf.data(), .iov_len = buf.size_bytes()}
+                , msg_{.msg_name = &addr_,
+                       .msg_namelen = sizeof(addr_),
+                       .msg_iov = &iovecs_,
+                       .msg_iovlen = 1,
+                       .msg_control = nullptr,
+                       .msg_controllen = 0,
+                       .msg_flags = 0} {};
+
+            auto await_resume() const noexcept -> Result<std::pair<std::size_t, Addr>> {
+                if (this->cb_.result_ >= 0) [[likely]] {
+                    return std::make_pair(static_cast<std::size_t>(this->cb_.result_), addr_);
+                } else {
+                    return std::unexpected{make_sys_error(-this->cb_.result_)};
+                }
+            }
+
+        private:
+            struct iovec  iovecs_;
+            Addr          addr_{};
+            struct msghdr msg_ {};
+        };
+        return RecvFrom{fd_, buf, flags};
+    }
+
+    template <typename Addr>
+        requires is_socket_address<Addr>
+    [[REMEMBER_CO_AWAIT]]
+    auto peek_from(std::span<char> buf) const noexcept {
+        return recv_from<Addr>(buf, MSG_PEEK);
+    }
+
     template <typename Stream, typename Addr>
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
-    auto accept() noexcept {
+    auto accept() const noexcept {
         class Accept : public io::detail::IORegistrator<Accept, decltype(io_uring_prep_accept)> {
             using Super = io::detail::IORegistrator<Accept, decltype(io_uring_prep_accept)>;
 

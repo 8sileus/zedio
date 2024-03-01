@@ -12,7 +12,7 @@ protected:
 
 public:
     [[nodiscard]]
-    auto accept() noexcept {
+    auto accept() const noexcept {
         return io_.accept<Stream, Addr>();
     }
 

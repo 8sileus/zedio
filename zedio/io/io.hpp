@@ -17,6 +17,7 @@
 #include "zedio/io/awaiter/recv.hpp"
 #include "zedio/io/awaiter/rename.hpp"
 #include "zedio/io/awaiter/send.hpp"
+#include "zedio/io/awaiter/sendto.hpp"
 #include "zedio/io/awaiter/shutdown.hpp"
 #include "zedio/io/awaiter/socket.hpp"
 #include "zedio/io/awaiter/statx.hpp"

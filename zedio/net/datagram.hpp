@@ -11,28 +11,44 @@ protected:
         : io_{std::move(io)} {}
 
 public:
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto send(std::span<const char> buf) noexcept {
         return io_.send(buf);
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto send_to(std::span<const char> buf, const Addr &addr) noexcept {
         return io_.send_to<Addr>(buf, addr);
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto recv(std::span<char> buf) const noexcept {
         return io_.recv(buf);
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
+    auto recv_from(std::span<char>buf)const noexcept {
+        return io_.recv_from<Addr>(buf);
+    }
+
+    [[REMEMBER_CO_AWAIT]]
     auto peek(std::span<char> buf) const noexcept {
         return io_.recv(buf, MSG_PEEK);
     }
 
+    [[REMEMBER_CO_AWAIT]]
+    auto peek_from(std::span<char> buf) const noexcept {
+        return io_.peek_from<Addr>(buf);
+    }
+
+    [[REMEMBER_CO_AWAIT]]
     auto connect(Addr &addr) noexcept {
         return io_.connect<Addr>(addr);
+    }
+
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return io_.fd();
     }
 
 public:
