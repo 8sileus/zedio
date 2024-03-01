@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Splice : public detail::IORegistrator<Splice, decltype(io_uring_prep_splice)> {
+class Splice : public detail::IORegistrator<Splice> {
 private:
-    using Super = detail::IORegistrator<Splice, decltype(io_uring_prep_splice)>;
+    using Super = detail::IORegistrator<Splice>;
 
 public:
     Splice(int          fd_in,

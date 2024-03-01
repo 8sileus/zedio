@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class SendTo : public detail::IORegistrator<SendTo, decltype(io_uring_prep_sendto)> {
+class SendTo : public detail::IORegistrator<SendTo> {
 private:
-    using Super = detail::IORegistrator<SendTo, decltype(io_uring_prep_sendto)>;
+    using Super = detail::IORegistrator<SendTo>;
 
 public:
     SendTo(int                    sockfd,

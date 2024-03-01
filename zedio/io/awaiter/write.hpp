@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Write : public detail::IORegistrator<Write, decltype(io_uring_prep_write)> {
+class Write : public detail::IORegistrator<Write> {
 private:
-    using Super = detail::IORegistrator<Write, decltype(io_uring_prep_write)>;
+    using Super = detail::IORegistrator<Write>;
 
 public:
     Write(int fd, const void *buf, unsigned nbytes, __u64 offset)

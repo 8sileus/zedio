@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Socket : public detail::IORegistrator<Socket, decltype(io_uring_prep_socket)> {
+class Socket : public detail::IORegistrator<Socket> {
 private:
-    using Super = detail::IORegistrator<Socket, decltype(io_uring_prep_socket)>;
+    using Super = detail::IORegistrator<Socket>;
 
 public:
     Socket(int domain, int type, int protocol, unsigned int flags)

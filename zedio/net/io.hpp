@@ -42,10 +42,9 @@ public:
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
     auto recv_from(std::span<char> buf, unsigned flags = 0) const noexcept {
-        class RecvFrom
-            : public io::detail::IORegistrator<RecvFrom, decltype(io_uring_prep_recvmsg)> {
+        class RecvFrom : public io::detail::IORegistrator<RecvFrom> {
         private:
-            using Super = io::detail::IORegistrator<RecvFrom, decltype(io_uring_prep_recvmsg)>;
+            using Super = io::detail::IORegistrator<RecvFrom>;
 
         public:
             RecvFrom(int fd, std::span<char> buf, unsigned flags)
@@ -86,8 +85,8 @@ public:
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
     auto accept() const noexcept {
-        class Accept : public io::detail::IORegistrator<Accept, decltype(io_uring_prep_accept)> {
-            using Super = io::detail::IORegistrator<Accept, decltype(io_uring_prep_accept)>;
+        class Accept : public io::detail::IORegistrator<Accept> {
+            using Super = io::detail::IORegistrator<Accept>;
 
         public:
             Accept(int fd)
@@ -336,9 +335,9 @@ public:
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
     static auto build_stream(const Addr &addr) {
-        class Connect : public io::detail::IORegistrator<Connect, decltype(io_uring_prep_connect)> {
+        class Connect : public io::detail::IORegistrator<Connect> {
         private:
-            using Super = io::detail::IORegistrator<Connect, decltype(io_uring_prep_connect)>;
+            using Super = io::detail::IORegistrator<Connect>;
 
         public:
             Connect(const Addr &addr)
@@ -349,14 +348,14 @@ public:
                 if (auto ret = SocketIO::build_socket(addr_.family(), SOCK_STREAM, 0); !ret)
                     [[unlikely]] {
                     this->cb_.result_ = ret.error().value();
-                    io_uring_prep_nop(std::get<0>(this->args_));
-                    io_uring_sqe_set_data(std::get<0>(this->args_), nullptr);
+                    io_uring_prep_nop(this->sqe_);
+                    io_uring_sqe_set_data(this->sqe_, nullptr);
                     return false;
                 } else {
                     io_ = std::move(ret.value());
                 }
-                std::get<1>(this->args_) = io_.fd();
-                std::get<2>(this->args_) = addr_.sockaddr();
+                this->sqe_->fd = io_.fd();
+                this->sqe_->addr = (unsigned long)addr_.sockaddr();
                 Super::await_suspend(handle);
                 return true;
             }

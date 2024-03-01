@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Setxattr : public detail::IORegistrator<Setxattr, decltype(io_uring_prep_setxattr)> {
+class Setxattr : public detail::IORegistrator<Setxattr> {
 private:
-    using Super = detail::IORegistrator<Setxattr, decltype(io_uring_prep_setxattr)>;
+    using Super = detail::IORegistrator<Setxattr>;
 
 public:
     Setxattr(const char *name, const char *value, const char *path, int flags, unsigned int len)

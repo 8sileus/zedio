@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Connect : public detail::IORegistrator<Connect, decltype(io_uring_prep_connect)> {
+class Connect : public detail::IORegistrator<Connect> {
 private:
-    using Super = detail::IORegistrator<Connect, decltype(io_uring_prep_connect)>;
+    using Super = detail::IORegistrator<Connect>;
 
 public:
     Connect(int fd, const struct sockaddr *addr, socklen_t addrlen)

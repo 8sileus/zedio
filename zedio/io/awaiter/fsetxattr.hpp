@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Fsetxattr : public detail::IORegistrator<Fsetxattr, decltype(io_uring_prep_fsetxattr)> {
+class Fsetxattr : public detail::IORegistrator<Fsetxattr> {
 private:
-    using Super = detail::IORegistrator<Fsetxattr, decltype(io_uring_prep_fsetxattr)>;
+    using Super = detail::IORegistrator<Fsetxattr>;
 
 public:
     Fsetxattr(int fd, const char *name, const char *value, int flags, unsigned int len)

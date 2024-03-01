@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Open : public detail::IORegistrator<Open, decltype(io_uring_prep_openat)> {
+class Open : public detail::IORegistrator<Open> {
 private:
-    using Super = detail::IORegistrator<Open, decltype(io_uring_prep_openat)>;
+    using Super = detail::IORegistrator<Open>;
 
 public:
     Open(int dfd, const char *path, int flags, mode_t mode)
@@ -24,9 +24,9 @@ public:
     }
 };
 
-class Open2 : public detail::IORegistrator<Open2, decltype(io_uring_prep_openat2)> {
+class Open2 : public detail::IORegistrator<Open2> {
 private:
-    using Super = detail::IORegistrator<Open2, decltype(io_uring_prep_openat2)>;
+    using Super = detail::IORegistrator<Open2>;
 
 public:
     Open2(int dfd, const char *path, struct open_how *how)

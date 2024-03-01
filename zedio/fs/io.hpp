@@ -17,9 +17,9 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto metadata() const noexcept {
-        class Statx : public io::detail::IORegistrator<Statx, decltype(io_uring_prep_statx)> {
+        class Statx : public io::detail::IORegistrator<Statx> {
         private:
-            using Super = io::detail::IORegistrator<Statx, decltype(io_uring_prep_statx)>;
+            using Super = io::detail::IORegistrator<Statx>;
 
         public:
             Statx(int fd)
@@ -77,9 +77,9 @@ public:
     template <class FileType>
     [[REMEMBER_CO_AWAIT]]
     static auto open(const std::string_view &path, int flags, mode_t mode) {
-        class Open : public io::detail::IORegistrator<Open, decltype(io_uring_prep_openat)> {
+        class Open : public io::detail::IORegistrator<Open> {
         private:
-            using Super = io::detail::IORegistrator<Open, decltype(io_uring_prep_openat)>;
+            using Super = io::detail::IORegistrator<Open>;
 
         public:
             Open(int dfd, const char *path, int flags, mode_t mode)

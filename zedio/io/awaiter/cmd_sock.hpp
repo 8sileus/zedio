@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class CmdSock : public detail::IORegistrator<CmdSock, decltype(io_uring_prep_cmd_sock)> {
+class CmdSock : public detail::IORegistrator<CmdSock> {
 private:
-    using Super = detail::IORegistrator<CmdSock, decltype(io_uring_prep_cmd_sock)>;
+    using Super = detail::IORegistrator<CmdSock>;
 
 public:
     CmdSock(int cmd_op, int fd, int level, int optname, void *optval, int optlen)

@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Recv : public detail::IORegistrator<Recv, decltype(io_uring_prep_recv)> {
+class Recv : public detail::IORegistrator<Recv> {
 private:
-    using Super = detail::IORegistrator<Recv, decltype(io_uring_prep_recv)>;
+    using Super = detail::IORegistrator<Recv>;
 
 public:
     Recv(int sockfd, void *buf, size_t len, int flags)

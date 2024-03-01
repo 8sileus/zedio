@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Link : public detail::IORegistrator<Link, decltype(io_uring_prep_linkat)> {
+class Link : public detail::IORegistrator<Link> {
 private:
-    using Super = detail::IORegistrator<Link, decltype(io_uring_prep_linkat)>;
+    using Super = detail::IORegistrator<Link>;
 
 public:
     Link(int olddfd, const char *oldpath, int newdfd, const char *newpath, int flags)

@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Rename : public detail::IORegistrator<Rename, decltype(io_uring_prep_renameat)> {
+class Rename : public detail::IORegistrator<Rename> {
 private:
-    using Super = detail::IORegistrator<Rename, decltype(io_uring_prep_renameat)>;
+    using Super = detail::IORegistrator<Rename>;
 
 public:
     Rename(int olddfd, const char *oldpath, int newdfd, const char *newpath, int flags)

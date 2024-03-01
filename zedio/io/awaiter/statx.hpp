@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Statx : public detail::IORegistrator<Statx, decltype(io_uring_prep_statx)> {
+class Statx : public detail::IORegistrator<Statx> {
 private:
-    using Super = detail::IORegistrator<Statx, decltype(io_uring_prep_statx)>;
+    using Super = detail::IORegistrator<Statx>;
 
 public:
     Statx(int dfd, const char *path, int flags, unsigned mask, struct statx *statxbuf)

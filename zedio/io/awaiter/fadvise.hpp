@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Fadvise : public detail::IORegistrator<Fadvise, decltype(io_uring_prep_fadvise)> {
+class Fadvise : public detail::IORegistrator<Fadvise> {
 private:
-    using Super = detail::IORegistrator<Fadvise, decltype(io_uring_prep_fadvise)>;
+    using Super = detail::IORegistrator<Fadvise>;
 
 public:
     Fadvise(int fd, __u64 offset, off_t len, int advice)

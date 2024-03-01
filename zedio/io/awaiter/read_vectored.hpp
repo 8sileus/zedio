@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class ReadVectored : public detail::IORegistrator<ReadVectored, decltype(io_uring_prep_readv2)> {
+class ReadVectored : public detail::IORegistrator<ReadVectored> {
 private:
-    using Super = detail::IORegistrator<ReadVectored, decltype(io_uring_prep_readv2)>;
+    using Super = detail::IORegistrator<ReadVectored>;
 
 public:
     ReadVectored(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0)

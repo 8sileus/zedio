@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class MkDir : public detail::IORegistrator<MkDir, decltype(io_uring_prep_mkdirat)> {
+class MkDir : public detail::IORegistrator<MkDir> {
 private:
-    using Super = detail::IORegistrator<MkDir, decltype(io_uring_prep_mkdirat)>;
+    using Super = detail::IORegistrator<MkDir>;
 
 public:
     MkDir(int dfd, const char *path, mode_t mode)

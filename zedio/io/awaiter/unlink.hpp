@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Unlink : public detail::IORegistrator<Unlink, decltype(io_uring_prep_unlinkat)> {
+class Unlink : public detail::IORegistrator<Unlink> {
 private:
-    using Super = detail::IORegistrator<Unlink, decltype(io_uring_prep_unlinkat)>;
+    using Super = detail::IORegistrator<Unlink>;
 
 public:
     Unlink(int dfd, const char *path, int flags)

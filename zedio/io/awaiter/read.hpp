@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Read : public detail::IORegistrator<Read, decltype(io_uring_prep_read)> {
+class Read : public detail::IORegistrator<Read> {
 private:
-    using Super = detail::IORegistrator<Read, decltype(io_uring_prep_read)>;
+    using Super = detail::IORegistrator<Read>;
 
 public:
     Read(int fd, void *buf, std::size_t nbytes, uint64_t offset)

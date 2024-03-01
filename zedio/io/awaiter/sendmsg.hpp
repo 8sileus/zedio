@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class SendMsg : public detail::IORegistrator<SendMsg, decltype(io_uring_prep_sendmsg)> {
+class SendMsg : public detail::IORegistrator<SendMsg> {
 private:
-    using Super = detail::IORegistrator<SendMsg, decltype(io_uring_prep_sendmsg)>;
+    using Super = detail::IORegistrator<SendMsg>;
 
 public:
     SendMsg(int fd, const struct msghdr *msg, unsigned flags)

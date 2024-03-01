@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Fsync : public detail::IORegistrator<Fsync, decltype(io_uring_prep_fsync)> {
+class Fsync : public detail::IORegistrator<Fsync> {
 private:
-    using Super = detail::IORegistrator<Fsync, decltype(io_uring_prep_fsync)>;
+    using Super = detail::IORegistrator<Fsync>;
 
 public:
     Fsync(int fd, unsigned fsync_flags)

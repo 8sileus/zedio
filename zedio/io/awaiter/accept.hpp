@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Accept : public detail::IORegistrator<Accept, decltype(io_uring_prep_accept)> {
+class Accept : public detail::IORegistrator<Accept> {
 private:
-    using Super = detail::IORegistrator<Accept, decltype(io_uring_prep_accept)>;
+    using Super = detail::IORegistrator<Accept>;
 
 public:
     Accept(int fd, struct sockaddr *addr, socklen_t *addrlen, int flags)

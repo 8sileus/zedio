@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Send : public detail::IORegistrator<Send, decltype(io_uring_prep_send)> {
+class Send : public detail::IORegistrator<Send> {
 private:
-    using Super = detail::IORegistrator<Send, decltype(io_uring_prep_send)>;
+    using Super = detail::IORegistrator<Send>;
 
 public:
     Send(int sockfd, const void *buf, size_t len, int flags)

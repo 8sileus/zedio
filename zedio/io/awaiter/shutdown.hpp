@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Shutdown : public detail::IORegistrator<Shutdown, decltype(io_uring_prep_shutdown)> {
+class Shutdown : public detail::IORegistrator<Shutdown> {
 private:
-    using Super = detail::IORegistrator<Shutdown, decltype(io_uring_prep_shutdown)>;
+    using Super = detail::IORegistrator<Shutdown>;
 
 public:
     enum How : int {

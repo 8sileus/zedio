@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class RecvMsg : public detail::IORegistrator<RecvMsg, decltype(io_uring_prep_recvmsg)> {
+class RecvMsg : public detail::IORegistrator<RecvMsg> {
 private:
-    using Super = detail::IORegistrator<RecvMsg, decltype(io_uring_prep_recvmsg)>;
+    using Super = detail::IORegistrator<RecvMsg>;
 
 public:
     RecvMsg(int fd, struct msghdr *msg, unsigned flags)

@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Fallocate : public detail::IORegistrator<Fallocate, decltype(io_uring_prep_fallocate)> {
+class Fallocate : public detail::IORegistrator<Fallocate> {
 private:
-    using Super = detail::IORegistrator<Fallocate, decltype(io_uring_prep_fallocate)>;
+    using Super = detail::IORegistrator<Fallocate>;
 
 public:
     Fallocate(int fd, int mode, __u64 offset, __u64 len)

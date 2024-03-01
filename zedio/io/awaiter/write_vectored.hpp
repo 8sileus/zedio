@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-struct WriteVectored : public detail::IORegistrator<WriteVectored, decltype(io_uring_prep_writev2)> {
+struct WriteVectored : public detail::IORegistrator<WriteVectored> {
 private:
-    using Super = detail::IORegistrator<WriteVectored, decltype(io_uring_prep_writev2)>;
+    using Super = detail::IORegistrator<WriteVectored>;
 
 public:
     WriteVectored(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0)

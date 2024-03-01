@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Tee : public detail::IORegistrator<Tee, decltype(io_uring_prep_tee)> {
+class Tee : public detail::IORegistrator<Tee> {
 private:
-    using Super = detail::IORegistrator<Tee, decltype(io_uring_prep_tee)>;
+    using Super = detail::IORegistrator<Tee>;
 
 public:
     Tee(int fd_in, int fd_out, unsigned int nbytes, unsigned int splice_flags)

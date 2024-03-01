@@ -2,7 +2,7 @@
 
 #include "zedio/common/error.hpp"
 #include "zedio/common/macros.hpp"
-#include "zedio/common/util/get_func_args.hpp"
+// #include "zedio/common/util/get_func_args.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 #include "zedio/io/base/callback.hpp"
 #include "zedio/io/base/driver.hpp"
@@ -10,16 +10,25 @@
 
 namespace zedio::io::detail {
 
-template <typename IO, typename IOFunc>
+template <typename IO>
 class IORegistrator {
-    using Tuple = util::GetFuncArgs<IOFunc>::TupleArgs;
-
 public:
-    template <typename... Args>
-        requires std::is_invocable_v<IOFunc, io_uring_sqe *, Args...>
-    IORegistrator(IOFunc &&f, Args... args)
-        : f_{f}
-        , args_{t_driver->get_sqe(), std::forward<Args>(args)...} {}
+    template <typename F, typename... Args>
+        requires std::is_invocable_v<F, io_uring_sqe *, Args...>
+    IORegistrator(F &&f, Args... args)
+        : sqe_{t_driver->get_sqe()} {
+        if (sqe_ != nullptr) [[likely]] {
+            std::invoke(std::forward<F>(f), sqe_, std::forward<Args>(args)...);
+            io_uring_sqe_set_data(sqe_, &this->cb_);
+        } else {
+            t_driver->push_waiting_coro([this,
+                                         f = std::forward<F>(f),
+                                         ... args = std::forward<Args>(args)](io_uring_sqe *sqe) {
+                std::invoke(f, sqe, args...);
+                io_uring_sqe_set_data(sqe, &this->cb_);
+            });
+        }
+    }
 
     // Delete copy
     IORegistrator(const IORegistrator &other) = delete;
@@ -34,15 +43,7 @@ public:
 
     void await_suspend(std::coroutine_handle<> handle) {
         cb_.handle_ = std::move(handle);
-        if (std::get<0>(args_) == nullptr) [[unlikely]] {
-            t_driver->push_waiting_coro([this](io_uring_sqe *sqe) {
-                std::get<0>(this->args_) = sqe;
-                std::apply(f_, args_);
-                io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
-            });
-        } else {
-            std::apply(f_, args_);
-            io_uring_sqe_set_data(std::get<0>(args_), &this->cb_);
+        if (sqe_ != nullptr) [[unlikely]] {
             t_driver->submit();
         }
     }
@@ -59,9 +60,8 @@ public:
     }
 
 protected:
-    Callback             cb_{};
-    std::decay_t<IOFunc> f_;
-    Tuple                args_;
+    Callback      cb_{};
+    io_uring_sqe *sqe_;
 };
 
 } // namespace zedio::io::detail

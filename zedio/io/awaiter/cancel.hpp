@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Cancel : public detail::IORegistrator<Cancel, decltype(io_uring_prep_cancel_fd)> {
+class Cancel : public detail::IORegistrator<Cancel> {
 private:
-    using Super = detail::IORegistrator<Cancel, decltype(io_uring_prep_cancel_fd)>;
+    using Super = detail::IORegistrator<Cancel>;
 
 public:
     Cancel(int fd, unsigned int flags)

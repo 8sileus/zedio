@@ -4,9 +4,9 @@
 
 namespace zedio::io {
 
-class Close : public detail::IORegistrator<Close, decltype(io_uring_prep_close)> {
+class Close : public detail::IORegistrator<Close> {
 private:
-    using Super = detail::IORegistrator<Close, decltype(io_uring_prep_close)>;
+    using Super = detail::IORegistrator<Close>;
 
 public:
     Close(int fd)
