@@ -15,7 +15,7 @@
 #include "zedio/io/awaiter/mkdir.hpp"
 #include "zedio/io/awaiter/open.hpp"
 #include "zedio/io/awaiter/read.hpp"
-#include "zedio/io/awaiter/read_vectored.hpp"
+#include "zedio/io/awaiter/readv.hpp"
 #include "zedio/io/awaiter/recv.hpp"
 #include "zedio/io/awaiter/rename.hpp"
 #include "zedio/io/awaiter/send.hpp"
@@ -28,7 +28,7 @@
 #include "zedio/io/awaiter/unlink.hpp"
 #include "zedio/io/awaiter/waitid.hpp"
 #include "zedio/io/awaiter/write.hpp"
-#include "zedio/io/awaiter/write_vectored.hpp"
+#include "zedio/io/awaiter/writev.hpp"
 // Linux
 #include <netdb.h>
 
@@ -82,21 +82,7 @@ public:
     template <typename... Ts>
     [[REMEMBER_CO_AWAIT]]
     auto read_vectored(Ts &...bufs) const noexcept {
-        constexpr auto N = sizeof...(Ts);
-
-        class Awaiter : public ReadVectored {
-        public:
-            Awaiter(int fd,Ts&...bufs)
-                : ReadVectored{fd, iovecs_.data(),iovecs_.size(),static_cast<std::size_t>(-1)}
-                , iovecs_{ iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                }...} {}
-
-        private:
-            std::array<struct iovec, N> iovecs_;
-        };
-        return Awaiter{fd, bufs...};
+        return ReadVectored<Ts...>{fd, bufs...};
     }
 
     [[REMEMBER_CO_AWAIT]]
@@ -125,21 +111,7 @@ public:
     template <typename... Ts>
     [[REMEMBER_CO_AWAIT]]
     auto write_vectored(Ts &...bufs) const noexcept {
-        constexpr auto N = sizeof...(Ts);
-
-        class Awaiter : public WriteVectored {
-        public:
-            Awaiter(int fd,Ts&...bufs)
-                : WriteVectored{fd, &iovecs_, N, static_cast<std::size_t>(-1)}
-                , iovecs_{ iovec{
-                  .iov_base = std::span<char>(bufs).data(),
-                  .iov_len = std::span<char>(bufs).size_bytes(),
-                }...} {}
-
-        private:
-            std::array<struct iovec, N> iovecs_;
-        };
-        return Awaiter{fd_, bufs...};
+        return WriteVectored<Ts...>{fd_, bufs...};
     }
 
     [[nodiscard]]

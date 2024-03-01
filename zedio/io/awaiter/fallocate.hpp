@@ -4,12 +4,12 @@
 
 namespace zedio::io {
 
-class Fallocate : public detail::IORegistrator<Fallocate> {
+class FAllocate : public detail::IORegistrator<FAllocate> {
 private:
-    using Super = detail::IORegistrator<Fallocate>;
+    using Super = detail::IORegistrator<FAllocate>;
 
 public:
-    Fallocate(int fd, int mode, __u64 offset, __u64 len)
+    FAllocate(int fd, int mode, __u64 offset, __u64 len)
         : Super{io_uring_prep_fallocate, fd, mode, offset, len} {}
 
     auto await_resume() const noexcept -> Result<void> {

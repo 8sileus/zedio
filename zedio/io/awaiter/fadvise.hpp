@@ -4,12 +4,12 @@
 
 namespace zedio::io {
 
-class Fadvise : public detail::IORegistrator<Fadvise> {
+class FAdvise : public detail::IORegistrator<FAdvise> {
 private:
-    using Super = detail::IORegistrator<Fadvise>;
+    using Super = detail::IORegistrator<FAdvise>;
 
 public:
-    Fadvise(int fd, __u64 offset, off_t len, int advice)
+    FAdvise(int fd, __u64 offset, off_t len, int advice)
         : Super{io_uring_prep_fadvise, fd, offset, len, advice} {}
 
     auto await_resume() const noexcept -> Result<void> {

@@ -4,12 +4,12 @@
 
 namespace zedio::io {
 
-class Waitid : public detail::IORegistrator<Waitid> {
+class WaitId : public detail::IORegistrator<WaitId> {
 private:
-    using Super = detail::IORegistrator<Waitid>;
+    using Super = detail::IORegistrator<WaitId>;
 
 public:
-    Waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options, unsigned int flags)
+    WaitId(idtype_t idtype, id_t id, siginfo_t *infop, int options, unsigned int flags)
         : Super{io_uring_prep_waitid, idtype, id, infop, options, flags} {}
 
     auto await_resume() const noexcept -> Result<void> {

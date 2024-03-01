@@ -4,12 +4,12 @@
 
 namespace zedio::io {
 
-class Fsetxattr : public detail::IORegistrator<Fsetxattr> {
+class FSetXattr : public detail::IORegistrator<FSetXattr> {
 private:
-    using Super = detail::IORegistrator<Fsetxattr>;
+    using Super = detail::IORegistrator<FSetXattr>;
 
 public:
-    Fsetxattr(int fd, const char *name, const char *value, int flags, unsigned int len)
+    FSetXattr(int fd, const char *name, const char *value, int flags, unsigned int len)
         : Super{io_uring_prep_fsetxattr, fd, name, value, flags, len} {}
 
     auto await_resume() const noexcept -> Result<std::size_t> {

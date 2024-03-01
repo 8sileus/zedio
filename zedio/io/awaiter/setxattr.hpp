@@ -4,12 +4,12 @@
 
 namespace zedio::io {
 
-class Setxattr : public detail::IORegistrator<Setxattr> {
+class SetXattr : public detail::IORegistrator<SetXattr> {
 private:
-    using Super = detail::IORegistrator<Setxattr>;
+    using Super = detail::IORegistrator<SetXattr>;
 
 public:
-    Setxattr(const char *name, const char *value, const char *path, int flags, unsigned int len)
+    SetXattr(const char *name, const char *value, const char *path, int flags, unsigned int len)
         : Super{io_uring_prep_setxattr, name, value, path, flags, len} {}
 
     auto await_resume() const noexcept -> Result<void> {

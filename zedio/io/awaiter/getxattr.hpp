@@ -4,12 +4,12 @@
 
 namespace zedio::io {
 
-class Getxattr : public detail::IORegistrator<Getxattr> {
+class GetXattr : public detail::IORegistrator<GetXattr> {
 private:
-    using Super = detail::IORegistrator<Getxattr>;
+    using Super = detail::IORegistrator<GetXattr>;
 
 public:
-    Getxattr(const char *name, char *value, const char *path, unsigned int len)
+    GetXattr(const char *name, char *value, const char *path, unsigned int len)
         : Super{io_uring_prep_getxattr, name, value, path, len} {}
 
     auto await_resume() const noexcept -> Result<std::size_t> {
