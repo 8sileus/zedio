@@ -4,7 +4,6 @@
 #include "zedio/common/util/rand.hpp"
 #include "zedio/common/util/thread.hpp"
 #include "zedio/io/base/driver.hpp"
-#include "zedio/io/time/timer.hpp"
 #include "zedio/runtime/config.hpp"
 #include "zedio/runtime/idle.hpp"
 #include "zedio/runtime/queue.hpp"
@@ -110,10 +109,7 @@ public:
         , index_{index}
         , driver_{shared.config_} {
         current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
-        LOG_TRACE("Build {} {{tid: {},timer_fd: {}}}",
-                  current_thread::get_thread_name(),
-                  current_thread::get_tid(),
-                  timer_.fd());
+        LOG_TRACE("Build {}", current_thread::get_thread_name());
         assert(t_worker == nullptr);
         t_worker = this;
     }
@@ -156,7 +152,7 @@ public:
         driver_.wake_up();
     }
 
-    void schedule_task(std::coroutine_handle<> &&task) {
+    void schedule_task(std::coroutine_handle<> task) {
         if (run_next_.has_value()) {
             local_queue_.push_back_or_overflow(std::move(run_next_.value()), shared_.global_queue_);
             run_next_.emplace(std::move(task));
@@ -366,7 +362,6 @@ private:
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     io::detail::Driver                     driver_;
-    io::detail::Timer                      timer_{};
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};

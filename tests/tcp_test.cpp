@@ -63,7 +63,7 @@ auto test() -> Task<void> {
         co_return;
     }
     spawn(server(addr.value()));
-    co_await zedio::io::Sleep(10s);
+    co_await time::sleep(10s);
 }
 
 auto main() -> int {

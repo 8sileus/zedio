@@ -21,7 +21,7 @@ auto test(std::size_t n) -> Task<void> {
     for (auto i = 0uz; i < 10; i += 1) {
         spawn(cal(mutex_, n, sum));
     }
-    co_await zedio::io::Sleep(10s);
+    co_await time::sleep(10s);
     console.info("expected: {}, actual {}", n * 10, sum);
     co_return;
 }

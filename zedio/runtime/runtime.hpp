@@ -112,26 +112,11 @@ private:
 
 // template <typename... Ts>
 //     requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
-static inline void spawn(async::Task<void> &&task) {
+static inline auto spawn(async::Task<void> &&task) {
     using runtime::detail::t_worker;
-
-    // if constexpr (sizeof...(Ts) == 1) {
-    t_worker->schedule_task(std::move(task.take()));
-    // } else {
-    // auto task = [](Ts... tasks) -> Task<void> {
-    // ((co_await tasks), ...);
-    // co_return;
-    // }(std::forward<Ts>(tasks)...);
-    // t_worker->schedule_task(std::move(task.take()));
-    // }
-}
-
-[[nodiscard]]
-static inline auto add_timer_event(const std::function<void()>    &cb,
-                                   const std::chrono::nanoseconds &delay,
-                                   const std::chrono::nanoseconds &period
-                                   = std::chrono::nanoseconds{0}) {
-    return io::detail::t_timer->add_timer_event(cb, delay, period);
+    auto handle = task.take();
+    t_worker->schedule_task(handle);
+    return handle;
 }
 
 } // namespace zedio

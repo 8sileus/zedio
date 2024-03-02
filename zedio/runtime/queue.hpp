@@ -151,7 +151,7 @@ public:
         atomic_tail.store(tail, std::memory_order::release);
     }
 
-    void push_back_or_overflow(std::coroutine_handle<> &&task, GlobalQueue &global_queue) {
+    void push_back_or_overflow(std::coroutine_handle<> task, GlobalQueue &global_queue) {
         // LOG_TRACE("push a task");
         uint32_t tail{0};
         while (true) {
