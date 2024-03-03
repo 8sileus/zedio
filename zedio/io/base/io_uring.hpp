@@ -48,8 +48,7 @@ public:
         return io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
     }
 
-    [[nodiscard]]
-    auto wait_cqe(std::optional<std::chrono::nanoseconds> timeout) -> io_uring_cqe * {
+    void wait_cqe(std::optional<std::chrono::nanoseconds> timeout) {
         io_uring_cqe *cqe{nullptr};
         if (timeout) {
             struct __kernel_timespec ts {
@@ -65,7 +64,6 @@ public:
                 LOG_ERROR("io_uring_wait_cqe failed, error: {}", strerror(-ret));
             }
         }
-        return cqe;
     }
 
     void cqe_advance(std::size_t cnt) {

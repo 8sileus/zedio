@@ -41,9 +41,23 @@ public:
 
     void await_suspend(std::coroutine_handle<> handle) {
         cb_.handle_ = std::move(handle);
-        if (sqe_ != nullptr) [[unlikely]] {
+        if (cb_.has_timeout_ != 0) {
+            cb_.iter_ = time::detail::t_timer->add_timer_event(&cb_, cb_.deadline_);
+        }
+        if (sqe_ != nullptr) [[likely]] {
             t_ring->submit();
         }
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto set_timeout(std::chrono::milliseconds timeout) -> IO & {
+        return set_timeout_at(std::chrono::steady_clock::now() + timeout);
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto set_timeout_at(std::chrono::steady_clock::time_point deadline) -> IO & {
+        cb_.deadline_ = deadline;
+        return *static_cast<IO *>(this);
     }
 
 protected:
