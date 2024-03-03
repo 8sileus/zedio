@@ -14,8 +14,8 @@ auto client(const UnixSocketAddr &addr) -> Task<void> {
         co_return;
     }
     std::string_view str = "tcp_test ping";
-    char buf[1024];
-    auto stream = std::move(ret.value());
+    char             buf[1024];
+    auto             stream = std::move(ret.value());
     while (true) {
         auto ret = co_await stream.write(str);
         if (!ret) {
@@ -42,7 +42,7 @@ auto server(const UnixSocketAddr &addr) -> Task<void> {
     console.info("server: {}", listener.local_addr().value().pathname());
     console.info("client: {}", peer_addr.pathname());
     std::string_view str = "tcp_test pong";
-    char buf[1024];
+    char             buf[1024];
     for (int i = 0; i <= 10; i += 1) {
         auto ret = co_await stream.read(buf);
         if (!ret || ret.value() == 0) {

@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(local_queue_test) {
     BOOST_CHECK_EQUAL(lq.empty(), true);
     BOOST_CHECK_EQUAL(gq.size(), 0);
     BOOST_CHECK_EQUAL(gq.empty(), true);
-    auto ele = std::noop_coroutine();
+    auto           ele = std::noop_coroutine();
     constexpr auto len = lq.capacity() + lq.capacity() / 2 + 1;
     for (auto i = 0uz; i < len; ++i) {
         lq.push_back_or_overflow(ele, gq);
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(global_queue_test) {
     GlobalQueue gq;
     BOOST_CHECK_EQUAL(gq.size(), 0);
     BOOST_CHECK_EQUAL(gq.empty(), true);
-    auto ele = std::noop_coroutine();
+    auto                     ele = std::noop_coroutine();
     std::atomic<std::size_t> cnt{0};
     std::vector<std::thread> threads;
     constexpr std::size_t    num = 512;
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(global_queue_test) {
             }
         });
     }
-    for(auto&thread:threads){
+    for (auto &thread : threads) {
         thread.join();
     }
     BOOST_CHECK_EQUAL(gq.empty(), false);
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(global_queue_test) {
             cnt += num;
         });
     }
-    for(auto&thread:threads){
+    for (auto &thread : threads) {
         thread.join();
     }
     BOOST_REQUIRE_EQUAL(num * threads.size(), cnt);

@@ -17,7 +17,9 @@ public:
         ofs_.rdbuf()->pubsetbuf(buffer_, sizeof(buffer_));
     }
 
-    ~LogFile() { ofs_.close(); }
+    ~LogFile() {
+        ofs_.close();
+    }
 
     void write(const char *data, size_t len) {
         ofs_.write(data, len);
@@ -27,9 +29,13 @@ public:
         }
     }
 
-    void flush() { ofs_.flush(); }
+    void flush() {
+        ofs_.flush();
+    }
 
-    void set_max_file_size(off_t max_file_size) noexcept { max_file_size_ = max_file_size; }
+    void set_max_file_size(off_t max_file_size) noexcept {
+        max_file_size_ = max_file_size;
+    }
 
 private:
     void roll() {

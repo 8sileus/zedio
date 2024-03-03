@@ -27,7 +27,7 @@ public:
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto recv_from(std::span<char>buf)const noexcept {
+    auto recv_from(std::span<char> buf) const noexcept {
         return io_.recv_from<Addr>(buf);
     }
 

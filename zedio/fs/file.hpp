@@ -16,7 +16,6 @@ private:
         : io_{std::move(io)} {}
 
 public:
-
     [[nodiscard]]
     auto write_all(std::span<const char> buf) const noexcept {
         return io_.write_all(buf);

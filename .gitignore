@@ -1,5 +1,6 @@
 .vscode
 generate.sh
+format.sh
 /bin
 /build
 /docs/benchmark/go

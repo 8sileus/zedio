@@ -29,11 +29,19 @@ auto get_thread_name() -> std::string_view {
 namespace zedio::util {
 class SpinMutex : Noncopyable {
 public:
-    explicit SpinMutex(int pshared = 0) noexcept { pthread_spin_init(&mutex_, pshared); }
-    ~SpinMutex() noexcept { pthread_spin_destroy(&mutex_); }
+    explicit SpinMutex(int pshared = 0) noexcept {
+        pthread_spin_init(&mutex_, pshared);
+    }
+    ~SpinMutex() noexcept {
+        pthread_spin_destroy(&mutex_);
+    }
 
-    void lock() noexcept { pthread_spin_lock(&mutex_); }
-    void unlock() noexcept { pthread_spin_unlock(&mutex_); }
+    void lock() noexcept {
+        pthread_spin_lock(&mutex_);
+    }
+    void unlock() noexcept {
+        pthread_spin_unlock(&mutex_);
+    }
 
 private:
     pthread_spinlock_t mutex_;

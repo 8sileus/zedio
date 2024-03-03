@@ -16,7 +16,9 @@ namespace detail {
             return loggers_.at(logger_name);
         }
 
-        void delete_logger(const std::string &logger_name) { loggers_.erase(logger_name); }
+        void delete_logger(const std::string &logger_name) {
+            loggers_.erase(logger_name);
+        }
 
         /// Remember to check whether the return value is nullptr
         [[nodiscard]]

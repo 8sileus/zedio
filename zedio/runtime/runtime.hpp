@@ -79,7 +79,7 @@ public:
 
         shared_.push_global_task(main_coro.take());
         shared_.wake_up_one();
-        
+
         wait_workers();
     }
 

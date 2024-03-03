@@ -101,10 +101,16 @@ private:
         }
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
-        static_cast<DeriverLogger *>(this)->template log<level>(std::format(
-            "{}.{:03} {} {} {} {}:{} {}\n", buffer, cur_millisecond, level_to_string(level),
-            current_thread::get_tid(), current_thread::get_thread_name(), sl.file_name(), sl.line(),
-            std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))));
+        static_cast<DeriverLogger *>(this)->template log<level>(
+            std::format("{}.{:03} {} {} {} {}:{} {}\n",
+                        buffer,
+                        cur_millisecond,
+                        level_to_string(level),
+                        current_thread::get_tid(),
+                        current_thread::get_thread_name(),
+                        sl.file_name(),
+                        sl.line(),
+                        std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))));
     }
 
 private:
@@ -168,8 +174,9 @@ private:
         while (running_) {
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                cond_.wait_for(lock, std::chrono::milliseconds(3),
-                               [this]() -> bool { return !this->full_buffers_.empty(); });
+                cond_.wait_for(lock, std::chrono::milliseconds(3), [this]() -> bool {
+                    return !this->full_buffers_.empty();
+                });
                 // if (full_buffers_.empty()) {
                 // cond_.wait_for(lock, std::chrono::seconds(3));
                 // }

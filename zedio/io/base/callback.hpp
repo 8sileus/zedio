@@ -13,7 +13,7 @@ struct Callback {
     // std::coroutine_handle<> handle_{nullptr};
     // int                     result_;
     // };
-    
+
     std::coroutine_handle<> handle_{nullptr};
     int                     result_{0};
 
