@@ -12,22 +12,21 @@ public:
         : handle_{handle}
         , expired_time_{expired_time} {}
 
-    Event(int fd, std::chrono::steady_clock::time_point expired_time)
-        : expired_time_{expired_time}
-        , need_cancel_fd_{fd} {}
+    Event(void *data, std::chrono::steady_clock::time_point expired_time)
+        : data_{data}
+        , expired_time_{expired_time} {}
 
     auto operator<=>(const Event &other) const {
         if (this->expired_time_ == other.expired_time_) {
-            return handle_.address() <=> other.handle_.address();
+            return this <=> std::addressof(other);
         }
         return this->expired_time_ <=> other.expired_time_;
     }
 
 public:
     std::coroutine_handle<>               handle_{nullptr};
+    void                                 *data_{nullptr};
     std::chrono::steady_clock::time_point expired_time_;
-    // if need_cancel_fd_ >= 0 , thie is a cancel tasks_
-    int need_cancel_fd_{-1};
 };
 
 } // namespace zedio::time::detail
