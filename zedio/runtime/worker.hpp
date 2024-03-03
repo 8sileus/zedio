@@ -342,7 +342,6 @@ private:
     // Let current worker sleep
     void sleep() {
         check_shutdown();
-        driver_.wait_before();
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
                 driver_.wait(local_queue_, shared_.global_queue_);

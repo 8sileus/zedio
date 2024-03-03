@@ -48,7 +48,7 @@ public:
         return io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
     }
 
-    void wait_cqe(std::optional<std::chrono::nanoseconds> timeout) {
+    void wait(std::optional<std::chrono::nanoseconds> timeout) {
         io_uring_cqe *cqe{nullptr};
         if (timeout) {
             struct __kernel_timespec ts {

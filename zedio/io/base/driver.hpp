@@ -40,7 +40,7 @@ public:
     // until other worker wakes up it or a I/O event completes
     void wait(runtime::detail::LocalQueue  &local_queue,
               runtime::detail::GlobalQueue &global_queue) {
-        ring_.wait_cqe(timer_.get_first_expired_time());
+        ring_.wait(timer_.get_first_expired_time());
         poll(local_queue, global_queue);
     }
 
@@ -63,6 +63,7 @@ public:
 
         ring_.cqe_advance(cnt);
         cnt += timer_.poll_batch(local_queue, global_queue);
+        waker_.reg();
         ring_.force_submit();
         LOG_TRACE("poll {} events", cnt);
         return cnt > 0;

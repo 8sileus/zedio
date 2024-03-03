@@ -12,12 +12,14 @@ auto process(TcpStream stream) -> Task<void> {
         if (len == 0) {
             break;
         }
+        buf[len] = '\0';
+        LOG_INFO("{}", std::string_view{buf, len});
         co_await stream.write_all({buf, len});
     }
 }
 
 auto server() -> Task<void> {
-    auto addr = SocketAddr::parse("localhost", 9898).value();
+    auto addr = SocketAddr::parse("192.168.15.33", 9898).value();
     auto listener = TcpListener::bind(addr).value();
     while (true) {
         auto [stream, peer_addr] = (co_await listener.accept()).value();
