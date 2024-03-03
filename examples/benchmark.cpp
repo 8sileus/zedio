@@ -60,9 +60,9 @@ auto main(int argc, char **argv) -> int {
         return -1;
     }
     SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
-    auto num_threas = std::stoi(argv[1]);
+    auto num_threads = std::stoi(argv[1]);
     Runtime::options()
-        .set_num_workers(num_threas)
+        .set_num_workers(num_threads)
         .set_num_weak_submissions_(0)
         .build()
         .block_on(server());
