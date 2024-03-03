@@ -5,37 +5,37 @@
 
 namespace zedio::net::detail {
 
-class SocketIO : public io::IO {
+class SocketIO : public io::detail::IO {
 private:
     explicit SocketIO(int fd)
         : IO{fd} {}
 
 public:
     [[REMEMBER_CO_AWAIT]]
-    auto shutdown(io::Shutdown::How how) noexcept {
-        return io::Shutdown{fd_, static_cast<int>(how)};
+    auto shutdown(io::ShutdownBehavior how) noexcept {
+        return io::detail::Shutdown{fd_, how};
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto send(std::span<const char> buf) noexcept {
-        return io::Send{fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL};
+        return io::detail::Send{fd_, buf.data(), buf.size_bytes(), MSG_NOSIGNAL};
     }
 
     template <typename Addr>
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
     auto send_to(std::span<const char> buf, const Addr &addr) noexcept {
-        return io::SendTo(fd_,
-                          buf.data(),
-                          buf.size_bytes(),
-                          MSG_NOSIGNAL,
-                          addr.sockaddr(),
-                          addr.length());
+        return io::detail::SendTo(fd_,
+                                  buf.data(),
+                                  buf.size_bytes(),
+                                  MSG_NOSIGNAL,
+                                  addr.sockaddr(),
+                                  addr.length());
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto recv(std::span<char> buf, int flags = 0) const noexcept {
-        return io::Recv{fd_, buf.data(), buf.size_bytes(), flags};
+        return io::detail::Recv{fd_, buf.data(), buf.size_bytes(), flags};
     }
 
     template <typename Addr>
@@ -115,7 +115,7 @@ public:
         requires is_socket_address<Addr>
     [[REMEMBER_CO_AWAIT]]
     auto connect(const Addr &addr) noexcept {
-        return io::Connect(fd_, addr.sockaddr(), addr.length());
+        return io::detail::Connect(fd_, addr.sockaddr(), addr.length());
     }
 
     template <typename Addr>

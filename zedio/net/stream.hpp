@@ -12,7 +12,7 @@ protected:
 
 public:
     [[nodiscard]]
-    auto shutdown(io::Shutdown::How how) noexcept {
+    auto shutdown(io::ShutdownBehavior how) noexcept {
         return io_.shutdown(how);
     }
 

@@ -4,21 +4,30 @@
 
 namespace zedio::io {
 
-class FAllocate : public detail::IORegistrator<FAllocate> {
-private:
-    using Super = detail::IORegistrator<FAllocate>;
+namespace detail {
 
-public:
-    FAllocate(int fd, int mode, __u64 offset, __u64 len)
-        : Super{io_uring_prep_fallocate, fd, mode, offset, len} {}
+    class FAllocate : public IORegistrator<FAllocate> {
+    private:
+        using Super = IORegistrator<FAllocate>;
 
-    auto await_resume() const noexcept -> Result<void> {
-        if (this->cb_.result_ >= 0) [[likely]] {
-            return {};
-        } else {
-            return std::unexpected{make_sys_error(-this->cb_.result_)};
+    public:
+        FAllocate(int fd, int mode, __u64 offset, __u64 len)
+            : Super{io_uring_prep_fallocate, fd, mode, offset, len} {}
+
+        auto await_resume() const noexcept -> Result<void> {
+            if (this->cb_.result_ >= 0) [[likely]] {
+                return {};
+            } else {
+                return std::unexpected{make_sys_error(-this->cb_.result_)};
+            }
         }
-    }
-};
+    };
+
+} // namespace detail
+
+[[REMEMBER_CO_AWAIT]]
+auto fadvise(int fd, int mode, __u64 offset, __u64 len) {
+    return detail::FAllocate{fd, mode, offset, len};
+}
 
 } // namespace zedio::io

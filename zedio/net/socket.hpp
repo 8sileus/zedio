@@ -33,10 +33,12 @@ public:
     // Converts the socket into TcpStream
     [[nodiscard]]
     auto connect(const Addr &addr) {
-        class Awaiter : public io::Connect {
+        class Awaiter : public io::detail::IORegistrator<Awaiter> {
+            using Super = io::detail::IORegistrator<Awaiter>;
+
         public:
             Awaiter(detail::SocketIO &&io, const Addr &addr)
-                : Connect{io.fd(), addr_.sockaddr(), addr.length()}
+                : Super{io_uring_prep_connect, io.fd(), addr_.sockaddr(), addr.length()}
                 , io_{std::move(io)}
                 , addr_{addr} {}
 

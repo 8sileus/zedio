@@ -6,13 +6,12 @@
 
 using namespace zedio;
 using namespace zedio::async;
-using namespace zedio::io;
 
 auto process(int fd) -> Task<void> {
     char buf[1024];
     while (true) {
-        if (auto ret = co_await Recv{fd, buf, sizeof(buf), 0}; ret && ret.value() > 0) {
-            ret = co_await Send(fd, buf, ret.value(), MSG_NOSIGNAL);
+        if (auto ret = co_await io::recv(fd, buf, sizeof(buf), 0); ret && ret.value() > 0) {
+            ret = co_await io::send(fd, buf, ret.value(), MSG_NOSIGNAL);
             if (!ret) {
                 LOG_ERROR("send failed, {}", ret.error().message());
                 break;
@@ -25,13 +24,13 @@ auto process(int fd) -> Task<void> {
             break;
         }
     }
-    if (auto ret = co_await Close(fd); !ret) {
+    if (auto ret = co_await io::close(fd); !ret) {
         LOG_ERROR("close failed, {}", ret.error().message());
     }
 }
 
 auto server(std::string_view ip, uint16_t port) -> Task<void> {
-    auto ret = co_await Socket(AF_INET, SOCK_STREAM, 0, 0);
+    auto ret = co_await io::socket(AF_INET, SOCK_STREAM, 0, 0);
     if (!ret) {
         LOG_ERROR("socket failed, {}", ret.error().message());
     }
@@ -47,14 +46,14 @@ auto server(std::string_view ip, uint16_t port) -> Task<void> {
     socklen_t          addrlen{};
     while (true) {
         auto ret
-            = co_await Accept(fd, reinterpret_cast<struct sockaddr *>(&peer_addr), &addrlen, 0);
+            = co_await io::accept(fd, reinterpret_cast<struct sockaddr *>(&peer_addr), &addrlen, 0);
         if (!ret) {
             LOG_ERROR("accept failed, {}", ret.error().message());
         }
         spawn(process(ret.value()));
     }
 
-    if (auto ret = co_await Close(fd); !ret) {
+    if (auto ret = co_await io::close(fd); !ret) {
         LOG_ERROR("close failed, {}", ret.error().message());
     }
 }

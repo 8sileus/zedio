@@ -32,7 +32,7 @@
 // Linux
 #include <netdb.h>
 
-namespace zedio::io {
+namespace zedio::io::detail {
 
 class IO {
 protected:
@@ -199,4 +199,4 @@ protected:
     int fd_;
 };
 
-} // namespace zedio::io
+} // namespace zedio::io::detail

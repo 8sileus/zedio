@@ -4,24 +4,38 @@
 
 namespace zedio::io {
 
-class Unlink : public detail::IORegistrator<Unlink> {
-private:
-    using Super = detail::IORegistrator<Unlink>;
+namespace detail {
 
-public:
-    Unlink(int dfd, const char *path, int flags)
-        : Super{io_uring_prep_unlinkat, dfd, path, flags} {}
+    class Unlink : public IORegistrator<Unlink> {
+    private:
+        using Super = IORegistrator<Unlink>;
 
-    Unlink(const char *path, int flags)
-        : Unlink{AT_FDCWD, path, flags} {}
+    public:
+        Unlink(int dfd, const char *path, int flags)
+            : Super{io_uring_prep_unlinkat, dfd, path, flags} {}
 
-    auto await_resume() const noexcept -> Result<void> {
-        if (this->cb_.result_ >= 0) [[likely]] {
-            return {};
-        } else {
-            return std::unexpected{make_sys_error(-this->cb_.result_)};
+        Unlink(const char *path, int flags)
+            : Unlink{AT_FDCWD, path, flags} {}
+
+        auto await_resume() const noexcept -> Result<void> {
+            if (this->cb_.result_ >= 0) [[likely]] {
+                return {};
+            } else {
+                return ::std::unexpected{make_sys_error(-this->cb_.result_)};
+            }
         }
-    }
-};
+    };
+
+} // namespace detail
+
+[[REMEMBER_CO_AWAIT]]
+auto unlinkat(int dfd, const char *path, int flags) {
+    return detail::Unlink(dfd, path, flags);
+}
+
+[[REMEMBER_CO_AWAIT]]
+auto unlink(const char *path, int flags) {
+    return detail::Unlink{path, flags};
+}
 
 } // namespace zedio::io

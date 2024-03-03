@@ -4,21 +4,30 @@
 
 namespace zedio::io {
 
-class Close : public detail::IORegistrator<Close> {
-private:
-    using Super = detail::IORegistrator<Close>;
+namespace detail {
 
-public:
-    Close(int fd)
-        : Super{io_uring_prep_close, fd} {}
+    class Close : public IORegistrator<Close> {
+    private:
+        using Super = IORegistrator<Close>;
 
-    auto await_resume() const noexcept -> Result<void> {
-        if (this->cb_.result_ >= 0) [[likely]] {
-            return {};
-        } else {
-            return std::unexpected{make_sys_error(-this->cb_.result_)};
+    public:
+        Close(int fd)
+            : Super{io_uring_prep_close, fd} {}
+
+        auto await_resume() const noexcept -> Result<void> {
+            if (this->cb_.result_ >= 0) [[likely]] {
+                return {};
+            } else {
+                return ::std::unexpected{make_sys_error(-this->cb_.result_)};
+            }
         }
-    }
-};
+    };
+
+} // namespace detail
+
+[[REMEMBER_CO_AWAIT]]
+auto close(int fd) {
+    return detail::Close{fd};
+}
 
 } // namespace zedio::io

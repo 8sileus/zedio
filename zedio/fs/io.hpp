@@ -4,7 +4,7 @@
 
 namespace zedio::fs::detail {
 
-class FileIO : public io::IO {
+class FileIO : public io::detail::IO {
 private:
     explicit FileIO(int fd)
         : IO{fd} {}
@@ -12,7 +12,7 @@ private:
 public:
     [[REMEMBER_CO_AWAIT]]
     auto fsync(unsigned int fsync_flags) noexcept {
-        return io::Fsync{fd_, fsync_flags};
+        return io::detail::Fsync{fd_, fsync_flags};
     }
 
     [[REMEMBER_CO_AWAIT]]

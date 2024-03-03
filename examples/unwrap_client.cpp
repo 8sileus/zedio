@@ -6,13 +6,12 @@
 
 using namespace zedio;
 using namespace zedio::async;
-using namespace zedio::io;
 
 auto client(std::string_view ip, uint16_t port, int num_connections) -> Task<void> {
     if (num_connections > 0) {
         spawn(client(ip, port, num_connections - 1));
     }
-    auto ret = co_await Socket(AF_INET, SOCK_STREAM, 0, 0);
+    auto ret = co_await io::socket(AF_INET, SOCK_STREAM, 0, 0);
     if (!ret) {
         LOG_ERROR("socket failed, {}", ret.error().message());
     }
@@ -23,14 +22,14 @@ auto client(std::string_view ip, uint16_t port, int num_connections) -> Task<voi
     addr.sin_port = ::htons(port);
 
     if (auto ret
-        = co_await Connect(fd, reinterpret_cast<const struct sockaddr *>(&addr), sizeof(addr));
+        = co_await io::connect(fd, reinterpret_cast<const struct sockaddr *>(&addr), sizeof(addr));
         ret) {
 
-        std::string_view w_buf= "ping";
+        std::string_view w_buf = "ping";
         char             r_buf[1024];
         while (true) {
-            if (auto ret = co_await Send{fd, w_buf.data(), w_buf.size(), MSG_NOSIGNAL}; ret) {
-                ret = co_await Recv(fd, r_buf, sizeof(r_buf), 0);
+            if (auto ret = co_await io::send(fd, w_buf.data(), w_buf.size(), MSG_NOSIGNAL); ret) {
+                ret = co_await io::recv(fd, r_buf, sizeof(r_buf), 0);
                 if (!ret) {
                     LOG_ERROR("recv failed, {}", ret.error().message());
                     break;
@@ -45,7 +44,7 @@ auto client(std::string_view ip, uint16_t port, int num_connections) -> Task<voi
         LOG_ERROR("connect failed, {}", ret.error().message());
     }
 
-    if (auto ret = co_await Close(fd); !ret) {
+    if (auto ret = co_await io::close(fd); !ret) {
         LOG_ERROR("close failed, {}", ret.error().message());
     }
 }
