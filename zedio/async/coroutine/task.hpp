@@ -6,8 +6,10 @@
 #include <cassert>
 // C++
 #include <coroutine>
+#include <iostream>
 #include <optional>
 // #include <stacktrace>
+#include <format>
 #include <stdexcept>
 #include <variant>
 
@@ -30,17 +32,21 @@ namespace detail {
                 if (callee.promise().caller_) {
                     return callee.promise().caller_;
                 } else {
-#ifndef ZEDIO_ALLOW_CORO_EXCEPTION
                     if (callee.promise().ex_ != nullptr) [[unlikely]] {
                         try {
                             std::rethrow_exception(callee.promise().ex_);
                         } catch (const std::exception &ex) {
+                            std::cerr << std::format("catch a exception: {}", ex.what());
+#ifndef NDEBUG
                             std::terminate();
+#endif
                         } catch (...) {
+                            std::cerr << "catch a unknown exception\n";
+#ifndef NDEBUG
                             std::terminate();
+#endif
                         }
                     }
-#endif
                     callee.destroy();
                     return std::noop_coroutine();
                 }

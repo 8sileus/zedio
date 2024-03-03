@@ -1,34 +1,42 @@
 #include "zedio/core.hpp"
 #include "zedio/net.hpp"
 
+using namespace zedio;
 using namespace zedio::async;
 using namespace zedio::net;
-using namespace zedio;
 
 auto process(TcpStream stream) -> Task<void> {
-    char buf[1024];
-    while (true) {
-        auto len = (co_await stream.read(buf)).value();
-        if (len == 0) {
-            break;
+    char buf[1024]{};
+    try {
+        while (true) {
+            auto len = (co_await (stream.read(buf))).value();
+            if (len == 0) {
+                break;
+            }
+            buf[len] = '\0';
+            LOG_INFO("{}", buf);
+            co_await stream.write_all({buf, len});
         }
-        buf[len] = '\0';
-        LOG_INFO("{}", std::string_view{buf, len});
-        co_await stream.write_all({buf, len});
+    } catch (...) {
     }
 }
 
 auto server() -> Task<void> {
-    auto addr = SocketAddr::parse("192.168.15.33", 9898).value();
+    auto addr = SocketAddr::parse("localhost", 9999).value();
     auto listener = TcpListener::bind(addr).value();
     while (true) {
-        auto [stream, peer_addr] = (co_await listener.accept()).value();
-        spawn(process(std::move(stream)));
+        // auto ret = co_await listener.accept().set_timeout(3s);
+        auto ret = co_await listener.accept();
+        if (ret) {
+            auto &[stream, addr] = ret.value();
+            LOG_INFO("{}", addr);
+            spawn(process(std::move(stream)));
+        } else {
+            LOG_ERROR("{}", ret.error().message());
+        }
     }
 }
 
 auto main() -> int {
-    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
-    Runtime::options().set_num_workers(4).build().block_on(server());
-    return 0;
+    Runtime::create().block_on(server());
 }
