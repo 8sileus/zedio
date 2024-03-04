@@ -6,8 +6,9 @@ using namespace zedio::async;
 using namespace zedio::io;
 using namespace zedio;
 
-auto interval_print_message(std::string messge, std::chrono::seconds interval, std::size_t cnt)
-    -> Task<void> {
+auto interval_print_message([[maybe_unused]] std::string messge,
+                            std::chrono::seconds         interval,
+                            std::size_t                  cnt) -> Task<void> {
     while (cnt--) {
         co_await time::sleep(interval);
         LOG_INFO("{}", messge);

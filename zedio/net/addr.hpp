@@ -26,13 +26,13 @@ public:
         : ip_{ip} {}
 
     [[nodiscard]]
-    auto addr() const -> uint32_t {
+    auto addr() const noexcept -> uint32_t {
         return ip_;
     }
 
     [[nodiscard]]
     auto to_string() const -> std::string {
-        char buf[64];
+        char buf[16];
         ::inet_ntop(AF_INET, &ip_, buf, sizeof(buf));
         return buf;
     }
@@ -48,7 +48,9 @@ public:
     }
 
 public:
-    friend auto operator==(const Ipv4Addr &left, const Ipv4Addr &right) -> bool {
+    [[nodiscard]]
+    friend auto
+    operator==(const Ipv4Addr &left, const Ipv4Addr &right) -> bool {
         return left.ip_ == right.ip_;
     }
 
@@ -80,20 +82,15 @@ public:
         : ip_{ip} {}
 
     [[nodiscard]]
-    auto addr() const -> const in6_addr & {
+    auto addr() const noexcept -> const in6_addr & {
         return ip_;
     }
 
     [[nodiscard]]
     auto to_string() const -> std::string {
-        char buf[128];
+        char buf[64];
         ::inet_ntop(AF_INET6, &ip_, buf, sizeof(buf));
         return buf;
-    }
-
-public:
-    friend auto operator==(const Ipv6Addr &left, const Ipv6Addr &right) -> bool {
-        return ::memcmp(&left.ip_, &right.ip_, sizeof(left.ip_)) == 0;
     }
 
 public:
@@ -104,6 +101,13 @@ public:
             return std::unexpected{make_sys_error(errno)};
         }
         return Ipv6Addr{addr};
+    }
+
+public:
+    [[nodiscard]]
+    friend auto
+    operator==(const Ipv6Addr &left, const Ipv6Addr &right) -> bool {
+        return ::memcmp(&left.ip_, &right.ip_, sizeof(left.ip_)) == 0;
     }
 
 private:
@@ -121,7 +125,7 @@ public:
         std::memcpy(&addr_, addr, len);
     }
 
-    SocketAddr(const Ipv4Addr &ip, uint16_t port) {
+    SocketAddr(Ipv4Addr ip, uint16_t port) {
         addr_.in4.sin_family = AF_INET;
         addr_.in4.sin_port = ::htons(port);
         addr_.in4.sin_addr.s_addr = ip.addr();
@@ -134,7 +138,7 @@ public:
     }
 
     [[nodiscard]]
-    auto ip() const -> std::variant<Ipv4Addr, Ipv6Addr> {
+    auto ip() const noexcept -> std::variant<Ipv4Addr, Ipv6Addr> {
         if (is_ipv4()) {
             return Ipv4Addr{addr_.in4.sin_addr.s_addr};
         } else {
@@ -142,11 +146,11 @@ public:
         }
     }
 
-    void set_ip(Ipv4Addr &ip) {
+    void set_ip(Ipv4Addr ip) {
         addr_.in4.sin_addr.s_addr = ip.addr();
     }
 
-    void set_ip(Ipv6Addr &ip) {
+    void set_ip(const Ipv6Addr &ip) {
         addr_.in6.sin6_addr = ip.addr();
     }
 
@@ -173,17 +177,17 @@ public:
     }
 
     [[nodiscard]]
-    auto is_ipv4() const -> bool {
+    auto is_ipv4() const noexcept -> bool {
         return addr_.in4.sin_family == AF_INET;
     }
 
     [[nodiscard]]
-    auto is_ipv6() const -> bool {
+    auto is_ipv6() const noexcept -> bool {
         return addr_.in6.sin6_family == AF_INET6;
     }
 
     [[nodiscard]]
-    auto family() const -> int {
+    auto family() const noexcept -> int {
         return addr_.in6.sin6_family;
     }
 
@@ -207,6 +211,7 @@ public:
     }
 
 public:
+    [[nodiscard]]
     static auto parse(std::string_view host_name, uint16_t port) -> Result<SocketAddr> {
         addrinfo hints{};
         hints.ai_flags = AI_NUMERICSERV;
@@ -251,7 +256,7 @@ public:
     }
 
     [[nodiscard]]
-    auto family() const -> int {
+    auto family() const noexcept -> int {
         return addr_.sun_family;
     }
 
@@ -293,6 +298,48 @@ private:
 namespace std {
 
 template <>
+class formatter<zedio::net::Ipv4Addr> {
+public:
+    constexpr auto parse(format_parse_context &context) {
+        auto it{context.begin()};
+        auto end{context.end()};
+        if (it == end || *it == '}') {
+            return it;
+        }
+        ++it;
+        if (it != end && *it != '}') {
+            throw format_error("Invalid format specifier for Ipv4Addr");
+        }
+        return it;
+    }
+
+    auto format(zedio::net::Ipv4Addr addr, auto &context) const noexcept {
+        return format_to(context.out(), "{}", addr.to_string());
+    }
+};
+
+template <>
+class formatter<zedio::net::Ipv6Addr> {
+public:
+    constexpr auto parse(format_parse_context &context) {
+        auto it{context.begin()};
+        auto end{context.end()};
+        if (it == end || *it == '}') {
+            return it;
+        }
+        ++it;
+        if (it != end && *it != '}') {
+            throw format_error("Invalid format specifier for Ipv6Addr");
+        }
+        return it;
+    }
+
+    auto format(const zedio::net::Ipv6Addr &addr, auto &context) const noexcept {
+        return format_to(context.out(), "{}", addr.to_string());
+    }
+};
+
+template <>
 class formatter<zedio::net::SocketAddr> {
 public:
     constexpr auto parse(format_parse_context &context) {
@@ -324,7 +371,7 @@ public:
         }
         ++it;
         if (it != end && *it != '}') {
-            throw format_error("Invalid format specifier for SocketAddr");
+            throw format_error("Invalid format specifier for UnixSocketAddr");
         }
         return it;
     }
