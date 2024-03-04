@@ -8,14 +8,18 @@
 namespace zedio::io::detail {
 
 struct Callback {
-    // Why use it ,program will seg fault;
-    // union {
-    // std::coroutine_handle<> handle_{nullptr};
-    // int                     result_;
-    // };
 
-    std::coroutine_handle<> handle_{nullptr};
-    int                     result_{0};
+    [[nodiscard]]
+    auto get_coro_handle_and_set_result(int result) -> std::coroutine_handle<> {
+        auto ret = handle_;
+        result_ = result;
+        return ret;
+    }
+
+    union {
+        std::coroutine_handle<> handle_{nullptr};
+        int                     result_;
+    };
 
     union {
         uint64_t                                has_timeout_{0};

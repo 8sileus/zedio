@@ -56,8 +56,8 @@ public:
                 if (cb->has_timeout_) {
                     timer_.cancel(cb->iter_);
                 }
-                local_queue.push_back_or_overflow(cb->handle_, global_queue);
-                cb->result_ = cqes[i]->res;
+                local_queue.push_back_or_overflow(cb->get_coro_handle_and_set_result(cqes[i]->res),
+                                                  global_queue);
             }
         }
 
