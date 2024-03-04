@@ -64,11 +64,11 @@ public:
 private:
     void notify_all() {
         auto head = head_.load(std::memory_order::relaxed);
-        while (!head_.compare_exchange_weak(head,
-                                            nullptr,
-                                            std::memory_order::acq_rel,
-                                            std::memory_order::release)) {
-        }
+        // while (!head_.compare_exchange_weak(head,
+        //                                     nullptr,
+        //                                     std::memory_order::acq_rel,
+        //                                     std::memory_order::release)) {
+        // }
         while (head != nullptr) {
             runtime::detail::t_worker->schedule_task(head->handle_);
             head = head->next_;

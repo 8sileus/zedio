@@ -5,11 +5,11 @@ using namespace zedio::async;
 using namespace zedio::log;
 using namespace zedio;
 
-auto latch_test([[maybe_unused]] Latch &latch_, std::size_t index, std::atomic<std::size_t> &sum)
+auto latch_test(Latch &latch_, [[maybe_unused]] std::size_t index, std::atomic<std::size_t> &sum)
     -> Task<void> {
-    console.info("latch_test {} suspend", index);
+    // console.info("latch_test {} suspend", index);
     co_await latch_.arrive_and_wait();
-    console.info("latch_test {} resume", index);
+    // console.info("latch_test {} resume", index);
     sum.fetch_add(1, std::memory_order::relaxed);
 }
 
@@ -29,6 +29,6 @@ auto test(std::size_t n) -> Task<void> {
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::TRACE);
     auto runtime = Runtime::options().set_num_workers(4).build();
-    runtime.block_on(test(10000));
+    runtime.block_on(test(100000));
     return 0;
 }
