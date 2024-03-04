@@ -3,6 +3,9 @@
 #include "zedio/async/coroutine/task.hpp"
 #include "zedio/async/sync/mutex.hpp"
 
+// C++
+#include <mutex>
+
 namespace zedio::async {
 
 class ConditionVariable {
@@ -42,11 +45,10 @@ class ConditionVariable {
 public:
     ConditionVariable() = default;
 
-    // Forbid copy
+    // Delete copy
     ConditionVariable(const ConditionVariable &) = delete;
     auto operator=(const ConditionVariable &) -> ConditionVariable & = delete;
-
-    // Forbid move
+    // Delete move
     ConditionVariable(ConditionVariable &&) = delete;
     auto operator=(ConditionVariable &&) -> ConditionVariable & = delete;
 

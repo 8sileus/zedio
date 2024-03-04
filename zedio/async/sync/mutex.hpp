@@ -63,11 +63,10 @@ public:
         assert(fifo_awaiters_ == nullptr);
     }
 
-    // Forbid copy
+    // Delete copy
     Mutex(const Mutex &) = delete;
     auto operator=(const Mutex &) -> Mutex & = delete;
-
-    // Forbid move
+    // Delete move
     Mutex(Mutex &&) = delete;
     auto operator=(Mutex &&) -> Mutex & = delete;
 

@@ -1,3 +1,4 @@
+#include "zedio/async/sync/mutex.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 
@@ -9,7 +10,6 @@ auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum) -> Task
     while (n--) {
         co_await mutex.lock();
         sum += 1;
-        // console.info("sum: {}", sum);
         mutex.unlock();
     }
     co_return;

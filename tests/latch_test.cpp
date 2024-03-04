@@ -1,3 +1,4 @@
+#include "zedio/async/sync/latch.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 
@@ -7,9 +8,9 @@ using namespace zedio;
 
 auto latch_test(Latch &latch_, [[maybe_unused]] std::size_t index, std::atomic<std::size_t> &sum)
     -> Task<void> {
-    // console.info("latch_test {} suspend", index);
+    // LOG_INFO("latch_test {} suspend", index);
     co_await latch_.arrive_and_wait();
-    // console.info("latch_test {} resume", index);
+    // LOG_INFO("latch_test {} resume", index);
     sum.fetch_add(1, std::memory_order::relaxed);
 }
 
@@ -21,7 +22,7 @@ auto test(std::size_t n) -> Task<void> {
     }
     co_await latch.arrive_and_wait();
     sum.fetch_add(1, std::memory_order::relaxed);
-    co_await time::sleep(10s);
+    co_await time::sleep(5s);
     console.info("expected: {}, actual {}", n, sum.load());
     co_return;
 }

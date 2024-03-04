@@ -1,3 +1,4 @@
+#include "zedio/async/sync/condition_variable.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 
@@ -17,7 +18,7 @@ auto consumer(ConditionVariable &cv, [[maybe_unused]] Mutex &mutex, bool &run, s
         if (!run) {
             break;
         }
-        console.info("pop {}", q.front());
+        LOG_INFO("pop {}", q.front());
         q.pop();
     }
     co_return;
@@ -29,7 +30,7 @@ auto producer(ConditionVariable &cv, Mutex &mutex, bool &run, std::queue<int> &q
         co_await mutex.lock();
         std::unique_lock lock(mutex, std::adopt_lock);
         q.push(i);
-        console.info("push {}", i);
+        LOG_INFO("push {}", i);
         cv.notify_one();
     }
     run = false;

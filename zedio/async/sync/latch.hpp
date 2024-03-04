@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/async/coroutine/task.hpp"
+#include "zedio/common/macros.hpp"
 #include "zedio/runtime/worker.hpp"
 
 namespace zedio::async {
@@ -23,7 +23,7 @@ class Latch {
             while (!latch_->head_.compare_exchange_weak(next_,
                                                         this,
                                                         std::memory_order::acq_rel,
-                                                        std::memory_order::release)) {
+                                                        std::memory_order::relaxed)) {
             }
             return latch_->try_wait();
         }
@@ -39,6 +39,13 @@ class Latch {
 public:
     Latch(std::ptrdiff_t expected)
         : expected_{expected} {}
+
+    // Delete copy
+    Latch(const Latch &) = delete;
+    auto operator=(const Latch &) -> Latch & = delete;
+    // Delete move
+    Latch(Latch &&) = delete;
+    auto operator=(Latch &&) -> Latch & = delete;
 
     void count_down(std::ptrdiff_t update = 1) {
         auto odd = expected_.fetch_sub(update, std::memory_order::release);
