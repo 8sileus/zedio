@@ -10,7 +10,7 @@ namespace zedio::log {
 namespace detail {
     class LogManager : util::Noncopyable {
     public:
-        auto make_logger(const std::string &logger_name, const std::string_view &file_base_name)
+        auto make_logger(const std::string &logger_name, std::string_view file_base_name)
             -> FileLogger & {
             loggers_.emplace(logger_name, file_base_name);
             return loggers_.at(logger_name);

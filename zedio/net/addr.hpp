@@ -39,7 +39,7 @@ public:
 
 public:
     [[nodiscard]]
-    static auto parse(const std::string_view &ip) -> Result<Ipv4Addr> {
+    static auto parse(std::string_view ip) -> Result<Ipv4Addr> {
         uint32_t addr;
         if (::inet_pton(AF_INET, ip.data(), &addr) != 1) {
             return std::unexpected{make_sys_error(errno)};
@@ -98,7 +98,7 @@ public:
 
 public:
     [[nodiscard]]
-    static auto parse(const std::string_view &ip) -> Result<Ipv6Addr> {
+    static auto parse(std::string_view ip) -> Result<Ipv6Addr> {
         in6_addr addr;
         if (::inet_pton(AF_INET6, ip.data(), &addr) != 1) [[unlikely]] {
             return std::unexpected{make_sys_error(errno)};
@@ -207,7 +207,7 @@ public:
     }
 
 public:
-    static auto parse(const std::string_view &host_name, uint16_t port) -> Result<SocketAddr> {
+    static auto parse(std::string_view host_name, uint16_t port) -> Result<SocketAddr> {
         addrinfo hints{};
         hints.ai_flags = AI_NUMERICSERV;
         addrinfo *result{nullptr};
@@ -235,7 +235,7 @@ class UnixSocketAddr {
 
     UnixSocketAddr() = default;
 
-    UnixSocketAddr(const std::string_view &path) {
+    UnixSocketAddr(std::string_view path) {
         addr_.sun_family = AF_UNIX;
         std::memcpy(addr_.sun_path, path.data(), path.size());
     }

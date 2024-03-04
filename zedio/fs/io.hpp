@@ -76,7 +76,7 @@ public:
 public:
     template <class FileType>
     [[REMEMBER_CO_AWAIT]]
-    static auto open(const std::string_view &path, int flags, mode_t mode) {
+    static auto open(std::string_view path, int flags, mode_t mode) {
         class Open : public io::detail::IORegistrator<Open> {
         private:
             using Super = io::detail::IORegistrator<Open>;

@@ -11,7 +11,7 @@ namespace zedio::log::detail {
 
 class LogFile : util::Noncopyable {
 public:
-    LogFile(const std::string_view &file_base_name)
+    LogFile(std::string_view file_base_name)
         : file_base_name_{file_base_name} {
         this->roll();
         ofs_.rdbuf()->pubsetbuf(buffer_, sizeof(buffer_));
