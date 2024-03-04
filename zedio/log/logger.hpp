@@ -24,7 +24,7 @@ public:
         : fmt_(std::forward<T>(fmt))
         , sl_(std::move(sl)) {}
 
-    constexpr auto fmt() const -> const std::string_view & {
+    constexpr auto fmt() const -> std::string_view {
         return fmt_;
     }
 
@@ -127,7 +127,7 @@ public:
 
 class FileLogger : public BaseLogger<FileLogger> {
 public:
-    FileLogger(const std::string_view &file_base_name)
+    FileLogger(std::string_view file_base_name)
         : file_{file_base_name}
         , current_buffer_{new Buffer}
         , thread_{&FileLogger::work, this} {
