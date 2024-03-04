@@ -3,9 +3,6 @@
 #include "zedio/async/coroutine/task.hpp"
 #include "zedio/async/sync/mutex.hpp"
 
-// C++
-#include <mutex>
-
 namespace zedio::async {
 
 class ConditionVariable {
