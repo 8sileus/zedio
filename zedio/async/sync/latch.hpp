@@ -1,3 +1,5 @@
+#pragma once
+
 #include "zedio/async/coroutine/task.hpp"
 #include "zedio/runtime/worker.hpp"
 
