@@ -64,6 +64,7 @@ public:
         ring_.cqe_advance(cnt);
         cnt += timer_.poll_batch(local_queue, global_queue);
         waker_.reg();
+        process_waiting_coros();
         ring_.force_submit();
         LOG_TRACE("poll {} events", cnt);
         return cnt > 0;
@@ -78,10 +79,9 @@ public:
         return waker_.wake_up();
     }
 
-    void wait_before() {
+    void process_waiting_coros() {
         decltype(waiting_coros_)::value_type cb{nullptr};
         io_uring_sqe                        *sqe{nullptr};
-        waker_.reg();
         while (!waiting_coros_.empty()) {
             sqe = ring_.get_sqe();
             if (sqe == nullptr) {
@@ -90,7 +90,7 @@ public:
             cb = std::move(waiting_coros_.front());
             waiting_coros_.pop_front();
         }
-        ring_.force_submit();
+        // ring_.force_submit();
     }
 
 private:
