@@ -32,7 +32,7 @@ public:
         case EmptySqe:
             return "No sqe is available";
         case InvalidAddresses:
-            return "Invalied addresses";
+            return "Invalid addresses";
         default:
             return strerror(err_code_);
         }
@@ -77,7 +77,7 @@ public:
     }
 
     auto format(const zedio::Error &error, auto &context) const noexcept {
-        return format_to(context.out(), "{} {}", error.value(), error.message());
+        return format_to(context.out(), "{} (error {})", error.message(), error.value());
     }
 };
 
