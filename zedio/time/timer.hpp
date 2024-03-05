@@ -67,10 +67,13 @@ public:
                 cnt += 1;
             } else {
                 auto sqe = io::detail::t_ring->get_sqe();
-                assert(sqe != nullptr);
-                reinterpret_cast<io::detail::Callback *>(it->data_)->has_timeout_ = 0;
-                io_uring_prep_cancel(sqe, it->data_, 0);
-                io_uring_sqe_set_data(sqe, nullptr);
+                if (sqe != nullptr) [[likely]] {
+                    reinterpret_cast<io::detail::Callback *>(it->data_)->has_timeout_ = 0;
+                    io_uring_prep_cancel(sqe, it->data_, 0);
+                    io_uring_sqe_set_data(sqe, nullptr);
+                } else {
+                    LOG_DEBUG("cancel io failed, error: sqe is nullptr");
+                }
             }
         }
         events_.erase(events_.begin(), it);

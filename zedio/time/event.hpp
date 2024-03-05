@@ -24,6 +24,8 @@ public:
     }
 
 public:
+    // TODO use std::function<void>;
+
     std::coroutine_handle<>               handle_{nullptr};
     void                                 *data_{nullptr};
     std::chrono::steady_clock::time_point expired_time_;

@@ -74,6 +74,26 @@ public:
         return max_count;
     }
 
+    [[nodiscard]]
+    auto try_acquire() -> bool {
+        if (count_down()) {
+            return true;
+        } else {
+            count_up();
+            return false;
+        }
+    }
+
+    // // TODO
+    // [[REMEMBER_CO_AWAIT]]
+    // auto try_acquire_until(std::chrono::steady_clock::time_point deadline) {}
+
+    // // TODO
+    // [[REMEMBER_CO_AWAIT]]
+    // auto try_acquire_for(std::chrono::nanoseconds timeout) {
+    //     return try_acquire_until(std::chrono::steady_clock::now() + timeout);
+    // }
+
 private:
     [[nodiscard]]
     auto count_down() -> bool {
