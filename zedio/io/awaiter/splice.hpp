@@ -31,12 +31,12 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto splice(int          fd_in,
-            int64_t      off_in,
-            int          fd_out,
-            int64_t      off_out,
-            unsigned int nbytes,
-            unsigned int splice_flags) {
+static inline auto splice(int          fd_in,
+                          int64_t      off_in,
+                          int          fd_out,
+                          int64_t      off_out,
+                          unsigned int nbytes,
+                          unsigned int splice_flags) {
     return detail::Splice{fd_in, off_in, fd_out, off_out, nbytes, splice_flags};
 }
 

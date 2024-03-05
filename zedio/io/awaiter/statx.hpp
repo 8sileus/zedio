@@ -26,7 +26,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto statx(int dfd, const char *path, int flags, unsigned mask, struct statx *statxbuf) {
+static inline auto
+statx(int dfd, const char *path, int flags, unsigned mask, struct statx *statxbuf) {
     return detail::Statx{dfd, path, flags, mask, statxbuf};
 }
 

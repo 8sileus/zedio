@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto write(int fd, const void *buf, unsigned nbytes, __u64 offset) {
+static inline auto write(int fd, const void *buf, unsigned nbytes, __u64 offset) {
     return detail::Write(fd, buf, nbytes, offset);
 }
 

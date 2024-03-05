@@ -29,7 +29,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto rename(int olddfd, const char *oldpath, int newdfd, const char *newpath, int flags) {
+static inline auto
+rename(int olddfd, const char *oldpath, int newdfd, const char *newpath, int flags) {
     return detail::Rename{olddfd, oldpath, newdfd, newpath, flags};
 }
 

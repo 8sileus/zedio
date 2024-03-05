@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
+static inline auto connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
     return detail::Connect{fd, addr, addrlen};
 }
 

@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto accept(int fd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+static inline auto accept(int fd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
     return detail::Accept{fd, addr, addrlen, flags};
 }
 

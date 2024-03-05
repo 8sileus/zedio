@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto sendmsg(int fd, const struct msghdr *msg, unsigned flags) {
+static inline auto sendmsg(int fd, const struct msghdr *msg, unsigned flags) {
     return detail::SendMsg{fd, msg, flags};
 }
 

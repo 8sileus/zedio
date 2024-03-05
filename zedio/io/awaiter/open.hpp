@@ -54,17 +54,17 @@ auto open(const char *path, int flags, mode_t mode) {
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto open2(const char *path, struct open_how *how) {
+static inline auto open2(const char *path, struct open_how *how) {
     return detail::Open2{path, how};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto openat(int dfd, const char *path, int flags, mode_t mode) {
+static inline auto openat(int dfd, const char *path, int flags, mode_t mode) {
     return detail::Open{dfd, path, flags, mode};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto openat2(int dfd, const char *path, struct open_how *how) {
+static inline auto openat2(int dfd, const char *path, struct open_how *how) {
     return detail::Open2{dfd, path, how};
 }
 

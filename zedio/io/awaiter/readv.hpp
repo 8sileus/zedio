@@ -52,7 +52,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto readv(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0) {
+static inline auto
+readv(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0) {
     return detail::ReadV{fd, iovecs, nr_vecs, offset, flags};
 }
 

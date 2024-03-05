@@ -29,12 +29,12 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto symlink(const char *target, const char *linkpath) {
+static inline auto symlink(const char *target, const char *linkpath) {
     return detail::SymLink{target, linkpath};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto symlinkat(const char *target, int newdirfd, const char *linkpath) {
+static inline auto symlinkat(const char *target, int newdirfd, const char *linkpath) {
     return detail::SymLink{target, newdirfd, linkpath};
 }
 

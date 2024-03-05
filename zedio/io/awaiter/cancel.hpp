@@ -25,7 +25,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto cancel(int fd, unsigned int flags) {
+static inline auto cancel(int fd, unsigned int flags) {
     return detail::Cancel{fd, flags};
 }
 

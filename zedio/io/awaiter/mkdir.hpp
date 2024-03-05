@@ -29,12 +29,12 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto mkdir(const char *path, mode_t mode) {
+static inline auto mkdir(const char *path, mode_t mode) {
     return detail::MkDir{path, mode};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto mkdirat(int dfd, const char *path, mode_t mode) {
+static inline auto mkdirat(int dfd, const char *path, mode_t mode) {
     return detail::MkDir{dfd, path, mode};
 }
 

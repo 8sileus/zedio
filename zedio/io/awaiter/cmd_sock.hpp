@@ -26,17 +26,17 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto getsockopt(int fd, int level, int optname, void *optval, int optlen) {
+static inline auto getsockopt(int fd, int level, int optname, void *optval, int optlen) {
     return detail::CmdSock{SOCKET_URING_OP_GETSOCKOPT, fd, level, optname, optval, optlen};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto setsockopt(int fd, int level, int optname, void *optval, int optlen) {
+static inline auto setsockopt(int fd, int level, int optname, void *optval, int optlen) {
     return detail::CmdSock{SOCKET_URING_OP_SETSOCKOPT, fd, level, optname, optval, optlen};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto cmdsock(int cmd_op, int fd, int level, int optname, void *optval, int optlen) {
+static inline auto cmdsock(int cmd_op, int fd, int level, int optname, void *optval, int optlen) {
     return detail::CmdSock{cmd_op, fd, level, optname, optval, optlen};
 }
 

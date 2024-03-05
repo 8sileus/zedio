@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto tee(int fd_in, int fd_out, unsigned int nbytes, unsigned int splice_flags) {
+static inline auto tee(int fd_in, int fd_out, unsigned int nbytes, unsigned int splice_flags) {
     return detail::Tee{fd_in, fd_out, nbytes, splice_flags};
 }
 

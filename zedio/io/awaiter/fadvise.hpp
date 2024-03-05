@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto fadvise(int fd, __u64 offset, off_t len, int advice) {
+static inline auto fadvise(int fd, __u64 offset, off_t len, int advice) {
     return detail::FAdvise{fd, offset, len, advice};
 }
 

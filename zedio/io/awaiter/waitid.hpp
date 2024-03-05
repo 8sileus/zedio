@@ -26,7 +26,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options, unsigned int flags) {
+static inline auto
+waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options, unsigned int flags) {
     return detail::WaitId{idtype, id, infop, options, flags};
 }
 

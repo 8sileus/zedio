@@ -26,7 +26,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto setxattr(const char *name, const char *value, const char *path, int flags, unsigned int len) {
+static inline auto
+setxattr(const char *name, const char *value, const char *path, int flags, unsigned int len) {
     return detail::SetXattr{name, value, path, flags, len};
 }
 

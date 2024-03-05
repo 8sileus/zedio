@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto socket(int domain, int type, int protocol, unsigned int flags) {
+static inline auto socket(int domain, int type, int protocol, unsigned int flags) {
     return detail::Socket{domain, type, protocol, flags};
 }
 

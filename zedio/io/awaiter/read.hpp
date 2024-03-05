@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto read(int fd, void *buf, std::size_t nbytes, uint64_t offset) {
+static inline auto read(int fd, void *buf, std::size_t nbytes, uint64_t offset) {
     return detail::Read{fd, buf, nbytes, offset};
 }
 

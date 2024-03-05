@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto getxattr(const char *name, char *value, const char *path, unsigned int len) {
+static inline auto getxattr(const char *name, char *value, const char *path, unsigned int len) {
     return detail::GetXattr{name, value, path, len};
 }
 

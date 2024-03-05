@@ -26,7 +26,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto fsetxattr(int fd, const char *name, const char *value, int flags, unsigned int len) {
+static inline auto
+fsetxattr(int fd, const char *name, const char *value, int flags, unsigned int len) {
     return detail::FSetXattr{fd, name, value, flags, len};
 }
 

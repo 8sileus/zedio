@@ -31,12 +31,12 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto sendto(int                    sockfd,
-            const void            *buf,
-            size_t                 len,
-            int                    flags,
-            const struct sockaddr *addr,
-            socklen_t              addrlen) {
+static inline auto sendto(int                    sockfd,
+                          const void            *buf,
+                          size_t                 len,
+                          int                    flags,
+                          const struct sockaddr *addr,
+                          socklen_t              addrlen) {
     return detail::SendTo{sockfd, buf, len, flags, addr, addrlen};
 }
 

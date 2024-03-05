@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto close(int fd) {
+static inline auto close(int fd) {
     return detail::Close{fd};
 }
 

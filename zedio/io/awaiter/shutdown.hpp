@@ -35,7 +35,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto shutdown(int fd, int how) {
+static inline auto shutdown(int fd, int how) {
     return detail::Shutdown{fd, how};
 }
 

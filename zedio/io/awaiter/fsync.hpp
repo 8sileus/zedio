@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto fsync(int fd, unsigned fsync_flags) {
+static inline auto fsync(int fd, unsigned fsync_flags) {
     return detail::Fsync{fd, fsync_flags};
 }
 

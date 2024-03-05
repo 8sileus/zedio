@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto recvmsg(int fd, struct msghdr *msg, unsigned flags) {
+static inline auto recvmsg(int fd, struct msghdr *msg, unsigned flags) {
     return detail::RecvMsg{fd, msg, flags};
 }
 

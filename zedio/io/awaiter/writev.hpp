@@ -52,7 +52,8 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto writev(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0) {
+static inline auto
+writev(int fd, const struct iovec *iovecs, unsigned nr_vecs, __u64 offset, int flags = 0) {
     return detail::WriteV{fd, iovecs, nr_vecs, offset, flags};
 }
 

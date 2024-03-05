@@ -26,7 +26,7 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto recv(int sockfd, void *buf, size_t len, int flags) {
+static inline auto recv(int sockfd, void *buf, size_t len, int flags) {
     return detail::Recv{sockfd, buf, len, flags};
 }
 

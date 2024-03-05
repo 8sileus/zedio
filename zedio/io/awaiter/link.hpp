@@ -29,12 +29,13 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto link(const char *oldpath, const char *newpath, int flags) {
+static inline auto link(const char *oldpath, const char *newpath, int flags) {
     return detail::Link{oldpath, newpath, flags};
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto linkat(int olddfd, const char *oldpath, int newdfd, const char *newpath, int flags) {
+static inline auto
+linkat(int olddfd, const char *oldpath, int newdfd, const char *newpath, int flags) {
     return detail::Link{olddfd, oldpath, newdfd, newpath, flags};
 }
 

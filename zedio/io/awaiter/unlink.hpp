@@ -29,12 +29,12 @@ namespace detail {
 } // namespace detail
 
 [[REMEMBER_CO_AWAIT]]
-auto unlinkat(int dfd, const char *path, int flags) {
+static inline auto unlinkat(int dfd, const char *path, int flags) {
     return detail::Unlink(dfd, path, flags);
 }
 
 [[REMEMBER_CO_AWAIT]]
-auto unlink(const char *path, int flags) {
+static inline auto unlink(const char *path, int flags) {
     return detail::Unlink{path, flags};
 }
 
