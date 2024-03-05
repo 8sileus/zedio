@@ -24,6 +24,7 @@
 #include "zedio/io/awaiter/shutdown.hpp"
 #include "zedio/io/awaiter/socket.hpp"
 #include "zedio/io/awaiter/statx.hpp"
+#include "zedio/io/awaiter/symlink.hpp"
 #include "zedio/io/awaiter/tee.hpp"
 #include "zedio/io/awaiter/unlink.hpp"
 #include "zedio/io/awaiter/waitid.hpp"
