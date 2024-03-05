@@ -5,7 +5,7 @@
 namespace zedio::fs {
 
 [[REMEMBER_CO_AWAIT]]
-static inline auto create_dir(std::string_view dir_path, mode_t mode = 0666) {
+static inline auto create_dir(std::string_view dir_path, mode_t mode = 0771) {
     return io::mkdir(dir_path.data(), mode);
 }
 
