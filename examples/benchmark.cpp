@@ -48,7 +48,7 @@ auto server() -> Task<void> {
             LOG_INFO("Accept a connection from {}", peer_addr);
             spawn(process(std::move(stream)));
         } else {
-            console.error(has_stream.error().message());
+            LOG_ERROR("{}", has_stream.error());
             break;
         }
     }

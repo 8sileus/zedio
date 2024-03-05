@@ -3,68 +3,82 @@
 #include "zedio/common/util/singleton.hpp"
 // C++
 #include <expected>
-#include <system_error>
+#include <string_view>
+// C
+#include <cassert>
+#include <cstring>
+#include <format>
 
 namespace zedio {
 
-enum class Error : int {
-    NoError = 0,
-    AsyncTimeout,
-    InvalidInput,
-    InvalidOutput,
-};
-
-class ZedioCategory : public std::error_category {
+class Error {
 public:
-    auto name() const noexcept -> const char * override {
-        return "zedio";
+    enum {
+        EmptySqe = 8000,
+        InvalidAddresses,
+    };
+
+    explicit Error(int err_code)
+        : err_code_{err_code} {}
+
+    [[nodiscard]]
+    auto value() const noexcept -> int {
+        return err_code_;
     }
 
-    auto message(int ev) const noexcept -> std::string override {
-        return error_to_string(static_cast<Error>(ev));
-    }
-
-    // auto equivalent(int i, const std::error_condition &cond) const noexcept -> bool override;
-
-    auto equivalent(const std::error_code &code, int cond) const noexcept -> bool {
-        return std::addressof(code.category()) == this && code.value() == cond;
+    [[nodiscard]]
+    auto message() const noexcept -> std::string_view {
+        switch (err_code_) {
+        case EmptySqe:
+            return "No sqe is available";
+        case InvalidAddresses:
+            return "Invalied addresses";
+        default:
+            return strerror(err_code_);
+        }
     }
 
 private:
-    static constexpr auto error_to_string(Error error) -> const char * {
-        switch (error) {
-        case Error::NoError:
-            return "Successful";
-        case Error::AsyncTimeout:
-            return "Asychronous I/O timeout";
-        case Error::InvalidInput:
-            return "Invalid input";
-        case Error::InvalidOutput:
-            return "Invalid Output";
-        default:
-            return "Remeber implement error_to_string for new error";
-        }
-    }
+    int err_code_;
 };
 
 [[nodiscard]]
-static inline auto make_zedio_error(Error err) -> std::error_code {
-    return std::error_code{static_cast<int>(err), util::Singleton<ZedioCategory>::instance()};
+static inline auto make_zedio_error(int err) -> Error {
+    assert(err >= 8000);
+    return Error{err};
 }
 
 [[nodiscard]]
-static inline auto make_sys_error(int err) -> std::error_code {
-    return std::error_code{err, std::system_category()};
+static inline auto make_sys_error(int err) -> Error {
+    return Error{err};
 }
 
 template <typename T>
-using Result = std::expected<T, std::error_code>;
+using Result = std::expected<T, Error>;
 
 } // namespace zedio
 
 namespace std {
 
 template <>
-struct is_error_condition_enum<zedio::Error> : public true_type {};
+class formatter<zedio::Error> {
+public:
+    constexpr auto parse(format_parse_context &context) {
+        auto it{context.begin()};
+        auto end{context.end()};
+        if (it == end || *it == '}') {
+            return it;
+        }
+        ++it;
+        if (it != end && *it != '}') {
+            throw format_error("Invalid format specifier for Error");
+        }
+        return it;
+    }
+
+    auto format(const zedio::Error &error, auto &context) const noexcept {
+        return format_to(context.out(), "{} {}", error.value(), error.message());
+    }
+};
 
 } // namespace std

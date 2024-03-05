@@ -32,16 +32,6 @@ public:
         return res;
     }
 
-    auto add_timer_event(void *data, std::chrono::steady_clock::time_point deadline) {
-        auto [res, ok] = events_.emplace(data, deadline);
-        assert(ok);
-        return res;
-    }
-
-    auto add_timer_event(void *data, std::chrono::nanoseconds timeout) {
-        return add_timer_event(data, std::chrono::steady_clock::now() + timeout);
-    }
-
     void cancel(std::set<Event>::iterator it) {
         events_.erase(it);
     }
@@ -61,20 +51,9 @@ public:
         auto        it = events_.begin();
         std::size_t cnt = 0;
         for (; it != events_.end() && it->expired_time_ <= now; ++it) {
-            if (it->data_ == nullptr) {
-                assert(it->handle_ != nullptr);
-                local_queue.push_back_or_overflow(it->handle_, global_queue);
-                cnt += 1;
-            } else {
-                auto sqe = io::detail::t_ring->get_sqe();
-                if (sqe != nullptr) [[likely]] {
-                    reinterpret_cast<io::detail::Callback *>(it->data_)->has_timeout_ = 0;
-                    io_uring_prep_cancel(sqe, it->data_, 0);
-                    io_uring_sqe_set_data(sqe, nullptr);
-                } else {
-                    LOG_DEBUG("cancel io failed, error: sqe is nullptr");
-                }
-            }
+            assert(it->handle_ != nullptr);
+            local_queue.push_back_or_overflow(it->handle_, global_queue);
+            cnt += 1;
         }
         events_.erase(events_.begin(), it);
         return cnt;

@@ -53,9 +53,6 @@ public:
         for (auto i = 0uz; i < cnt; i += 1) {
             auto cb = reinterpret_cast<Callback *>(cqes[i]->user_data);
             if (cb != nullptr) [[likely]] {
-                if (cb->has_timeout_) {
-                    timer_.cancel(cb->iter_);
-                }
                 local_queue.push_back_or_overflow(cb->get_coro_handle_and_set_result(cqes[i]->res),
                                                   global_queue);
             }
@@ -64,40 +61,19 @@ public:
         ring_.cqe_advance(cnt);
         cnt += timer_.poll_batch(local_queue, global_queue);
         waker_.reg();
-        process_waiting_coros();
         ring_.force_submit();
         LOG_TRACE("poll {} events", cnt);
         return cnt > 0;
-    }
-
-    void push_waiting_coro(std::function<void(io_uring_sqe *sqe)> &&cb) {
-        LOG_DEBUG("push a waiting coros");
-        waiting_coros_.push_back(std::move(cb));
     }
 
     void wake_up() {
         return waker_.wake_up();
     }
 
-    void process_waiting_coros() {
-        decltype(waiting_coros_)::value_type cb{nullptr};
-        io_uring_sqe                        *sqe{nullptr};
-        while (!waiting_coros_.empty()) {
-            sqe = ring_.get_sqe();
-            if (sqe == nullptr) {
-                break;
-            }
-            cb = std::move(waiting_coros_.front());
-            waiting_coros_.pop_front();
-        }
-        // ring_.force_submit();
-    }
-
 private:
-    IORing                                            ring_;
-    Waker                                             waker_{};
-    time::detail::Timer                               timer_{};
-    std::list<std::function<void(io_uring_sqe *sqe)>> waiting_coros_{};
+    IORing              ring_;
+    Waker               waker_{};
+    time::detail::Timer timer_{};
 };
 
 } // namespace zedio::io::detail

@@ -46,7 +46,7 @@ public:
                 LOG_ERROR("Bind {} failed, error: {}", address.to_string(), ret.error().message());
             }
         }
-        return std::unexpected{make_zedio_error(Error::InvalidInput)};
+        return std::unexpected{make_zedio_error(Error::InvalidAddresses)};
     }
 
 protected:

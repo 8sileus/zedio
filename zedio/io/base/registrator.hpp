@@ -6,6 +6,8 @@
 #include "zedio/io/base/callback.hpp"
 #include "zedio/io/base/driver.hpp"
 
+using namespace std::chrono_literals;
+
 namespace zedio::io::detail {
 
 template <class IO>
@@ -19,12 +21,7 @@ public:
             std::invoke(std::forward<F>(f), sqe_, std::forward<Args>(args)...);
             io_uring_sqe_set_data(sqe_, &this->cb_);
         } else {
-            t_driver->push_waiting_coro([this,
-                                         f = std::forward<F>(f),
-                                         ... args = std::forward<Args>(args)](io_uring_sqe *sqe) {
-                std::invoke(f, sqe, args...);
-                io_uring_sqe_set_data(sqe, &this->cb_);
-            });
+            cb_.result_ = -Error::EmptySqe;
         }
     }
 
@@ -36,33 +33,45 @@ public:
     auto operator=(IORegistrator &&other) -> IORegistrator & = delete;
 
     auto await_ready() const noexcept -> bool {
-        return false;
+        return sqe_ == nullptr;
     }
 
     void await_suspend(std::coroutine_handle<> handle) {
         cb_.handle_ = std::move(handle);
-        if (cb_.has_timeout_ != 0) {
-            cb_.iter_ = time::detail::t_timer->add_timer_event(&cb_, cb_.deadline_);
-        }
-        if (sqe_ != nullptr) [[likely]] {
-            t_ring->submit();
-        }
+        assert(sqe_);
+        t_ring->submit();
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto set_timeout(std::chrono::milliseconds timeout) -> IO & {
-        return set_timeout_at(std::chrono::steady_clock::now() + timeout);
+    auto set_timeout_for(std::chrono::nanoseconds timeout) -> IO & {
+        if (timeout >= std::chrono::milliseconds{1} && sqe_ != nullptr) [[likely]] {
+            auto timeout_sqe = t_ring->get_sqe();
+            if (timeout_sqe != nullptr) [[likely]] {
+                sqe_->flags |= IOSQE_IO_LINK;
+
+                ts_.tv_sec = timeout.count() / 1000'000'000;
+                ts_.tv_nsec = timeout.count() % 1000'000'000;
+
+                io_uring_prep_link_timeout(timeout_sqe, &ts_, 0);
+                io_uring_sqe_set_data(timeout_sqe, nullptr);
+            }
+        } else {
+            LOG_ERROR("Set timeout failed");
+        }
+        return *static_cast<IO *>(this);
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto set_timeout_at(std::chrono::steady_clock::time_point deadline) -> IO & {
-        cb_.deadline_ = deadline;
-        return *static_cast<IO *>(this);
+        return set_timeout_for(deadline - std::chrono::steady_clock::now());
     }
 
 protected:
     Callback      cb_{};
     io_uring_sqe *sqe_;
+
+private:
+    struct __kernel_timespec ts_;
 };
 
 } // namespace zedio::io::detail
