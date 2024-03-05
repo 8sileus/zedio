@@ -1,6 +1,7 @@
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 #include "zedio/net.hpp"
+#include "zedio/time.hpp"
 
 using namespace zedio::async;
 using namespace zedio::net;

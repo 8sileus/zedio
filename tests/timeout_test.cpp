@@ -1,4 +1,5 @@
 #include "zedio/core.hpp"
+#include "zedio/time.hpp"
 
 #include <iostream>
 

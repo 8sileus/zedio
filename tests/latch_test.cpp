@@ -1,6 +1,7 @@
 #include "zedio/async/sync/latch.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
+#include "zedio/time.hpp"
 
 using namespace zedio::async;
 using namespace zedio::log;
