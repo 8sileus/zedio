@@ -15,7 +15,7 @@ namespace detail {
             : Super{io_uring_prep_linkat, olddfd, oldpath, newdfd, newpath, flags} {}
 
         Link(const char *oldpath, const char *newpath, int flags)
-            : Link{AT_FDCWD, oldpath, AT_FDCWD, newpath, flags} {}
+            : Super{io_uring_prep_link, oldpath, newpath, flags} {}
 
         auto await_resume() const noexcept -> Result<void> {
             if (this->cb_.result_ >= 0) [[likely]] {

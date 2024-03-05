@@ -15,7 +15,7 @@ namespace detail {
             : Super{io_uring_prep_unlinkat, dfd, path, flags} {}
 
         Unlink(const char *path, int flags)
-            : Unlink{AT_FDCWD, path, flags} {}
+            : Super{io_uring_prep_unlink, path, flags} {}
 
         auto await_resume() const noexcept -> Result<void> {
             if (this->cb_.result_ >= 0) [[likely]] {

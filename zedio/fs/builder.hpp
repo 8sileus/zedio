@@ -41,6 +41,7 @@ public:
         flags_ |= flags;
     }
 
+    [[REMEMBER_CO_AWAIT]]
     auto open(std::string_view path) {
         adjust_flags();
         return FileIO::open<FileType>(path, flags_, permission_);

@@ -36,11 +36,6 @@ auto create_file() -> Task<void> {
     if (auto fsync_ret = co_await ret.value().fsync_data(); !fsync_ret) {
         console.error("{} {}", fsync_ret.error().value(), fsync_ret.error().message());
     }
-    {
-        std::string buf;
-        co_await ret.value().read_to_string(buf);
-        console.info("{} {}", buf, buf.size());
-    }
     co_return;
 }
 
