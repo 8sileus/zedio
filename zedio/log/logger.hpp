@@ -7,9 +7,11 @@
 #include "zedio/log/level.hpp"
 
 // C++
+#include <array>
 #include <condition_variable>
 #include <iostream>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <source_location>
 #include <thread>
@@ -22,12 +24,14 @@ public:
         requires std::constructible_from<std::string_view, T>
     FmtWithSourceLocation(T &&fmt, std::source_location sl = std::source_location::current())
         : fmt_(std::forward<T>(fmt))
-        , sl_(std::move(sl)) {}
+        , sl_(sl) {}
 
+    [[nodiscard]]
     constexpr auto fmt() const -> std::string_view {
         return fmt_;
     }
 
+    [[nodiscard]]
     constexpr auto source_location() const -> const std::source_location & {
         return sl_;
     }
@@ -82,8 +86,8 @@ public:
 private:
     template <LogLevel level, typename... Args>
     void format(const FmtWithSourceLocation &fwsl, Args &&...args) {
-        static thread_local char   buffer[64]{};
-        static thread_local time_t last_second{0};
+        static thread_local std::array<char, 64> buffer{};
+        static thread_local time_t               last_second{0};
 
         if (level < level_) {
             return;
@@ -97,13 +101,13 @@ private:
             struct tm tm_time;
             ::localtime_r(&cur_second, &tm_time);
             constexpr auto format = "%Y-%m-%d %H:%M:%S";
-            ::strftime(buffer, sizeof(buffer), format, &tm_time);
+            ::strftime(buffer.data(), buffer.size(), format, &tm_time);
         }
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
         static_cast<DeriverLogger *>(this)->template log<level>(
             std::format("{}.{:03} {} {} {} {}:{} {}\n",
-                        buffer,
+                        buffer.data(),
                         cur_millisecond,
                         level_to_string(level),
                         current_thread::get_tid(),
@@ -127,12 +131,12 @@ public:
 
 class FileLogger : public BaseLogger<FileLogger> {
 public:
-    FileLogger(std::string_view file_base_name)
+    explicit FileLogger(std::string_view file_base_name)
         : file_{file_base_name}
-        , current_buffer_{new Buffer}
+        , current_buffer_{std::make_unique<Buffer>()}
         , thread_{&FileLogger::work, this} {
         for (int i = 0; i < 2; ++i) {
-            empty_buffers_.emplace_back(new Buffer);
+            empty_buffers_.emplace_back(std::make_unique<Buffer>());
         }
     }
 
@@ -148,7 +152,7 @@ public:
             return;
         }
         std::lock_guard<std::mutex> lock(mutex_);
-        if (current_buffer_->writeable_bytes() > msg.size()) {
+        if (current_buffer_->writable_bytes() > msg.size()) {
             current_buffer_->write(msg);
         } else {
             full_buffers_.push_back(std::move(current_buffer_));
@@ -156,7 +160,7 @@ public:
                 current_buffer_ = std::move(empty_buffers_.front());
                 empty_buffers_.pop_front();
             } else {
-                current_buffer_.reset(new Buffer);
+                current_buffer_ = std::make_unique<Buffer>();
             }
             current_buffer_->write(msg);
             cond_.notify_one();
@@ -185,7 +189,7 @@ private:
                     current_buffer_ = std::move(empty_buffers_.front());
                     empty_buffers_.pop_front();
                 } else {
-                    current_buffer_.reset(new Buffer);
+                    current_buffer_ = std::make_unique<Buffer>();
                 }
             }
 

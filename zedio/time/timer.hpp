@@ -12,7 +12,7 @@ namespace zedio::time::detail {
 
 class Timer;
 
-thread_local Timer *t_timer;
+inline thread_local Timer *t_timer;
 
 class Timer {
 public:

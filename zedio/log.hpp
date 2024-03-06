@@ -5,7 +5,7 @@
 
 namespace zedio::log {
 
-auto &console = util::Singleton<detail::ConsoleLogger>::instance();
+inline auto &console = util::Singleton<detail::ConsoleLogger>::instance();
 
 using detail::LogLevel;
 

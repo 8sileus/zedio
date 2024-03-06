@@ -58,6 +58,7 @@ consteval auto level_to_color(LogLevel level) noexcept -> std::string_view {
     }
 }
 
+[[nodiscard]]
 consteval auto reset_format() noexcept -> std::string_view {
     return "\033[0m";
 }
