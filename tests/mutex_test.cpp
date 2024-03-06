@@ -8,7 +8,7 @@ using namespace zedio::sync;
 using namespace zedio::log;
 using namespace zedio;
 
-auto cal([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum) -> Task<void> {
+auto test_mutex([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum) -> Task<void> {
     while (n--) {
         co_await mutex.lock();
         sum += 1;
@@ -21,7 +21,7 @@ auto test(std::size_t n) -> Task<void> {
     Mutex       mutex_;
     std::size_t sum = 0;
     for (auto i = 0uz; i < 10; i += 1) {
-        spawn(cal(mutex_, n, sum));
+        spawn(test_mutex(mutex_, n, sum));
     }
     co_await time::sleep(10s);
     console.info("expected: {}, actual {}", n * 10, sum);
@@ -31,6 +31,6 @@ auto test(std::size_t n) -> Task<void> {
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::TRACE);
     auto runtime = Runtime::options().set_num_workers(4).build();
-    runtime.block_on(test(10000));
+    runtime.block_on(test(100000));
     return 0;
 }

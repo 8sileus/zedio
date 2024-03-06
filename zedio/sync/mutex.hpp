@@ -1,10 +1,10 @@
 #pragma once
 
 #include "zedio/common/macros.hpp"
+#include "zedio/runtime/worker.hpp"
 // C++
 #include <atomic>
 #include <coroutine>
-#include <list>
 // C
 #include <cassert>
 
@@ -113,7 +113,7 @@ public:
         assert(fifo_awaiters_ != nullptr);
         auto resume = fifo_awaiters_;
         fifo_awaiters_ = fifo_awaiters_->next_;
-        resume->handle_.resume();
+        runtime::detail::t_worker->schedule_task(resume->handle_);
     }
 
 private:
