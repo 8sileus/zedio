@@ -2,6 +2,7 @@
 
 #include "zedio/common/util/noncopyable.hpp"
 // C++
+#include <array>
 #include <format>
 #include <fstream>
 #include <string>
@@ -11,10 +12,10 @@ namespace zedio::log::detail {
 
 class LogFile : util::Noncopyable {
 public:
-    LogFile(std::string_view file_base_name)
+    explicit LogFile(std::string_view file_base_name)
         : file_base_name_{file_base_name} {
         this->roll();
-        ofs_.rdbuf()->pubsetbuf(buffer_, sizeof(buffer_));
+        ofs_.rdbuf()->pubsetbuf(buffer_.data(), buffer_.size());
     }
 
     ~LogFile() {
@@ -51,9 +52,9 @@ private:
 
             std::string file_name{file_base_name_};
             file_name.reserve(file_name.size());
-            char buf[64];
-            ::strftime(buf, sizeof(buf), "-%Y%m%d-%H%M%S.log", &tm_time);
-            file_name.append(buf);
+            std::array<char, 64> buf{};
+            ::strftime(buf.data(), buf.size(), "-%Y%m%d-%H%M%S.log", &tm_time);
+            file_name.append(buf.data());
             ofs_.open(file_name, std::ios::out);
             if (!ofs_.is_open()) [[unlikely]] {
                 throw std::runtime_error(std::format("open file {} failed", file_name));
@@ -66,13 +67,13 @@ private:
     static constexpr std::size_t BUFFER_SIZE{64 * 1024};
 
 private:
-    std::ofstream     ofs_{};
-    const std::string file_base_name_;
-    off_t             max_file_size_{10 * 1024 * 1024};
-    off_t             cur_file_size_{0};
-    char              buffer_[BUFFER_SIZE];
-    time_t            last_roll_day_{0};
-    time_t            last_roll_second_{0};
+    std::ofstream                 ofs_{};
+    const std::string             file_base_name_;
+    off_t                         max_file_size_{10 * 1024 * 1024};
+    off_t                         cur_file_size_{0};
+    std::array<char, BUFFER_SIZE> buffer_{};
+    time_t                        last_roll_day_{0};
+    time_t                        last_roll_second_{0};
 };
 
 } // namespace zedio::log::detail
