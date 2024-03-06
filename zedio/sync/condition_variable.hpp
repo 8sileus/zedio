@@ -1,12 +1,12 @@
 #pragma once
 
 #include "zedio/async/coroutine/task.hpp"
-#include "zedio/async/sync/mutex.hpp"
+#include "zedio/sync/mutex.hpp"
 
 // C++
 #include <mutex>
 
-namespace zedio::async {
+namespace zedio::sync {
 
 class ConditionVariable {
     class Awaiter {
@@ -99,4 +99,4 @@ private:
     std::atomic<Awaiter *> awaiters_{nullptr};
 };
 
-} // namespace zedio::async
+} // namespace zedio::sync

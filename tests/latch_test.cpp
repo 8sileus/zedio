@@ -1,9 +1,10 @@
-#include "zedio/async/sync/latch.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
+#include "zedio/sync/latch.hpp"
 #include "zedio/time.hpp"
 
 using namespace zedio::async;
+using namespace zedio::sync;
 using namespace zedio::log;
 using namespace zedio;
 

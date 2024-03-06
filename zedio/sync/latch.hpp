@@ -3,7 +3,7 @@
 #include "zedio/common/macros.hpp"
 #include "zedio/runtime/worker.hpp"
 
-namespace zedio::async {
+namespace zedio::sync {
 
 class Latch {
     class Awaiter {
@@ -89,4 +89,4 @@ private:
     std::atomic<Awaiter *>      head_{nullptr};
 };
 
-} // namespace zedio::async
+} // namespace zedio::sync

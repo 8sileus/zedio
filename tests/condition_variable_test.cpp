@@ -1,11 +1,12 @@
-#include "zedio/async/sync/condition_variable.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
+#include "zedio/sync/condition_variable.hpp"
 
 // C++
 #include <queue>
 
 using namespace zedio::async;
+using namespace zedio::sync;
 using namespace zedio::log;
 using namespace zedio;
 

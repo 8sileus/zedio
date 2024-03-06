@@ -3,7 +3,7 @@
 #include "zedio/common/macros.hpp"
 #include "zedio/runtime/worker.hpp"
 
-namespace zedio::async {
+namespace zedio::sync {
 
 template <std::ptrdiff_t max_count>
 class CountingSemaphore {
@@ -114,4 +114,4 @@ private:
 
 using BinarySemaphore = CountingSemaphore<2>;
 
-} // namespace zedio::async
+} // namespace zedio::sync

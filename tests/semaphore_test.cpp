@@ -1,9 +1,10 @@
-#include "zedio/async/sync/semaphore.hpp"
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
+#include "zedio/sync/semaphore.hpp"
 #include "zedio/time.hpp"
 
 using namespace zedio::async;
+using namespace zedio::sync;
 using namespace zedio::log;
 using namespace zedio;
 
