@@ -24,7 +24,7 @@ class ConditionVariable {
         void await_suspend(std::coroutine_handle<> handle) noexcept {
             handle_ = handle;
 
-            std::unique_lock<Mutex> lock{mutex_, std::adopt_lock};
+            std::lock_guard<Mutex> lock{mutex_, std::adopt_lock};
             next_ = cv_.awaiters_.load(std::memory_order::relaxed);
             while (!cv_.awaiters_.compare_exchange_weak(next_,
                                                         this,
@@ -90,7 +90,7 @@ public:
 private:
     static void resume(Awaiter *awaiter) {
         while (awaiter != nullptr) {
-            awaiter->handle_.resume();
+            runtime::detail::t_worker->schedule_task(awaiter->handle_);
             awaiter = awaiter->next_;
         }
     }

@@ -68,14 +68,14 @@ public:
         return (end_ + 1) % data_.size() == start_;
     }
 
-    void unchecked_push(const T &val) {
+    void safety_pop(const T &val) {
         assert(!is_fill());
         data_[end_++] = val;
         end_ %= data_.size();
     }
 
     [[nodiscard]]
-    auto unchecked_pop() -> T {
+    auto safety_pop() -> T {
         assert(!is_empty());
         auto ret = std::move(data_[start_++]);
         start_ %= data_.size();

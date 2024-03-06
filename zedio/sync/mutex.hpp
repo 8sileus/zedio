@@ -5,6 +5,7 @@
 // C++
 #include <atomic>
 #include <coroutine>
+#include <mutex>
 // C
 #include <cassert>
 
@@ -111,9 +112,8 @@ public:
             } while (lifo_awaiters != nullptr);
         }
         assert(fifo_awaiters_ != nullptr);
-        auto resume = fifo_awaiters_;
+        runtime::detail::t_worker->schedule_task(fifo_awaiters_->handle_);
         fifo_awaiters_ = fifo_awaiters_->next_;
-        runtime::detail::t_worker->schedule_task(resume->handle_);
     }
 
 private:
