@@ -9,18 +9,18 @@
 
 namespace zedio::current_thread {
 
-auto get_tid() noexcept -> pid_t {
+static inline auto get_tid() noexcept -> pid_t {
     static thread_local pid_t t_id = ::gettid();
     return t_id;
 }
 
 static thread_local std::string t_name;
 
-auto set_thread_name(std::string_view name) {
+static inline auto set_thread_name(std::string_view name) {
     t_name = name;
 }
 
-auto get_thread_name() -> std::string_view {
+static inline auto get_thread_name() -> std::string_view {
     return t_name;
 }
 

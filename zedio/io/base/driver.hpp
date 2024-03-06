@@ -22,7 +22,7 @@ namespace zedio::io::detail {
 
 class Driver;
 
-thread_local Driver *t_driver{nullptr};
+inline thread_local Driver *t_driver{nullptr};
 
 class Driver : util::Noncopyable {
 public:

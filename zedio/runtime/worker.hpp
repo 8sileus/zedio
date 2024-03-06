@@ -15,7 +15,7 @@ namespace zedio::runtime::detail {
 
 class Worker;
 
-thread_local Worker *t_worker{nullptr};
+inline thread_local Worker *t_worker{nullptr};
 
 class Worker : util::Noncopyable {
 public:

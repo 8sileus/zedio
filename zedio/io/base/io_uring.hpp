@@ -14,7 +14,7 @@
 namespace zedio::io::detail {
 class IORing;
 
-thread_local IORing *t_ring{nullptr};
+inline thread_local IORing *t_ring{nullptr};
 
 class IORing {
 public:
