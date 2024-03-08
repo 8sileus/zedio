@@ -14,18 +14,18 @@ class Latch {
             : latch_{latch} {}
 
         auto await_ready() const noexcept -> bool {
-            return !latch_->try_wait();
+            return latch_->try_wait();
         }
 
         auto await_suspend(std::coroutine_handle<> handle) noexcept -> bool {
             handle_ = handle;
-            next_ = latch_->head_.load(std::memory_order::acquire);
+            next_ = latch_->head_.load(std::memory_order::relaxed);
             while (!latch_->head_.compare_exchange_weak(next_,
                                                         this,
                                                         std::memory_order::acq_rel,
                                                         std::memory_order::relaxed)) {
             }
-            return latch_->try_wait();
+            return !latch_->try_wait();
         }
 
         constexpr void await_resume() const noexcept {}
@@ -37,7 +37,7 @@ class Latch {
     };
 
 public:
-    Latch(std::ptrdiff_t expected)
+    explicit Latch(std::ptrdiff_t expected)
         : expected_{expected} {}
 
     // Delete copy
@@ -60,13 +60,14 @@ public:
         return Awaiter{this};
     }
 
+    [[nodiscard]]
     auto try_wait() -> bool {
-        return expected_.load(std::memory_order::relaxed) != 0;
+        return expected_.load(std::memory_order::acquire) == 0;
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto arrive_and_wait() {
-        count_down();
+    auto arrive_and_wait(std::ptrdiff_t update = 1) {
+        count_down(update);
         return wait();
     }
 
