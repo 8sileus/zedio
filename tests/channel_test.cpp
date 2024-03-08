@@ -47,7 +47,6 @@ auto test_channel(std::size_t n, std::ptrdiff_t num_p, std::ptrdiff_t num_c) -> 
     co_await latch.arrive_and_wait();
     LOG_INFO("expected {}, actual {}", n * (n + 1) / 2 * num_p, sum.load());
 }
-
 auto test(std::size_t n) -> Task<void> {
     // test mpmc
     co_await test_channel(n, 4, 4);
@@ -57,6 +56,34 @@ auto test(std::size_t n) -> Task<void> {
     co_await test_channel(n, 1, 4);
     // test mpsc
     co_await test_channel(n, 1, 1);
+
+    auto [sender, receiver] = Channel<std::string>::make(0);
+    auto latch = std::make_shared<Latch>(3);
+    spawn([](auto sender, auto latch) -> Task<void> {
+        for (auto i = 0; i < 10; i += 1) {
+            if (auto ret = co_await sender.send(std::string("ping ") + std::to_string(i)); !ret) {
+                LOG_ERROR("{}", ret.error());
+                break;
+            } else {
+                LOG_INFO("send ping {}", i);
+            }
+        }
+        sender.close();
+        co_await latch->arrive_and_wait();
+    }(std::move(sender), latch));
+    spawn([](auto receiver, auto latch) -> Task<void> {
+        while (true) {
+            if (auto ret = co_await receiver.recv(); !ret) {
+                LOG_ERROR("{}", ret.error());
+                break;
+            } else {
+                LOG_INFO("recv {}", ret.value());
+            }
+        }
+        receiver.close();
+        co_await latch->arrive_and_wait();
+    }(std::move(receiver), latch));
+    co_await latch->arrive_and_wait();
 }
 
 auto main() -> int {

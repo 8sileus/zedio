@@ -11,27 +11,27 @@ class CountingSemaphore {
         friend CountingSemaphore;
 
     public:
-        explicit Awaiter(CountingSemaphore *sem)
+        explicit Awaiter(CountingSemaphore &sem)
             : sem_{sem} {}
 
         auto await_ready() const noexcept -> bool {
-            return sem_->count_down();
+            return sem_.count_down();
         }
 
         void await_suspend(std::coroutine_handle<> handle) noexcept {
             handle_ = handle;
-            next_ = sem_->head_.load(std::memory_order::acquire);
-            while (!sem_->head_.compare_exchange_weak(next_,
-                                                      this,
-                                                      std::memory_order::acq_rel,
-                                                      std::memory_order::relaxed)) {
+            next_ = sem_.head_.load(std::memory_order::acquire);
+            while (!sem_.head_.compare_exchange_weak(next_,
+                                                     this,
+                                                     std::memory_order::acq_rel,
+                                                     std::memory_order::relaxed)) {
             }
         }
 
         constexpr void await_resume() const noexcept {}
 
     private:
-        CountingSemaphore      *sem_;
+        CountingSemaphore      &sem_;
         std::coroutine_handle<> handle_;
         Awaiter                *next_;
     };
@@ -51,7 +51,7 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto acquire() {
-        return Awaiter{this};
+        return Awaiter{*this};
     }
 
     void release(std::ptrdiff_t update = 1) {

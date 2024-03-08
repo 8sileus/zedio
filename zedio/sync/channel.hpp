@@ -1,7 +1,8 @@
 #pragma once
 
 #include "zedio/sync/channel/channel.hpp"
-#include "zedio/sync/channel/counter.hpp"
+#include "zedio/sync/channel/receiver.hpp"
+#include "zedio/sync/channel/sender.hpp"
 
 namespace zedio::sync {
 
