@@ -19,7 +19,7 @@ class Latch {
 
         auto await_suspend(std::coroutine_handle<> handle) noexcept -> bool {
             handle_ = handle;
-            next_ = latch_->head_.load(std::memory_order::acquire);
+            next_ = latch_->head_.load(std::memory_order::relaxed);
             while (!latch_->head_.compare_exchange_weak(next_,
                                                         this,
                                                         std::memory_order::acq_rel,
@@ -33,7 +33,7 @@ class Latch {
     private:
         Latch                  *latch_;
         std::coroutine_handle<> handle_;
-        Awaiter                *next_{nullptr};
+        Awaiter                *next_;
     };
 
 public:
@@ -60,6 +60,7 @@ public:
         return Awaiter{this};
     }
 
+    [[nodiscard]]
     auto try_wait() -> bool {
         return expected_.load(std::memory_order::acquire) == 0;
     }
@@ -72,7 +73,7 @@ public:
 
 private:
     void notify_all() {
-        auto *head = head_.load(std::memory_order::relaxed);
+        auto head = head_.load(std::memory_order::relaxed);
         // while (!head_.compare_exchange_weak(head,
         //                                     nullptr,
         //                                     std::memory_order::acq_rel,
