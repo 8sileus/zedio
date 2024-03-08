@@ -16,6 +16,7 @@ public:
     enum {
         EmptySqe = 8000,
         InvalidAddresses,
+        ClosedChannel,
     };
 
     explicit Error(int err_code)
@@ -33,6 +34,8 @@ public:
             return "No sqe is available";
         case InvalidAddresses:
             return "Invalid addresses";
+        case ClosedChannel:
+            return "Channel has closed";
         default:
             return strerror(err_code_);
         }
@@ -44,12 +47,13 @@ private:
 
 [[nodiscard]]
 static inline auto make_zedio_error(int err) -> Error {
-    assert(err >= 8000);
+    assert(err >= 0);
     return Error{err};
 }
 
 [[nodiscard]]
 static inline auto make_sys_error(int err) -> Error {
+    assert(err >= 0);
     return Error{err};
 }
 

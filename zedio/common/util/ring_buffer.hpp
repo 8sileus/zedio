@@ -3,6 +3,7 @@
 // C++
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <optional>
 #include <vector>
 
@@ -68,9 +69,11 @@ public:
         return (end_ + 1) % data_.size() == start_;
     }
 
-    void safety_pop(const T &val) {
+    template <typename U>
+        requires std::is_nothrow_constructible_v<T, U>
+    void safety_push(U &&val) {
         assert(!is_fill());
-        data_[end_++] = val;
+        data_[end_++] = std::forward<U>(val);
         end_ %= data_.size();
     }
 
@@ -82,11 +85,13 @@ public:
         return ret;
     }
 
-    auto push(const T &val) -> bool {
+    template <typename U>
+        requires std::is_nothrow_constructible_v<T, U>
+    auto push(U &&val) -> bool {
         if (is_fill()) {
             return false;
         }
-        data_[end_++] = val;
+        data_[end_++] = std::forward<U>(val);
         end_ %= data_.size();
         return true;
     }

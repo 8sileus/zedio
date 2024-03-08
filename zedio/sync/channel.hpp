@@ -1,43 +1,24 @@
 #pragma once
 
-#include "zedio/async/coroutine/task.hpp"
-#include "zedio/common/util/ring_buffer.hpp"
-#include "zedio/sync/condition_variable.hpp"
-#include "zedio/sync/mutex.hpp"
+#include "zedio/sync/channel/channel.hpp"
+#include "zedio/sync/channel/counter.hpp"
 
 namespace zedio::sync {
 
-template <typename T, std::size_t SIZE>
+template <typename T>
 class Channel {
+    using ChannelImpl = detail::Channel<T>;
+
 public:
-    auto send(T &&value) -> async::Task<void> {
-        co_await mutex_.lock();
-        std::lock_guard lock(mutex_, std::adopt_lock);
-        senders_.wait(mutex_, [this]() { return !buf_.is_fill(); });
+    using Sender = detail::Sender<ChannelImpl>;
+    using Receiver = detail::Receiver<ChannelImpl>;
 
-        assert(!buf_.is_fill());
-        buf_.safety_push(std::forward<T>(value));
+public:
+    [[nodiscard]]
+    static auto make(std::size_t max_cap) -> std::pair<Sender, Receiver> {
+        auto counter = std::make_shared<ChannelImpl>(1, 1, max_cap);
+        return std::make_pair(Sender{counter}, Receiver{counter});
     }
-
-    auto recv() -> async::Task<T> {
-        co_await mutex_.lock();
-        std::lock_guard lock(mutex_, std::adopt_lock);
-        receivers_.wait(mutex_, [this]() { return !buf_.is_empty(); });
-
-        assert(!buf_.is_empty());
-        return buf_.safety_pop();
-    }
-
-private:
-    Mutex                          mutex_{};
-    ConditionVariable              senders_{};
-    ConditionVariable              receivers_{};
-    util::StackRingBuffer<T, SIZE> buf_{};
 };
-
-// template <typename T, std::size_t SIZE>
-// auto channel() -> std::pair<Channel::Sender, Channel::Receiver> {
-//     auto ptr = std::make_shared<Channel<T, SIZE>>();
-// }
 
 } // namespace zedio::sync

@@ -85,8 +85,7 @@ public:
         return Awaiter{*this};
     }
 
-    [[REMEMBER_CO_AWAIT]]
-    auto unlock() noexcept {
+    void unlock() noexcept {
         assert(state_.load(std::memory_order::relaxed) != unlocking_state());
 
         // IF head_awaiter is nullptr,That means there are no ordered coroutines

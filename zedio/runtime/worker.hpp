@@ -345,7 +345,7 @@ private:
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
                 driver_.wait(local_queue_, shared_.global_queue_);
-                LOG_TRACE("{}", tick_);
+                LOG_TRACE("sleep, tick {}", tick_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
                     LOG_TRACE("awaken");
