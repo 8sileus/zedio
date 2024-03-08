@@ -1,0 +1,11 @@
+{
+    "type": "module",
+    "scripts": {
+        "docs:build": "vitepress build docs",
+        "docs:preview": "vitepress preview docs",
+        "docs:rebuild": "vitepress build docs && vitepress preview docs"
+    },
+    "dependencies": {
+        "vitepress": "^1.0.0-rc.45"
+    }
+}
