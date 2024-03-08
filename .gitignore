@@ -2,7 +2,6 @@
 generate.sh
 format.sh
 /bin
-/build
-/docs/benchmark/go
-/docs/benchmark/monoio
-/docs/benchmark/tokio
+/[Bb]uild
+/node_modules
+/docs/.vitepress/dist
