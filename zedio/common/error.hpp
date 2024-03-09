@@ -17,6 +17,7 @@ public:
         EmptySqe = 8000,
         InvalidAddresses,
         ClosedChannel,
+        UnexpectedEOF,
     };
 
     explicit Error(int err_code)
@@ -36,6 +37,8 @@ public:
             return "Invalid addresses";
         case ClosedChannel:
             return "Channel has closed";
+        case UnexpectedEOF:
+            return "Early EOF";
         default:
             return strerror(err_code_);
         }
@@ -47,7 +50,7 @@ private:
 
 [[nodiscard]]
 static inline auto make_zedio_error(int err) -> Error {
-    assert(err >= 0);
+    assert(err >= 8000);
     return Error{err};
 }
 

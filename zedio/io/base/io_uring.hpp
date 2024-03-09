@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/debug.hpp"
-#include "zedio/io/base/config.hpp"
+#include "zedio/io/config.hpp"
 
 // C
 #include <cstring>

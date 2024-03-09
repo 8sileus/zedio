@@ -36,10 +36,6 @@
 namespace zedio::io::detail {
 
 class IO {
-protected:
-    explicit IO(int fd)
-        : fd_{fd} {}
-
 public:
     ~IO() {
         if (fd_ >= 0) {
@@ -65,6 +61,11 @@ public:
         return *this;
     }
 
+protected:
+    explicit IO(int fd)
+        : fd_{fd} {}
+
+public:
     [[REMEMBER_CO_AWAIT]]
     auto close() noexcept {
         auto fd = fd_;
@@ -95,16 +96,31 @@ public:
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto write_all(std::span<const char> buf) const noexcept -> zedio::async::Task<Result<void>> {
-        auto has_written_bytes{0uz};
-        auto remaining_bytes{buf.size_bytes()};
-        while (remaining_bytes > 0) {
-            auto ret = co_await this->write({buf.data() + has_written_bytes, remaining_bytes});
+    auto read_exact(std::span<char> buf) -> zedio::async::Task<Result<void>> {
+        while (!buf.empty()) {
+            auto ret = co_await this->read(buf);
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
-            has_written_bytes += ret.value();
-            remaining_bytes -= ret.value();
+            if (ret.value() == 0) {
+                co_return std::unexpected{make_zedio_error(Error::UnexpectedEOF)};
+            }
+            buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
+        }
+        co_return Result<void>{};
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto write_all(std::span<const char> buf) const noexcept -> zedio::async::Task<Result<void>> {
+        while (!buf.empty()) {
+            auto ret = co_await this->write(buf);
+            if (!ret) [[unlikely]] {
+                co_return std::unexpected{ret.error()};
+            }
+            if (ret.value() == 0) {
+                co_return std::unexpected{make_zedio_error(Error::UnexpectedEOF)};
+            }
+            buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
         }
         co_return Result<void>{};
     }

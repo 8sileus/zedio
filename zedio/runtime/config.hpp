@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/io/base/config.hpp"
+#include "zedio/io/config.hpp"
 // C++
 #include <thread>
 
