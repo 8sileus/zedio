@@ -117,9 +117,6 @@ public:
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
-            if (ret.value() == 0) {
-                co_return std::unexpected{make_zedio_error(Error::UnexpectedEOF)};
-            }
             buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
         }
         co_return Result<void>{};

@@ -16,87 +16,95 @@ public:
         : buf_(size) {}
 
 public:
+    void reset_data() {
+        auto len = r_remaining();
+        std::copy(r_begin(), r_end(), buf_.begin());
+        r_pos_ = 0;
+        w_pos_ = len;
+    }
+
+    void reset_pos() noexcept {
+        r_pos_ = w_pos_ = 0;
+    }
+
+    void r_increase(std::size_t n) {
+        r_pos_ += n;
+        assert(r_pos_ <= w_pos_);
+    }
+
+    [[nodiscard]]
+    auto r_remaining() const noexcept -> std::size_t {
+        return w_pos_ - r_pos_;
+    }
+
+    [[nodiscard]]
+    auto r_begin() const -> std::vector<char>::const_iterator {
+        return buf_.begin() + r_pos_;
+    }
+
+    [[nodiscard]]
+    auto r_end() const -> const std::vector<char>::const_iterator {
+        return r_begin() + r_remaining();
+    }
+
+    [[nodiscard]]
+    auto r_splice() const -> std::span<const char> {
+        return {r_begin(), r_end()};
+    }
+
+    void w_increase(std::size_t n) noexcept {
+        w_pos_ += n;
+        assert(r_pos_ <= w_pos_);
+    }
+
+    [[nodiscard]]
+    auto w_remaining() const noexcept -> std::size_t {
+        return buf_.size() - w_pos_;
+    }
+
+    [[nodiscard]]
+    auto w_begin() -> std::vector<char>::iterator {
+        return buf_.begin() + w_pos_;
+    }
+
+    [[nodiscard]]
+    auto w_end() -> std::vector<char>::iterator {
+        return w_begin() + w_remaining();
+    }
+
+    [[nodiscard]]
+    auto w_splice() -> std::span<char> {
+        return {w_begin(), w_end()};
+    }
+
+    [[nodiscard]]
+    auto empty() const noexcept -> bool {
+        return r_pos_ == w_pos_;
+    }
+
+    [[nodiscard]]
+    auto capacity() const noexcept -> std::size_t {
+        return buf_.size();
+    }
+
+    [[nodiscard]]
     auto write_to(std::span<char> buf) -> std::size_t {
-        auto len = std::min(readable_bytes(), buf.size_bytes());
-        std::copy(begin_read(), begin_read() + len, buf.data());
-        increase_rpos(buf.size_bytes());
+        auto len = std::min(r_remaining(), buf.size_bytes());
+        std::copy(r_begin(), r_end(), buf_.data());
+        r_increase(buf.size_bytes());
         if (r_pos_ == w_pos_) {
             reset_pos();
         }
         return len;
     }
 
-    auto writable_bytes() const noexcept -> std::size_t {
-        return buf_.size() - w_pos_;
-    }
-
-    auto readable_bytes() const noexcept -> std::size_t {
-        return w_pos_ - r_pos_;
-    }
-
-    auto remaining_bytes() {
-        return buf_.size() - readable_bytes();
-    }
-
-    auto begin_write() -> char * {
-        return buf_.data() + w_pos_;
-    }
-
-    auto begin_read() -> char * {
-        return buf_.data() + r_pos_;
-    }
-
-    auto begin_read() const -> const char * {
-        return buf_.data() + r_pos_;
-    }
-
-    void increase_rpos(std::size_t len) {
-        r_pos_ += len;
-    }
-
-    void increase_wpos(std::size_t len) {
-        w_pos_ += len;
-    }
-
-    auto capacity() -> std::size_t {
-        return buf_.size();
-    }
-
-    void move_to_front() {
-        auto len = readable_bytes();
-        ::memcpy(buf_.data(), begin_read(), len);
-        r_pos_ = 0;
-        w_pos_ = len;
-    }
-
-    auto empty() -> bool {
-        return r_pos_ == w_pos_;
-    }
-
-    auto find_flag_and_return_splice(char flag) const -> std::span<const char> {
-        if (auto end
-            = std::find(buf_.begin() + r_pos_, buf_.begin() + r_pos_ + readable_bytes(), flag);
-            end == buf_.end()) {
+    [[nodiscard]]
+    auto find_flag_and_return_splice(char flag) -> std::span<const char> {
+        if (auto end = std::find(r_begin(), r_end(), flag); end == buf_.end()) {
             return {};
         } else {
             return {buf_.begin() + r_pos_, end - (buf_.begin() + r_pos_) + 1};
         }
-    }
-
-    auto write_splice() -> std::span<char> {
-        return {begin_write(), writable_bytes()};
-    }
-
-    auto read_splice() -> std::span<char> {
-        return {begin_read(), readable_bytes()};
-    }
-
-    auto read_splice() const -> std::span<const char> {
-        return {begin_read(), readable_bytes()};
-    }
-
-    void reset_pos() {
-        r_pos_ = w_pos_ = 0;
     }
 
 private:

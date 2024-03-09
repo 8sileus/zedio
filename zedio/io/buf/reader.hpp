@@ -1,38 +1,45 @@
 #pragma once
 
 #include "zedio/io/buf/stream.hpp"
-#include "zedio/io/io.hpp"
-// C++
-#include <span>
-#include <vector>
 
 namespace zedio::io {
 
+template <class IO>
+    requires requires(IO io, std::span<char> buf) {
+        { io.read(buf) };
+    }
 class BufReader {
 public:
-    BufReader(detail::IO &&io, std::size_t size)
+    BufReader(IO &&io, std::size_t size)
         : io_{std::move(io)}
         , stream_{size} {}
 
 public:
     [[nodiscard]]
     auto buffer() {
-        return stream_.read_splice();
+        return stream_.r_splice();
     }
 
     [[nodiscard]]
-    auto buffer() const {
-        return stream_.read_splice();
-    }
-
-    [[nodiscard]]
-    auto capacity() -> std::size_t {
+    auto capacity() const noexcept -> std::size_t {
         return stream_.capacity();
     }
 
     void consume(std::size_t n) {
-        n = std::min(n, stream_.readable_bytes());
-        stream_.increase_rpos(n);
+        n = std::min(n, stream_.r_remaining());
+        stream_.r_increase(n);
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto fill_buf() -> zedio::async::Task<Result<void>> {
+        auto ret = co_await io::read(io_.fd(),
+                                     stream_.w_splice().data(),
+                                     stream_.w_splice().size_bytes(),
+                                     static_cast<uint64_t>(-1));
+        if (!ret) [[unlikely]] {
+            co_return std::unexpected{ret.error()};
+        }
+        co_return Result<void>{};
     }
 
     [[REMEMBER_CO_AWAIT]]
@@ -43,7 +50,7 @@ public:
     [[REMEMBER_CO_AWAIT]]
     auto read_exact(std::span<char> buf) {
         return real_read(buf, [this, exact_bytes = buf.size_bytes()]() -> bool {
-            return this->stream_.readable_bytes() >= exact_bytes;
+            return this->stream_.r_remaining() >= exact_bytes;
         });
     }
 
@@ -52,14 +59,14 @@ public:
         while (true) {
             if (auto splice = stream_.find_flag_and_return_splice(end_flag); !splice.empty()) {
                 buf.append(splice.begin(), splice.end());
-                stream_.increase_rpos(splice.size_bytes());
+                stream_.r_increase(splice.size_bytes());
                 break;
             } else {
-                buf.append(stream_.read_splice().begin(), stream_.read_splice().end());
+                buf.append(stream_.r_splice().begin(), stream_.r_splice().end());
                 stream_.reset_pos();
             }
 
-            auto ret = co_await io_.read(stream_.write_splice());
+            auto ret = co_await io_.read(stream_.w_splice());
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
@@ -89,26 +96,26 @@ private:
             co_return stream_.write_to(buf);
         }
 
-        if (stream_.writable_bytes() < buf.size_bytes()) {
-            stream_.move_to_front();
+        if (stream_.w_remaining() < buf.size_bytes()) {
+            stream_.reset_data();
         }
 
-        assert(stream_.writable_bytes() >= buf.size_bytes());
+        assert(stream_.w_remaining() >= buf.size_bytes());
 
         while (true) {
-            auto ret = co_await io_.read(stream_.write_splice());
+            auto ret = co_await io_.read(stream_.w_splice());
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
-            stream_.increase_wpos(ret.value());
-            if (pred()) {
+            stream_.w_increase(ret.value());
+            if (pred() || ret.value() == 0) {
                 co_return stream_.write_to(buf);
             }
         }
     }
 
 private:
-    detail::IO        io_;
+    IO                io_;
     detail::BufStream stream_;
 };
 
