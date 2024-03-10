@@ -25,6 +25,11 @@ public:
         return stream_.r_splice();
     }
 
+    [[nodiscard]]
+    auto capacity() const noexcept -> std::size_t {
+        return stream_.capacity();
+    }
+
     [[REMEMBER_CO_AWAIT]]
     auto flush() -> zedio::async::Task<Result<void>> {
         auto                splice = stream_.r_splice();
@@ -38,7 +43,7 @@ public:
                 co_return std::unexpected{make_zedio_error(Error::WriteZero)};
             }
             stream_.r_increase(ret.value());
-            splice = splice.subspan(ret.value(), splice.size() - ret.value());
+            splice = splice.subspan(ret.value(), splice.size_bytes() - ret.value());
         }
         stream_.reset_pos();
         co_return Result<void>{};
@@ -46,17 +51,12 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto write(std::span<const char> buf) {
-        return real_write(buf, false);
+        return real_write<true>(buf);
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto write_all(std::span<const char> buf) {
-        return real_write(buf, true);
-    }
-
-    [[nodiscard]]
-    auto take_writer() -> IO {
-        return std::move(io_);
+        return real_write<false>(buf);
     }
 
     [[nodiscard]]
@@ -65,8 +65,8 @@ public:
     }
 
 private:
-    auto real_write(std::span<const char> buf, bool is_write_all)
-        -> zedio::async::Task<Result<std::size_t>> {
+    template <bool write_once>
+    auto real_write(std::span<const char> buf) -> zedio::async::Task<Result<std::size_t>> {
         if (stream_.w_remaining() >= buf.size_bytes()) {
             co_return stream_.read_from(buf);
         }
@@ -92,7 +92,10 @@ private:
             ret.value() -= len;
             result += ret.value();
             buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
-        } while (is_write_all && stream_.w_remaining() < buf.size_bytes());
+            if constexpr (write_once) {
+                break;
+            }
+        } while (stream_.w_remaining() < buf.size_bytes());
 
         // assert(stream_.w_remaining() >= buf.size_bytes());
         result += stream_.read_from(buf);
