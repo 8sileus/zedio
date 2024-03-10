@@ -100,6 +100,14 @@ public:
     }
 
     [[nodiscard]]
+    auto read_from(std::span<const char> src_buf) -> std::size_t {
+        auto len = std::min(w_remaining(), src_buf.size_bytes());
+        std::copy_n(src_buf.begin(), len, w_begin());
+        w_increase(len);
+        return len;
+    }
+
+    [[nodiscard]]
     auto find_flag_and_return_splice(std::string_view end_str) -> std::span<const char> {
         auto pos = std::string_view{r_splice()}.find(end_str);
         if (pos == std::string_view::npos) {

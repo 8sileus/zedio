@@ -15,6 +15,10 @@ public:
         : io_{std::move(io)}
         , stream_{size} {}
 
+    // Delete Copy
+    BufReader(const BufReader &) = delete;
+    auto operator=(const BufReader &) -> BufReader & = delete;
+
 public:
     [[nodiscard]]
     auto buffer() {
@@ -90,8 +94,8 @@ public:
     }
 
     [[nodiscard]]
-    auto take_reader() -> IO {
-        return std::move(io_);
+    auto reader() -> IO & {
+        return io_;
     }
 
 private:

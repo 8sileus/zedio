@@ -1,6 +1,7 @@
 #include "zedio/core.hpp"
 #include "zedio/fs/file.hpp"
 #include "zedio/io/buf/reader.hpp"
+#include "zedio/io/buf/writer.hpp"
 #include "zedio/log.hpp"
 
 using namespace zedio::async;
@@ -18,19 +19,21 @@ auto create_file() -> Task<void> {
                    .open("read_line_test.txt");
     std::string n1 = "\n";
     std::string n2 = "\r\n";
-    for (int i = 0; i <= 10; i += 1) {
+    auto        writer = io::BufWriter(std::move(ret.value()));
+    for (int i = 0; i <= 10000; i += 1) {
         if (i & 1) {
-            co_await ret.value().write(std::to_string(i) + n1);
+            co_await writer.write_all(std::to_string(i) + n1);
         } else {
-            co_await ret.value().write(std::to_string(i) + n2);
+            co_await writer.write_all(std::to_string(i) + n2);
         }
     }
-    if (auto meta = co_await ret.value().metadata(); meta) {
+    co_await writer.flush();
+    if (auto meta = co_await writer.writer().metadata(); meta) {
         LOG_INFO("{}", meta.value().stx_size);
     } else {
         LOG_ERROR("{} {}", meta.error().value(), meta.error().message());
     }
-    if (auto fsync_ret = co_await ret.value().fsync_data(); !fsync_ret) {
+    if (auto fsync_ret = co_await writer.writer().fsync_data(); !fsync_ret) {
         LOG_ERROR("{} {}", fsync_ret.error().value(), fsync_ret.error().message());
     }
     LOG_INFO("create file succ");
