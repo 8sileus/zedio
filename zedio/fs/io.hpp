@@ -24,15 +24,15 @@ public:
     template <class T>
     [[REMEMBER_CO_AWAIT]]
     auto read_to_end(T &buf) const noexcept -> zedio::async::Task<Result<void>> {
-        auto offset = buf.size();
+        auto old_len = buf.size();
         {
             auto ret = co_await this->metadata();
             if (!ret) {
                 co_return std::unexpected{ret.error()};
             }
-            buf.resize(offset + ret.value().stx_size);
+            buf.resize(old_len + ret.value().stx_size - lseek64(fd_, 0, SEEK_CUR));
         }
-        auto span = std::span<char>{buf}.subspan(offset);
+        auto span = std::span<char>{buf}.subspan(old_len);
         auto ret = Result<std::size_t>{};
         while (true) {
             ret = co_await this->read(span);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/io/buf/stream.hpp"
+#include "zedio/io/config.hpp"
 
 namespace zedio::io {
 
@@ -10,7 +11,7 @@ template <class IO>
     }
 class BufReader {
 public:
-    BufReader(IO &&io, std::size_t size)
+    BufReader(IO &&io, std::size_t size = detail::Config::DEFAULT_BUF_SIZE)
         : io_{std::move(io)}
         , stream_{size} {}
 
@@ -44,18 +45,23 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto read(std::span<char> buf) {
-        return real_read(buf, [this]() -> bool { !this->stream_.empty(); });
+        return real_read<false>(buf, [this]() -> bool { return !this->stream_.empty(); });
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto read_exact(std::span<char> buf) {
-        return real_read(buf, [this, exact_bytes = buf.size_bytes()]() -> bool {
+        return real_read<true>(buf, [this, exact_bytes = buf.size_bytes()]() -> bool {
             return this->stream_.r_remaining() >= exact_bytes;
         });
     }
 
+    template <typename T>
+        requires requires(std::string_view s, T s_or_c) {
+            { s.find(s_or_c) };
+        }
     [[REMEMBER_CO_AWAIT]]
-    auto read_until(std::string &buf, char end_flag) -> zedio::async::Task<Result<std::size_t>> {
+    auto read_until(std::string &buf, T end_flag) -> zedio::async::Task<Result<std::size_t>> {
+        Result<std::size_t> ret;
         while (true) {
             if (auto splice = stream_.find_flag_and_return_splice(end_flag); !splice.empty()) {
                 buf.append(splice.begin(), splice.end());
@@ -66,13 +72,14 @@ public:
                 stream_.reset_pos();
             }
 
-            auto ret = co_await io_.read(stream_.w_splice());
+            ret = co_await io_.read(stream_.w_splice());
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
             if (ret.value() == 0) {
                 break;
             }
+            stream_.w_increase(ret.value());
         }
         co_return buf.size();
     }
@@ -82,8 +89,13 @@ public:
         return read_until(buf, '\n');
     }
 
+    [[nodiscard]]
+    auto take_reader() -> IO {
+        return std::move(io_);
+    }
+
 private:
-    template <class Pred>
+    template <bool eof_is_error, class Pred>
         requires std::is_invocable_v<Pred>
     auto real_read(std::span<char> buf, Pred pred) -> zedio::async::Task<Result<std::size_t>> {
         if (stream_.capacity() < buf.size_bytes()) {
@@ -102,14 +114,25 @@ private:
 
         assert(stream_.w_remaining() >= buf.size_bytes());
 
+        Result<std::size_t> ret;
         while (true) {
-            auto ret = co_await io_.read(stream_.w_splice());
+            ret = co_await io_.read(stream_.w_splice());
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
             stream_.w_increase(ret.value());
-            if (pred() || ret.value() == 0) {
-                co_return stream_.write_to(buf);
+
+            if constexpr (eof_is_error) {
+                if (ret.value() == 0) {
+                    co_return std::unexpected{make_zedio_error(Error::UnexpectedEOF)};
+                }
+                if (pred()) {
+                    co_return stream_.write_to(buf);
+                }
+            } else {
+                if (pred() || ret.value() == 0) {
+                    co_return stream_.write_to(buf);
+                }
             }
         }
     }

@@ -18,7 +18,7 @@ public:
 public:
     static constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};
 
-    static constexpr std::size_t DEFAULT_IO_BUF_SIZE{8 * 1024};
+    static constexpr std::size_t DEFAULT_BUF_SIZE{8 * 1024};
 };
 
 } // namespace zedio::io::detail

@@ -6,6 +6,7 @@
 // C++
 #include <algorithm>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace zedio::io::detail {
@@ -88,10 +89,10 @@ public:
     }
 
     [[nodiscard]]
-    auto write_to(std::span<char> buf) -> std::size_t {
-        auto len = std::min(r_remaining(), buf.size_bytes());
-        std::copy(r_begin(), r_end(), buf_.data());
-        r_increase(buf.size_bytes());
+    auto write_to(std::span<char> dst_buf) -> std::size_t {
+        auto len = std::min(r_remaining(), dst_buf.size_bytes());
+        std::copy_n(r_begin(), len, dst_buf.begin());
+        r_increase(len);
         if (r_pos_ == w_pos_) {
             reset_pos();
         }
@@ -99,11 +100,22 @@ public:
     }
 
     [[nodiscard]]
-    auto find_flag_and_return_splice(char flag) -> std::span<const char> {
-        if (auto end = std::find(r_begin(), r_end(), flag); end == buf_.end()) {
+    auto find_flag_and_return_splice(std::string_view end_str) -> std::span<const char> {
+        auto pos = std::string_view{r_splice()}.find(end_str);
+        if (pos == std::string_view::npos) {
             return {};
         } else {
-            return {buf_.begin() + r_pos_, end - (buf_.begin() + r_pos_) + 1};
+            return {r_begin(), pos + end_str.size()};
+        }
+    }
+
+    [[nodiscard]]
+    auto find_flag_and_return_splice(char end_char) -> std::span<const char> {
+        auto pos = std::string_view{r_splice()}.find(end_char);
+        if (pos == std::string_view::npos) {
+            return {};
+        } else {
+            return {r_begin(), pos + 1};
         }
     }
 

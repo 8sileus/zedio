@@ -13,16 +13,19 @@ namespace zedio {
 
 class Error {
 public:
-    enum {
+    enum ErrorCode {
         EmptySqe = 8000,
         InvalidAddresses,
         ClosedChannel,
         UnexpectedEOF,
+        WriteZero,
     };
 
+public:
     explicit Error(int err_code)
         : err_code_{err_code} {}
 
+public:
     [[nodiscard]]
     auto value() const noexcept -> int {
         return err_code_;
@@ -38,7 +41,9 @@ public:
         case ClosedChannel:
             return "Channel has closed";
         case UnexpectedEOF:
-            return "Early EOF";
+            return "Read EOF too early";
+        case WriteZero:
+            return "Write return zero";
         default:
             return strerror(err_code_);
         }

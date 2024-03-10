@@ -97,8 +97,9 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto read_exact(std::span<char> buf) -> zedio::async::Task<Result<void>> {
+        Result<std::size_t> ret;
         while (!buf.empty()) {
-            auto ret = co_await this->read(buf);
+            ret = co_await this->read(buf);
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
@@ -112,10 +113,14 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto write_all(std::span<const char> buf) const noexcept -> zedio::async::Task<Result<void>> {
+        Result<std::size_t> ret;
         while (!buf.empty()) {
-            auto ret = co_await this->write(buf);
+            ret = co_await this->write(buf);
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
+            }
+            if (ret.value() == 0) [[unlikely]] {
+                co_return std::unexpected{make_zedio_error(Error::WriteZero)};
             }
             buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
         }
