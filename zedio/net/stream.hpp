@@ -11,39 +11,44 @@ protected:
         : io_{std::move(io)} {}
 
 public:
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto shutdown(io::ShutdownBehavior how) noexcept {
         return io_.shutdown(how);
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto close() noexcept {
         return io_.close();
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto read(std::span<char> buf) const noexcept {
         return io_.recv(buf);
     }
 
+    [[REMEMBER_CO_AWAIT]]
+    auto read_exact(std::span<char> buf) const noexcept {
+        return io_.read_exact(buf);
+    }
+
     template <typename... Ts>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto read_vectored(Ts &&...bufs) const noexcept {
         return io_.read_vectored(std::forward<Ts>(bufs)...);
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto write(std::span<const char> buf) noexcept {
         return io_.send(buf);
     }
 
     template <typename... Ts>
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto write_vectored(Ts &&...bufs) noexcept {
         return io_.write_vectored(std::forward<Ts>(bufs)...);
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto write_all(std::span<const char> buf) noexcept {
         return io_.write_all(buf);
     }

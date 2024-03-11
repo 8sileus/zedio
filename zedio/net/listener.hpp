@@ -11,7 +11,7 @@ protected:
         : io_{std::move(io)} {}
 
 public:
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto accept() const noexcept {
         return io_.accept<Stream, Addr>();
     }
@@ -26,7 +26,7 @@ public:
         return io_.fd();
     }
 
-    [[nodiscard]]
+    [[REMEMBER_CO_AWAIT]]
     auto close() noexcept {
         return io_.close();
     }
