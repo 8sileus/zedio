@@ -27,7 +27,7 @@ public:
     }
 
     [[nodiscard]]
-    auto num_wokring_and_searching(std::memory_order order) -> std::pair<std::size_t, std::size_t> {
+    auto num_working_and_searching(std::memory_order order) -> std::pair<std::size_t, std::size_t> {
         auto state = state_.load(order);
         return {(state & WORKING_MASK) >> WORKING_SHIFT, state & SEARCHING_MASK};
     }
@@ -65,7 +65,7 @@ private:
                                               ^ SEARCHING_MASK};
 
     static_assert((WORKING_MASK & SEARCHING_MASK) == 0);
-    static_assert(!(WORKING_MASK | SEARCHING_MASK) == 0);
+    static_assert((WORKING_MASK | SEARCHING_MASK) == std::numeric_limits<std::size_t>::max());
 
 private:
     /// --------------------------------
@@ -143,7 +143,7 @@ private:
     [[nodiscard]]
     auto notify_should_wakeup() -> bool {
         auto [num_working, num_searching]
-            = state_.num_wokring_and_searching(std::memory_order::seq_cst);
+            = state_.num_working_and_searching(std::memory_order::seq_cst);
         return num_searching == 0 && num_working < num_workers_;
     }
 
