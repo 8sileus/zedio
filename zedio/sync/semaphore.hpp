@@ -70,7 +70,7 @@ public:
     }
 
     [[nodiscard]]
-    auto max() {
+    constexpr auto max() {
         return max_count;
     }
 
@@ -112,6 +112,6 @@ private:
     std::atomic<Awaiter *>      head_{nullptr};
 };
 
-using BinarySemaphore = CountingSemaphore<2>;
+using BinarySemaphore = CountingSemaphore<1>;
 
 } // namespace zedio::sync
