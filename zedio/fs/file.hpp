@@ -17,18 +17,18 @@ private:
 
 public:
     [[REMEMBER_CO_AWAIT]]
-    auto write_all(std::span<const char> buf) const noexcept {
+    auto write_all(std::span<const char> buf) noexcept {
         return io_.write_all(buf);
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto write(std::span<const char> buf) const noexcept {
+    auto write(std::span<const char> buf) noexcept {
         return io_.write(buf);
     }
 
     template <typename... Ts>
     [[REMEMBER_CO_AWAIT]]
-    auto write_vectored(Ts &...bufs) const noexcept {
+    auto write_vectored(Ts &...bufs) noexcept {
         return io_.write_vectored(bufs...);
     }
 
@@ -47,12 +47,13 @@ public:
         return io_.read_to_end(buf);
     }
 
-    void seek(off64_t offset, int whence) {
+    [[nodiscard]]
+    auto seek(off64_t offset, int whence) noexcept {
         ::lseek64(io_.fd(), offset, whence);
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto metadata() {
+    auto metadata() const noexcept {
         return io_.metadata();
     }
 

@@ -88,15 +88,7 @@ public:
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto write(std::span<const char> buf) const noexcept {
-        return Write{fd_,
-                     buf.data(),
-                     static_cast<unsigned int>(buf.size_bytes()),
-                     static_cast<std::size_t>(-1)};
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto read_exact(std::span<char> buf) -> zedio::async::Task<Result<void>> {
+    auto read_exact(std::span<char> buf) const noexcept -> zedio::async::Task<Result<void>> {
         Result<std::size_t> ret;
         while (!buf.empty()) {
             ret = co_await this->read(buf);
@@ -112,7 +104,15 @@ public:
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto write_all(std::span<const char> buf) const noexcept -> zedio::async::Task<Result<void>> {
+    auto write(std::span<const char> buf) noexcept {
+        return Write{fd_,
+                     buf.data(),
+                     static_cast<unsigned int>(buf.size_bytes()),
+                     static_cast<std::size_t>(-1)};
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto write_all(std::span<const char> buf) noexcept -> zedio::async::Task<Result<void>> {
         Result<std::size_t> ret;
         while (!buf.empty()) {
             ret = co_await this->write(buf);
@@ -129,7 +129,7 @@ public:
 
     template <typename... Ts>
     [[REMEMBER_CO_AWAIT]]
-    auto write_vectored(Ts &&...bufs) const noexcept {
+    auto write_vectored(Ts &&...bufs) noexcept {
         return WriteVectored<Ts...>{fd_, std::forward<Ts>(bufs)...};
     }
 
