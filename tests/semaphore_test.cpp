@@ -1,7 +1,7 @@
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
+#include "zedio/sync/latch.hpp"
 #include "zedio/sync/semaphore.hpp"
-#include "zedio/time.hpp"
 
 using namespace zedio::async;
 using namespace zedio::sync;
@@ -9,32 +9,69 @@ using namespace zedio::log;
 using namespace zedio;
 
 template <std::ptrdiff_t N>
-auto sem_test(CountingSemaphore<N>        &sem,
-              [[maybe_unused]] std::size_t index,
-              std::atomic<std::size_t>    &sum) -> Task<void> {
-    LOG_INFO("sem_test {} suspend", index);
+auto count_sem_test(CountingSemaphore<N>        &sem,
+                    Latch                       &latch,
+                    [[maybe_unused]] std::size_t index,
+                    std::atomic<std::size_t>    &sum) -> Task<void> {
+    // LOG_INFO("sem_test {} suspend", index);
     co_await sem.acquire();
-    LOG_INFO("sem_test {} resume", index);
+    // LOG_INFO("sem_test {} resume", index);
     sum.fetch_add(1, std::memory_order::relaxed);
+    sem.release();
+    latch.count_down();
 }
 
 template <std::ptrdiff_t N>
-auto test() -> Task<void> {
-    CountingSemaphore<N>     sem{0};
+auto test_count_semaphore() -> Task<void> {
+    static_assert(N >= 10);
+    CountingSemaphore<N>     sem{N / 10};
+    Latch                    latch{N + 1};
     std::atomic<std::size_t> sum = 0;
     for (auto i = 0uz; i < N; i += 1) {
-        spawn(sem_test<N>(sem, i, sum));
+        spawn(count_sem_test<N>(sem, latch, i, sum));
     }
-    co_await time::sleep(1s);
-    sem.release(N);
-    co_await time::sleep(5s);
+
+    co_await latch.arrive_and_wait();
     console.info("expected: {}, actual {}", N, sum.load());
     co_return;
 }
 
+auto bin_sem_test(BinarySemaphore             &bin_sem,
+                  Latch                       &latch,
+                  [[maybe_unused]] std::size_t index,
+                  std::atomic<std::size_t>    &sum) -> Task<void> {
+    // LOG_INFO("sem_test {} suspend", index);
+    co_await bin_sem.acquire();
+    // LOG_INFO("sem_test {} resume", index);
+    sum.fetch_add(1, std::memory_order::relaxed);
+    bin_sem.release();
+    latch.count_down();
+}
+
+template <std::ptrdiff_t N>
+auto test_binary_semaphore() -> Task<void> {
+    BinarySemaphore          bin_sem;
+    Latch                    latch{N + 1};
+    std::atomic<std::size_t> sum = 0;
+    for (auto i = 0uz; i < N; i += 1) {
+        spawn(bin_sem_test(bin_sem, latch, i, sum));
+    }
+
+    co_await latch.arrive_and_wait();
+    console.info("expected: {}, actual {}", N, sum.load());
+    co_return;
+}
+
+auto test() -> Task<void> {
+    co_await test_count_semaphore<1000>();
+    co_await test_binary_semaphore<1000>();
+}
+
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::TRACE);
-    auto runtime = Runtime::options().set_num_workers(4).build();
-    runtime.block_on(test<1000>());
+    // FIXME: workers > 1 will cause a core dump
+    // auto runtime = Runtime::options().set_num_workers(4).build();
+    auto runtime = Runtime::create();
+    runtime.block_on(test());
     return 0;
 }
