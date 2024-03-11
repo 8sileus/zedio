@@ -58,10 +58,14 @@ public:
             }
         }
 
-        ring_.cqe_advance(cnt);
+        ring_.consume(cnt);
+
         cnt += timer_.poll_batch(local_queue, global_queue);
+
         waker_.reg();
+
         ring_.force_submit();
+
         LOG_TRACE("poll {} events", cnt);
         return cnt > 0;
     }

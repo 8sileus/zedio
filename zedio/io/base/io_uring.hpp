@@ -67,7 +67,7 @@ public:
         }
     }
 
-    void cqe_advance(std::size_t cnt) {
+    void consume(std::size_t cnt) {
         io_uring_cq_advance(&ring_, cnt);
     }
 
@@ -80,7 +80,7 @@ public:
 
     void force_submit() {
         num_weak_submissions_ = 0;
-        if (auto ret = io_uring_submit(&ring_); ret < 0) {
+        if (auto ret = io_uring_submit(&ring_); ret < 0) [[unlikely]] {
             LOG_ERROR("submit sqes failed, {}", strerror(-ret));
         }
     }
