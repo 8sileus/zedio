@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zedio/common/concepts.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/common/macros.hpp"
 #include "zedio/common/util/noncopyable.hpp"

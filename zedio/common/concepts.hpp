@@ -3,6 +3,8 @@
 // C++
 #include <concepts>
 #include <coroutine>
+#include <ranges>
+#include <span>
 // Linux
 #include <sys/socket.h>
 
@@ -20,5 +22,8 @@ concept is_awaiter = requires(IOAwaiter awaiter) {
     { awaiter.await_resume() };
     { awaiter.await_suspend(std::noop_coroutine()) };
 };
+
+template <typename C>
+concept constructible_to_char_splice = requires(C c) { std::span<char>{c}; };
 
 } // namespace zedio

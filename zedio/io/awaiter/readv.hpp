@@ -24,6 +24,7 @@ namespace detail {
     };
 
     template <typename... Ts>
+        requires(constructible_to_char_splice<Ts> && ...)
     class ReadVectored : public IORegistrator<ReadVectored<Ts...>> {
     private:
         using Super = IORegistrator<ReadVectored<Ts...>>;
@@ -31,11 +32,13 @@ namespace detail {
 
     public:
         ReadVectored(int fd,Ts&...bufs)
-                : Super{io_uring_prep_readv,fd, iovecs_.data(),iovecs_.size(),static_cast<std::size_t>(-1)}
+                : Super{io_uring_prep_readv,fd, nullptr,N,static_cast<std::size_t>(-1)}
                 , iovecs_{ iovec{
                   .iov_base = std::span<char>(bufs).data(),
                   .iov_len = std::span<char>(bufs).size_bytes(),
-                }...} {}
+                }...} {
+            this->sqe_->addr = reinterpret_cast<unsigned long long>(iovecs_.data());
+        }
 
         auto await_resume() const noexcept -> Result<std::size_t> {
             if (this->cb_.result_ >= 0) [[likely]] {

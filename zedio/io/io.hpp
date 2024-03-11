@@ -83,8 +83,8 @@ public:
 
     template <typename... Ts>
     [[REMEMBER_CO_AWAIT]]
-    auto read_vectored(Ts &...bufs) const noexcept {
-        return ReadVectored<Ts...>{fd, bufs...};
+    auto read_vectored(Ts &&...bufs) const noexcept {
+        return ReadVectored<Ts...>{fd_, std::forward<Ts>(bufs)...};
     }
 
     [[REMEMBER_CO_AWAIT]]
@@ -129,8 +129,8 @@ public:
 
     template <typename... Ts>
     [[REMEMBER_CO_AWAIT]]
-    auto write_vectored(Ts &...bufs) const noexcept {
-        return WriteVectored<Ts...>{fd_, bufs...};
+    auto write_vectored(Ts &&...bufs) const noexcept {
+        return WriteVectored<Ts...>{fd_, std::forward<Ts>(bufs)...};
     }
 
     [[nodiscard]]

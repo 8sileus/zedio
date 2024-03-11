@@ -28,8 +28,8 @@ public:
 
     template <typename... Ts>
     [[nodiscard]]
-    auto read_vectored(Ts &...bufs) const noexcept {
-        return io_.read_vectored(bufs...);
+    auto read_vectored(Ts &&...bufs) const noexcept {
+        return io_.read_vectored(std::forward<Ts>(bufs)...);
     }
 
     [[nodiscard]]
@@ -39,8 +39,8 @@ public:
 
     template <typename... Ts>
     [[nodiscard]]
-    auto write_vectored(Ts &...bufs) noexcept {
-        return io_.write_vectored(bufs...);
+    auto write_vectored(Ts &&...bufs) noexcept {
+        return io_.write_vectored(std::forward<Ts>(bufs)...);
     }
 
     [[nodiscard]]
