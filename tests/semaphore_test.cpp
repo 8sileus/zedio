@@ -17,7 +17,7 @@ auto count_sem_test(CountingSemaphore<N>        &sem,
     co_await sem.acquire();
     // LOG_INFO("sem_test {} resume", index);
     sum.fetch_add(1, std::memory_order::relaxed);
-    sem.release();
+    co_await sem.release();
     latch.count_down();
 }
 
@@ -44,7 +44,7 @@ auto bin_sem_test(BinarySemaphore             &bin_sem,
     co_await bin_sem.acquire();
     // LOG_INFO("sem_test {} resume", index);
     sum.fetch_add(1, std::memory_order::relaxed);
-    bin_sem.release();
+    co_await bin_sem.release();
     latch.count_down();
 }
 
