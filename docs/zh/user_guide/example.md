@@ -1,3 +1,8 @@
+# 例子
+
+## Echo server
+```C++
+//忽略所有的错误，实际使用中记得处理错误
 #include "zedio/core.hpp"
 #include "zedio/net.hpp"
 
@@ -21,7 +26,6 @@ auto server() -> Task<void> {
     auto listener = TcpListener::bind(addr).value();
     while (true) {
         auto [stream, addr] = (co_await listener.accept()).value();
-        LOG_INFO("{}", addr);
         spawn(process(std::move(stream)));
     }
 }
@@ -29,3 +33,4 @@ auto server() -> Task<void> {
 auto main() -> int {
     Runtime::create().block_on(server());
 }
+```

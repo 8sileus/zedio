@@ -53,12 +53,20 @@ function makeNavBar(): DefaultTheme.NavItem[] {
             link: '/zh/zedio/benchmark'
         },
         {
-            text: 'Runtime',
+            text: '例子',
+            link: '/zh/user_guide/example'
+        },
+        {
+            text: '运行时',
             link: '/zh/user_guide/runtime'
         },
         {
-            text: 'Async IO',
+            text: '异步IO',
             link: '/zh/user_guide/io'
+        },
+        {
+            text: '错误与异常',
+            link: '/zh/user_guide/error_exception'
         },
     ]
 }
@@ -84,8 +92,10 @@ function makeSidebarUserGuide(): DefaultTheme.SidebarItem[] {
             text: 'API',
             collapsed: false,
             items: [
-                { text: 'Runtime', link: 'runtime' },
-                { text: 'Async IO', link: 'io' },
+                { text: '例子', link: 'example' },
+                { text: '运行时', link: 'runtime' },
+                { text: '异步I/O', link:'io' },
+                { text: '错误与异常', link: 'error_exception' },
             ]
         },
     ]
