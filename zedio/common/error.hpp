@@ -19,6 +19,8 @@ public:
         ClosedChannel,
         UnexpectedEOF,
         WriteZero,
+        TooLongTime,
+        PassedTime,
     };
 
 public:
@@ -44,6 +46,10 @@ public:
             return "Read EOF too early";
         case WriteZero:
             return "Write return zero";
+        case TooLongTime:
+            return "Time is too long";
+        case PassedTime:
+            return "Time has passed";
         default:
             return strerror(err_code_);
         }

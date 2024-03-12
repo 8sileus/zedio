@@ -4,7 +4,7 @@
 #include "zedio/io/base/io_uring.hpp"
 #include "zedio/io/base/waker.hpp"
 #include "zedio/runtime/queue.hpp"
-#include "zedio/time/timer.hpp"
+#include "zedio/time/timer/timer.hpp"
 // C
 #include <cstring>
 // C++
@@ -40,7 +40,7 @@ public:
     // until other worker wakes up it or a I/O event completes
     void wait(runtime::detail::LocalQueue  &local_queue,
               runtime::detail::GlobalQueue &global_queue) {
-        ring_.wait(timer_.get_first_expired_time());
+        ring_.wait(timer_.next_expiration_time());
         poll(local_queue, global_queue);
     }
 
@@ -60,7 +60,7 @@ public:
 
         ring_.consume(cnt);
 
-        cnt += timer_.poll_batch(local_queue, global_queue);
+        cnt += timer_.handle_expired_entries(local_queue, global_queue);
 
         waker_.reg();
 

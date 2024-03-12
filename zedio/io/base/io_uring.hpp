@@ -49,12 +49,12 @@ public:
         return io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
     }
 
-    void wait(std::optional<std::chrono::nanoseconds> timeout) {
+    void wait(std::optional<time_t> timeout) {
         io_uring_cqe *cqe{nullptr};
         if (timeout) {
+            // LOG_DEBUG("wait for {}", timeout.value());
             struct __kernel_timespec ts {
-                .tv_sec = timeout.value().count() / 1000'000'000,
-                .tv_nsec = timeout.value().count() % 1000'000'000,
+                .tv_sec = timeout.value() / 1000, .tv_nsec = timeout.value() % 1000 * 1000'000,
             };
             if (auto ret = io_uring_wait_cqe_timeout(&ring_, &cqe, &ts); ret != 0 && ret != -ETIME)
                 [[unlikely]] {
