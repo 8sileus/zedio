@@ -30,4 +30,4 @@ Zedio is an event-driven header library for writing asynchronous applications in
 + **Sync** 
 + **Log** 
 
-It's being developed, if you're interested in zedio and want to participate in its development, see [contributing](contributing)
+It's being developed, if you're interested in zedio and want to participate in its development, see [contributing](./docs/zedio/contributing.md)
