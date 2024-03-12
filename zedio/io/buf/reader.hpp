@@ -1,23 +1,23 @@
 #pragma once
 
-#include "zedio/io/buf/stream.hpp"
+#include "zedio/io/buf/buffer.hpp"
 #include "zedio/io/config.hpp"
 
-namespace zedio::io {
+namespace zedio::io::detail {
 
 template <class IO>
     requires requires(IO io, std::span<char> buf) {
         { io.read(buf) };
     }
-class BufReader {
+class Reader {
 public:
-    BufReader(IO &&io, std::size_t size = detail::Config::DEFAULT_BUF_SIZE)
-        : io_{std::move(io)}
-        , stream_{size} {}
+    Reader(IO &io, StreamBuffer &stream)
+        : io_{io}
+        , stream_{stream} {}
 
     // Delete Copy
-    BufReader(const BufReader &) = delete;
-    auto operator=(const BufReader &) -> BufReader & = delete;
+    Reader(const Reader &) = delete;
+    auto operator=(const Reader &) -> Reader & = delete;
 
 public:
     [[nodiscard]]
@@ -142,8 +142,8 @@ private:
     }
 
 private:
-    IO                io_;
-    detail::BufStream stream_;
+    IO           &io_;
+    StreamBuffer &stream_;
 };
 
-} // namespace zedio::io
+} // namespace zedio::io::detail

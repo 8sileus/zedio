@@ -1,23 +1,23 @@
 #pragma once
 
-#include "zedio/io/buf/stream.hpp"
+#include "zedio/io/buf/buffer.hpp"
 #include "zedio/io/io.hpp"
 
-namespace zedio::io {
+namespace zedio::io::detail {
 
 template <class IO>
     requires requires(IO io, std::span<const char> buf) {
         { io.write(buf) };
     }
-class BufWriter {
+class Writer {
 public:
-    BufWriter(IO &&io, std::size_t size = detail::Config::DEFAULT_BUF_SIZE)
-        : io_{std::move(io)}
-        , stream_{size} {}
+    Writer(IO &io, StreamBuffer &stream)
+        : io_{io}
+        , stream_{stream} {}
 
     // Delete Copy
-    BufWriter(const BufWriter &) = delete;
-    auto operator=(const BufWriter &) -> BufWriter & = delete;
+    Writer(const Writer &) = delete;
+    auto operator=(const Writer &) -> Writer & = delete;
 
 public:
     [[nodiscard]]
@@ -103,8 +103,8 @@ private:
     }
 
 private:
-    IO                io_;
-    detail::BufStream stream_;
+    IO           &io_;
+    StreamBuffer &stream_;
 };
 
-} // namespace zedio::io
+} // namespace zedio::io::detail

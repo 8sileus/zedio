@@ -11,9 +11,9 @@
 
 namespace zedio::io::detail {
 
-class BufStream {
+class StreamBuffer {
 public:
-    BufStream(std::size_t size)
+    StreamBuffer(std::size_t size)
         : buf_(size) {}
 
 public:
