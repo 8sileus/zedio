@@ -27,6 +27,8 @@ auto test() -> Task<void> {
     LOG_INFO("interval {}", 3s);
     co_await interval.tick();
     LOG_INFO("interval {}", 3s);
+    co_await time::sleep_until(start);
+    LOG_INFO("co_await a passed time");
 }
 
 auto main() -> int {

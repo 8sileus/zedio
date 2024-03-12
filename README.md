@@ -15,15 +15,19 @@
 
 Documentation: https://8sileus.github.io/zedio/
 
-Zedio is an event-driven header library for writing asynchronous applications in C++:
+Zedio is an event-driven header library for writing asynchronous applications in modern C++:
 
+## Feature:
 + Multithreaded, work-stealing based task scheduler. (reference [tokio](https://tokio.rs/))
 + Proactor event handling backed by [io_uring](https://github.com/axboe/liburing).
-+ Asynchronous TCP and UDP sockets.
++ Zero overhead abstraction, no virtual, no dynamic
 
-It's being developed, if you're interested in zedio and want to participate in its development, see [contributing](https://8sileus.github.io/zedio/zedio/contributing)
+## Sub library: 
++ **I/O**
++ **NetWorking** 
++ **FileSystem** 
++ **Time** 
++ **Sync** 
++ **Log** 
 
-## Discussion
-
-- QQ Group: 590815858
-- Email: 1926004708@qq.com
+It's being developed, if you're interested in zedio and want to participate in its development, see [contributing](contributing)
