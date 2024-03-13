@@ -30,12 +30,12 @@ auto create_file() -> Task<void> {
         }
     }
     co_await writer.flush();
-    if (auto meta = co_await writer.writer().metadata(); meta) {
+    if (auto meta = co_await writer.inner().metadata(); meta) {
         LOG_INFO("{}", meta.value().stx_size);
     } else {
         LOG_ERROR("{} {}", meta.error().value(), meta.error().message());
     }
-    if (auto fsync_ret = co_await writer.writer().fsync_data(); !fsync_ret) {
+    if (auto fsync_ret = co_await writer.inner().fsync_data(); !fsync_ret) {
         LOG_ERROR("{} {}", fsync_ret.error().value(), fsync_ret.error().message());
     }
     LOG_INFO("create file succ");
