@@ -17,7 +17,7 @@ auto main() -> int{
         // 设置多少个工作线程
         .set_num_workers(std::thread::hardware_concurrency())  
         // 设置将多少次submit才真正提供
-        .set_num_weak_submissions_(4)
+        .set_submit_interval(4)
         // 多久检查一次全局队列
         .set_check_gloabal_interval(61)
         // 多久检查一个I/O驱动

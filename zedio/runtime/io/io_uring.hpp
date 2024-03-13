@@ -18,8 +18,8 @@ inline thread_local IORing *t_ring{nullptr};
 class IORing {
 public:
     IORing(const Config &config)
-        : num_max_weak_submissions_{config.num_weak_submissions_} {
-        if (auto ret = io_uring_queue_init(config.ring_entries_, &ring_, config.io_uring_flags_);
+        : submit_interval_{config.submit_interval_} {
+        if (auto ret = io_uring_queue_init(config.ring_entries_, &ring_, config.ring_flags_);
             ret < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
@@ -72,14 +72,14 @@ public:
     }
 
     void submit() {
-        num_cur_weak_submissions_ += 1;
-        if (num_cur_weak_submissions_ == num_max_weak_submissions_) {
+        submit_tick_ += 1;
+        if (submit_tick_ == submit_interval_) {
             force_submit();
         }
     }
 
     void force_submit() {
-        num_max_weak_submissions_ = 0;
+        submit_tick_ = 0;
         if (auto ret = io_uring_submit(&ring_); ret < 0) [[unlikely]] {
             LOG_ERROR("submit sqes failed, {}", strerror(-ret));
         }
@@ -87,8 +87,8 @@ public:
 
 private:
     struct io_uring ring_ {};
-    uint32_t        num_cur_weak_submissions_{0};
-    uint32_t        num_max_weak_submissions_;
+    uint32_t        submit_tick_{0};
+    uint32_t        submit_interval_;
 };
 
 } // namespace zedio::runtime::detail

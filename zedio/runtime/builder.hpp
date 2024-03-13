@@ -32,18 +32,14 @@ public:
     }
 
     [[nodiscard]]
-    auto set_num_weak_submissions_(uint32_t num) -> Builder & {
-        config_.num_weak_submissions_ = num;
+    auto set_submit_interval(uint32_t interval) -> Builder & {
+        config_.submit_interval_ = interval;
         return *this;
     }
 
     [[nodiscard]]
-    auto set_io_uring_sqpoll(bool on) -> Builder & {
-        if (on) {
-            config_.io_uring_flags_ |= IORING_SETUP_SQPOLL;
-        } else {
-            config_.io_uring_flags_ &= ~IORING_SETUP_SQPOLL;
-        }
+    auto set_custom_flags(unsigned int flag) -> Builder & {
+        config_.ring_flags_ |= flag;
         return *this;
     }
 

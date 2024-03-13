@@ -24,7 +24,7 @@ public:
             : config_{config}
             , idle_{config.num_workers_}
             , shutdown_{static_cast<std::ptrdiff_t>(config.num_workers_)} {
-            LOG_TRACE("runtime with {} threads", config_.num_workers_);
+            LOG_TRACE("{}", config);
             for (std::size_t i = 0; i < config_.num_workers_; ++i) {
                 // Make sure all threads have started
                 std::barrier sync(2);

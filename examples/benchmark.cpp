@@ -63,7 +63,7 @@ auto main(int argc, char **argv) -> int {
     auto num_threads = std::stoi(argv[1]);
     Runtime::options()
         .set_num_workers(num_threads)
-        .set_num_weak_submissions_(0)
+        .set_submit_interval(0)
         .build()
         .block_on(server());
     return 0;

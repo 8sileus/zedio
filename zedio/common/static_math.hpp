@@ -9,7 +9,7 @@ template <typename T>
     requires std::is_integral_v<T>
 static inline consteval auto static_pow(T x, T y) -> T {
     T result = 1;
-    while (y--) {
+    while (--y) {
         result *= x;
     }
     return result;
