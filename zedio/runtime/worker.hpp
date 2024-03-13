@@ -3,8 +3,8 @@
 #include "zedio/common/debug.hpp"
 #include "zedio/common/util/rand.hpp"
 #include "zedio/common/util/thread.hpp"
-#include "zedio/io/base/driver.hpp"
 #include "zedio/runtime/config.hpp"
+#include "zedio/runtime/driver.hpp"
 #include "zedio/runtime/idle.hpp"
 #include "zedio/runtime/queue.hpp"
 // C++
@@ -361,7 +361,7 @@ private:
     util::FastRand                         rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
-    io::detail::Driver                     driver_;
+    Driver                                 driver_;
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};

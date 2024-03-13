@@ -2,15 +2,13 @@
 
 #include "zedio/common/error.hpp"
 #include "zedio/common/static_math.hpp"
-#include "zedio/time/timer/wheel.hpp"
+#include "zedio/runtime/timer/wheel.hpp"
 
-namespace zedio::time::detail {
+namespace zedio::runtime::detail {
 
 class Timer;
 
 inline thread_local Timer *t_timer;
-
-constexpr inline std::size_t MAX_LEVEL = 6;
 
 class Timer {
 public:
@@ -104,4 +102,4 @@ private:
     Wheel<MS_PER_SLOT>                    wheel;
 };
 
-} // namespace zedio::time::detail
+} // namespace zedio::runtime::detail

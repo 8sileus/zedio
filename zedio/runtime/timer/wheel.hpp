@@ -1,17 +1,16 @@
 #pragma once
 
 #include "zedio/common/static_math.hpp"
+#include "zedio/runtime/config.hpp"
 #include "zedio/runtime/queue.hpp"
-#include "zedio/time/timer/entry.hpp"
+#include "zedio/runtime/timer/entry.hpp"
 // C
 #include <assert.h>
 // C++
 #include <array>
 #include <bit>
 
-namespace zedio::time::detail {
-
-static inline constexpr std::size_t SLOT_SIZE{64};
+namespace zedio::runtime::detail {
 
 template <std::size_t MS_PER_SLOT>
     requires(MS_PER_SLOT > 0)
@@ -174,4 +173,4 @@ private:
     std::array<std::shared_ptr<Entry>, SLOT_SIZE> slots_{};
 };
 
-} // namespace zedio::time::detail
+} // namespace zedio::runtime::detail

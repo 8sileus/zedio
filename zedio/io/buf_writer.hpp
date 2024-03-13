@@ -7,7 +7,7 @@ namespace zedio::io {
 template <typename IO>
 class BufWriter : public detail::Writer<IO> {
 public:
-    BufWriter(IO &&io, std::size_t size = detail::Config::DEFAULT_BUF_SIZE)
+    BufWriter(IO &&io, std::size_t size = detail::StreamBuffer::DEFAULT_BUF_SIZE)
         : detail::Writer<IO>{io_, stream_}
         , io_{std::move(io)}
         , stream_{size} {}

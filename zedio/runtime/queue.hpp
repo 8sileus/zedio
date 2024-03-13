@@ -104,8 +104,8 @@ public:
         auto [steal, _] = unpack(head_.load(std::memory_order::acquire));
         std::atomic_ref<uint32_t> atoimc_tail{tail_};
         auto                      tail = atoimc_tail.load(std::memory_order::acquire);
-        assert(Config::LOCAL_QUEUE_CAPACITY >= static_cast<std::size_t>(tail - steal));
-        return Config::LOCAL_QUEUE_CAPACITY - static_cast<std::size_t>(tail - steal);
+        assert(LOCAL_QUEUE_CAPACITY >= static_cast<std::size_t>(tail - steal));
+        return LOCAL_QUEUE_CAPACITY - static_cast<std::size_t>(tail - steal);
     }
 
     [[nodiscard]]
@@ -158,7 +158,7 @@ public:
             auto head = head_.load(std::memory_order::acquire);
             auto [steal, real] = unpack(head);
             tail = tail_;
-            if (tail - steal < static_cast<uint32_t>(Config::LOCAL_QUEUE_CAPACITY)) {
+            if (tail - steal < static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY)) {
                 // There is capacity for the task
                 break;
             } else if (steal != real) {
@@ -209,7 +209,7 @@ public:
         auto dst_tail = dst.tail_;
 
         // less than half of local_queue_capacity just return
-        if (dst_tail - steal > static_cast<uint32_t>(Config::LOCAL_QUEUE_CAPACITY / 2)) {
+        if (dst_tail - steal > static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY / 2)) {
             return result;
         }
         auto n = steal_into2(dst, dst_tail);
@@ -293,10 +293,9 @@ private:
                        uint32_t                  head,
                        [[maybe_unused]] uint32_t tail,
                        GlobalQueue              &global_queue) -> bool {
-        static constexpr auto NUM_TASKS_TAKEN{
-            static_cast<uint32_t>(Config::LOCAL_QUEUE_CAPACITY / 2)};
+        static constexpr auto NUM_TASKS_TAKEN{static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY / 2)};
 
-        assert(tail - head == Config::LOCAL_QUEUE_CAPACITY);
+        assert(tail - head == LOCAL_QUEUE_CAPACITY);
 
         auto prev = pack(head, head);
 
@@ -318,7 +317,7 @@ private:
     }
 
 private:
-    static constexpr std::size_t MASK = Config::LOCAL_QUEUE_CAPACITY - 1;
+    static constexpr std::size_t MASK = LOCAL_QUEUE_CAPACITY - 1;
 
     // [[nodiscard]]
     // static auto wrapping_add(uint32_t a, uint32_t b) -> uint32_t {
@@ -344,7 +343,7 @@ private:
     std::atomic<uint64_t> head_{0};
     uint32_t              tail_{0};
     // std::atomic<uint32_t> tail_{0};
-    std::array<std::coroutine_handle<>, Config::LOCAL_QUEUE_CAPACITY> buffer_;
+    std::array<std::coroutine_handle<>, LOCAL_QUEUE_CAPACITY> buffer_;
 };
 
 } // namespace zedio::runtime::detail

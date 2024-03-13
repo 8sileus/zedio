@@ -5,7 +5,7 @@
 #include "zedio/common/macros.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 #include "zedio/io/base/callback.hpp"
-#include "zedio/io/base/driver.hpp"
+#include "zedio/runtime/driver.hpp"
 
 using namespace std::chrono_literals;
 
@@ -17,7 +17,7 @@ public:
     template <typename F, typename... Args>
         requires std::is_invocable_v<F, io_uring_sqe *, Args...>
     IORegistrator(F &&f, Args... args)
-        : sqe_{t_ring->get_sqe()} {
+        : sqe_{runtime::detail::t_ring->get_sqe()} {
         if (sqe_ != nullptr) [[likely]] {
             std::invoke(std::forward<F>(f), sqe_, std::forward<Args>(args)...);
             io_uring_sqe_set_data(sqe_, &this->cb_);
@@ -33,6 +33,7 @@ public:
     IORegistrator(IORegistrator &&other) = delete;
     auto operator=(IORegistrator &&other) -> IORegistrator & = delete;
 
+public:
     auto await_ready() const noexcept -> bool {
         return sqe_ == nullptr;
     }
@@ -40,13 +41,13 @@ public:
     void await_suspend(std::coroutine_handle<> handle) {
         cb_.handle_ = std::move(handle);
         assert(sqe_);
-        t_ring->submit();
+        runtime::detail::t_ring->submit();
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto set_timeout_for(std::chrono::nanoseconds timeout) -> IO & {
         if (timeout >= std::chrono::milliseconds{1} && sqe_ != nullptr) [[likely]] {
-            auto timeout_sqe = t_ring->get_sqe();
+            auto timeout_sqe = runtime::detail::t_ring->get_sqe();
             if (timeout_sqe != nullptr) [[likely]] {
                 sqe_->flags |= IOSQE_IO_LINK;
 

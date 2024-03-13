@@ -8,7 +8,7 @@
 #include <coroutine>
 #include <memory>
 
-namespace zedio::time::detail {
+namespace zedio::runtime::detail {
 
 class Entry {
 public:
@@ -38,4 +38,4 @@ public:
     std::shared_ptr<Entry>                next_{nullptr};
 };
 
-} // namespace zedio::time::detail
+} // namespace zedio::runtime::detail

@@ -7,7 +7,7 @@ namespace zedio::io {
 template <typename IO>
 class BufReader : public detail::Reader<IO> {
 public:
-    BufReader(IO &&io, std::size_t size = detail::Config::DEFAULT_BUF_SIZE)
+    BufReader(IO &&io, std::size_t size = detail::StreamBuffer::DEFAULT_BUF_SIZE)
         : detail::Reader<IO>{io_, stream_}
         , io_{std::move(io)}
         , stream_{size} {}

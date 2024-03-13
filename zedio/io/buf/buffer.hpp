@@ -127,6 +127,9 @@ public:
         }
     }
 
+public:
+    static constexpr std::size_t DEFAULT_BUF_SIZE{8 * 1024};
+
 private:
     std::vector<char> buf_;
     std::size_t       r_pos_{0};

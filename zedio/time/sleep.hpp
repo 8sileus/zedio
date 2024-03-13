@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/concepts.hpp"
-#include "zedio/time/timer/timer.hpp"
+#include "zedio/runtime/timer/timer.hpp"
 
 using namespace std::chrono_literals;
 
@@ -25,7 +25,7 @@ namespace detail {
         }
 
         auto await_suspend(std::coroutine_handle<> handle) noexcept -> bool {
-            auto ret = detail::t_timer->add_entry(expired_time_, handle);
+            auto ret = runtime::detail::t_timer->add_entry(expired_time_, handle);
             if (!ret) {
                 result_ = std::unexpected{ret.error()};
                 return false;

@@ -9,8 +9,8 @@ template <typename IO>
 class BufStream : public detail::Reader<IO>, public detail::Writer<IO> {
 public:
     BufStream(IO        &&io,
-              std::size_t r_size = detail::Config::DEFAULT_BUF_SIZE,
-              std::size_t w_size = detail::Config::DEFAULT_BUF_SIZE)
+              std::size_t r_size = detail::StreamBuffer::DEFAULT_BUF_SIZE,
+              std::size_t w_size = detail::StreamBuffer::DEFAULT_BUF_SIZE)
         : detail::Reader<IO>(io_, r_stream_)
         , detail::Writer<IO>{io_, w_stream_}
         , io_{std::move(io)}

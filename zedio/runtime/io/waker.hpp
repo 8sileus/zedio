@@ -1,11 +1,11 @@
 #pragma once
 
-#include "zedio/io/base/io_uring.hpp"
+#include "zedio/runtime/io/io_uring.hpp"
 // Linux
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-namespace zedio::io::detail {
+namespace zedio::runtime::detail {
 
 class Waker {
 public:
@@ -17,6 +17,11 @@ public:
         }
     }
 
+    ~Waker() {
+        ::close(fd_);
+    }
+
+public:
     void wake_up() {
         static constexpr uint64_t buf{1};
         if (auto ret = ::write(this->fd_, &buf, sizeof(buf)); ret != sizeof(buf)) [[unlikely]] {
@@ -24,7 +29,7 @@ public:
         }
     }
 
-    void reg() {
+    void turn_on() {
         if (flag_ != 0) {
             flag_ = 0;
             auto sqe = t_ring->get_sqe();
@@ -34,13 +39,9 @@ public:
         }
     }
 
-    ~Waker() {
-        close(fd_);
-    }
-
 private:
     uint64_t flag_{1};
     int      fd_;
 };
 
-} // namespace zedio::io::detail
+} // namespace zedio::runtime::detail

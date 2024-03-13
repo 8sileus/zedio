@@ -1,7 +1,6 @@
 #pragma once
 
 #include "zedio/io/buf/buffer.hpp"
-#include "zedio/io/config.hpp"
 
 namespace zedio::io::detail {
 

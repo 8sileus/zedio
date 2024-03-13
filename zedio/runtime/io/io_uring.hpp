@@ -1,8 +1,7 @@
 #pragma once
 
 #include "zedio/common/debug.hpp"
-#include "zedio/io/config.hpp"
-
+#include "zedio/runtime/config.hpp"
 // C
 #include <cstring>
 // C++
@@ -11,7 +10,7 @@
 // Linux
 #include <liburing.h>
 
-namespace zedio::io::detail {
+namespace zedio::runtime::detail {
 class IORing;
 
 inline thread_local IORing *t_ring{nullptr};
@@ -19,7 +18,7 @@ inline thread_local IORing *t_ring{nullptr};
 class IORing {
 public:
     IORing(const Config &config)
-        : config_{config} {
+        : num_max_weak_submissions_{config.num_weak_submissions_} {
         if (auto ret = io_uring_queue_init(config.ring_entries_, &ring_, config.io_uring_flags_);
             ret < 0) [[unlikely]] {
             throw std::runtime_error(
@@ -34,13 +33,14 @@ public:
         t_ring = nullptr;
     }
 
+public:
     [[nodiscard]]
     auto ring() -> struct io_uring * {
         return &ring_;
     }
 
     [[nodiscard]]
-    auto get_sqe() -> io_uring_sqe * {
+    auto get_sqe() -> struct io_uring_sqe * {
         return io_uring_get_sqe(&ring_);
     }
 
@@ -72,23 +72,23 @@ public:
     }
 
     void submit() {
-        num_weak_submissions_ += 1;
-        if (num_weak_submissions_ == config_.num_weak_submissions_) {
+        num_cur_weak_submissions_ += 1;
+        if (num_cur_weak_submissions_ == num_max_weak_submissions_) {
             force_submit();
         }
     }
 
     void force_submit() {
-        num_weak_submissions_ = 0;
+        num_max_weak_submissions_ = 0;
         if (auto ret = io_uring_submit(&ring_); ret < 0) [[unlikely]] {
             LOG_ERROR("submit sqes failed, {}", strerror(-ret));
         }
     }
 
 private:
-    const Config   &config_;
     struct io_uring ring_ {};
-    uint32_t        num_weak_submissions_{0};
+    uint32_t        num_cur_weak_submissions_{0};
+    uint32_t        num_max_weak_submissions_;
 };
 
-} // namespace zedio::io::detail
+} // namespace zedio::runtime::detail
