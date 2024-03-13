@@ -8,7 +8,7 @@
 #include "zedio/runtime/idle.hpp"
 #include "zedio/runtime/queue.hpp"
 // C++
-#include <barrier>
+#include <latch>
 #include <thread>
 
 namespace zedio::runtime::detail {
@@ -27,16 +27,16 @@ public:
             LOG_TRACE("{}", config);
             for (std::size_t i = 0; i < config_.num_workers_; ++i) {
                 // Make sure all threads have started
-                std::barrier sync(2);
+                std::latch sync{2};
                 threads_.emplace_back([this, i, &sync]() {
-                    Worker worker(*this, i);
+                    Worker worker{*this, i};
                     workers_.emplace_back(&worker);
-                    // workers_.emplace_back(std::make_unique<Worker>(*this, i));
-                    sync.arrive_and_drop();
-                    worker.run();
+                    assert(workers_.size() == i + 1);
+                    assert(workers_.back() == &worker);
 
+                    sync.count_down();
+                    worker.run();
                     shutdown_.arrive_and_wait();
-                    // workers_[i]->run();
                 });
                 sync.arrive_and_wait();
             }
@@ -98,7 +98,7 @@ public:
         GlobalQueue  global_queue_{};
         /// Coordinates idle workers
         Idle                     idle_;
-        std::barrier<>           shutdown_;
+        std::latch               shutdown_;
         std::vector<Worker *>    workers_{};
         std::vector<std::thread> threads_{};
     };
