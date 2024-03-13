@@ -61,7 +61,7 @@ auto test(std::size_t n) -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::TRACE);
-    auto runtime = Runtime::options().set_num_workers(4).build();
+    auto runtime = Runtime::options().scheduler().set_num_workers(4).build();
     runtime.block_on(test(10000));
     return 0;
 }

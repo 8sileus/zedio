@@ -117,7 +117,7 @@ auto test() -> Task<void> {
 }
 
 auto main() -> int {
-    auto runtime = Runtime::options().set_num_workers(1).build();
+    auto runtime = Runtime::options().scheduler().set_num_workers(1).build();
     runtime.block_on(test());
     return 0;
 }

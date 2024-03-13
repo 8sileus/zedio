@@ -14,7 +14,7 @@ private:
 
 public:
     // Waiting for the task to close
-    void block_on(async::Task<void> &&first_coro) {
+    auto block_on(async::Task<void> &&first_coro) -> int {
         auto main_coro = [](runtime::detail::Worker::Shared &shared,
                             async::Task<void>              &&main_coro) -> async::Task<void> {
             try {
@@ -32,6 +32,7 @@ public:
         shared_.wake_up_one();
 
         wait_workers();
+        return 0;
     }
 
 private:

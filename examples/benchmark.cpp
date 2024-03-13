@@ -62,7 +62,9 @@ auto main(int argc, char **argv) -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
     auto num_threads = std::stoi(argv[1]);
     Runtime::options()
+        .scheduler()
         .set_num_workers(num_threads)
+        .driver()
         .set_submit_interval(0)
         .build()
         .block_on(server());

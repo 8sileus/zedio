@@ -21,7 +21,7 @@ auto create_file() -> Task<void> {
     std::string n2 = "\r\n";
     auto        writer_test_move = io::BufWriter(std::move(ret.value()));
     LOG_DEBUG("{}", writer_test_move.capacity());
-    auto        writer = std::move(writer_test_move);
+    auto writer = std::move(writer_test_move);
     for (int i = 0; i <= 10000; i += 1) {
         if (i & 1) {
             co_await writer.write_all(std::to_string(i) + n1);
@@ -148,7 +148,5 @@ auto test() -> Task<void> {
 }
 
 auto main() -> int {
-    auto runtime = Runtime::options().set_num_workers(1).build();
-    runtime.block_on(test());
-    return 0;
+    return Runtime::options().scheduler().set_num_workers(1).build().block_on(test());
 }

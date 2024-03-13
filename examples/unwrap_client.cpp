@@ -60,6 +60,7 @@ auto main(int argc, char **argv) -> int {
     auto num_threads = std::stoi(argv[3]);
     auto num_connections = std::stoi(argv[4]);
     Runtime::options()
+        .scheduler()
         .set_num_workers(num_threads)
         .build()
         .block_on(client(ip, static_cast<uint16_t>(port), num_connections));
