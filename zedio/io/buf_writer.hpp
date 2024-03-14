@@ -17,11 +17,11 @@ public:
         : io_{std::move(io)}
         , w_stream_{size} {}
 
-    BufWriter(BufWriter &&other)
+    BufWriter(BufWriter &&other) noexcept
         : io_{std::move(other.io_)}
         , w_stream_{std::move(other.w_stream_)} {}
 
-    auto operator=(BufWriter &&other) -> BufWriter & {
+    auto operator=(BufWriter &&other) noexcept -> BufWriter & {
         io_ = std::move(other.io_);
         w_stream_ = std::move(other.w_stream_);
         return *this;

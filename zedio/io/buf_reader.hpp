@@ -17,11 +17,11 @@ public:
         : io_{std::move(io)}
         , r_stream_{size} {}
 
-    BufReader(BufReader &&other)
+    BufReader(BufReader &&other) noexcept
         : io_{std::move(other.io_)}
         , r_stream_{std::move(other.r_stream_)} {}
 
-    auto operator=(BufReader &&other) -> BufReader & {
+    auto operator=(BufReader &&other) noexcept -> BufReader & {
         io_ = std::move(other.io_);
         r_stream_ = std::move(other.r_stream_);
         return *this;

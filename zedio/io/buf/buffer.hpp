@@ -13,11 +13,11 @@ namespace zedio::io::detail {
 
 class StreamBuffer {
 public:
-    StreamBuffer(std::size_t size)
+    explicit StreamBuffer(std::size_t size)
         : buf_(size) {}
 
 public:
-    void reset_data() {
+    void reset_data() noexcept {
         auto len = r_remaining();
         std::copy(r_begin(), r_end(), buf_.begin());
         r_pos_ = 0;
@@ -28,7 +28,7 @@ public:
         r_pos_ = w_pos_ = 0;
     }
 
-    void r_increase(std::size_t n) {
+    void r_increase(std::size_t n) noexcept {
         r_pos_ += n;
         assert(r_pos_ <= w_pos_);
     }
@@ -39,17 +39,17 @@ public:
     }
 
     [[nodiscard]]
-    auto r_begin() const -> std::vector<char>::const_iterator {
+    auto r_begin() const noexcept -> std::vector<char>::const_iterator {
         return buf_.begin() + r_pos_;
     }
 
     [[nodiscard]]
-    auto r_end() const -> const std::vector<char>::const_iterator {
+    auto r_end() const noexcept -> const std::vector<char>::const_iterator {
         return r_begin() + r_remaining();
     }
 
     [[nodiscard]]
-    auto r_splice() const -> std::span<const char> {
+    auto r_splice() const noexcept -> std::span<const char> {
         return {r_begin(), r_end()};
     }
 
@@ -64,17 +64,17 @@ public:
     }
 
     [[nodiscard]]
-    auto w_begin() -> std::vector<char>::iterator {
+    auto w_begin() noexcept -> std::vector<char>::iterator {
         return buf_.begin() + w_pos_;
     }
 
     [[nodiscard]]
-    auto w_end() -> std::vector<char>::iterator {
+    auto w_end() noexcept -> std::vector<char>::iterator {
         return w_begin() + w_remaining();
     }
 
     [[nodiscard]]
-    auto w_splice() -> std::span<char> {
+    auto w_splice() noexcept -> std::span<char> {
         return {w_begin(), w_end()};
     }
 
@@ -89,7 +89,7 @@ public:
     }
 
     [[nodiscard]]
-    auto write_to(std::span<char> dst_buf) -> std::size_t {
+    auto write_to(std::span<char> dst_buf) noexcept -> std::size_t {
         auto len = std::min(r_remaining(), dst_buf.size_bytes());
         std::copy_n(r_begin(), len, dst_buf.begin());
         r_increase(len);
@@ -100,7 +100,7 @@ public:
     }
 
     [[nodiscard]]
-    auto read_from(std::span<const char> src_buf) -> std::size_t {
+    auto read_from(std::span<const char> src_buf) noexcept -> std::size_t {
         auto len = std::min(w_remaining(), src_buf.size_bytes());
         std::copy_n(src_buf.begin(), len, w_begin());
         w_increase(len);
@@ -108,7 +108,7 @@ public:
     }
 
     [[nodiscard]]
-    auto find_flag_and_return_splice(std::string_view end_str) -> std::span<const char> {
+    auto find_flag_and_return_splice(std::string_view end_str) noexcept -> std::span<const char> {
         auto pos = std::string_view{r_splice()}.find(end_str);
         if (pos == std::string_view::npos) {
             return {};
@@ -118,7 +118,7 @@ public:
     }
 
     [[nodiscard]]
-    auto find_flag_and_return_splice(char end_char) -> std::span<const char> {
+    auto find_flag_and_return_splice(char end_char) noexcept -> std::span<const char> {
         auto pos = std::string_view{r_splice()}.find(end_char);
         if (pos == std::string_view::npos) {
             return {};

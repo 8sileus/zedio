@@ -22,7 +22,7 @@ public:
         return (static_cast<B *>(this)->io_);
     }
 
-    void consume(std::size_t n) {
+    void consume(std::size_t n) noexcept {
         n = std::min(n, static_cast<B *>(this).r_stream_.r_remaining());
         static_cast<B *>(this)->r_stream_.r_increase(n);
     }
@@ -53,23 +53,33 @@ public:
         });
     }
 
-    template <typename T>
+    template <typename C, typename T>
         requires requires(std::string_view s, T s_or_c) {
             { s.find(s_or_c) };
-        }
-    [[REMEMBER_CO_AWAIT]]
-    auto read_until(std::string &buf, T end_flag) -> zedio::async::Task<Result<std::size_t>> {
+        } && (std::is_same_v<std::string, C> || std::is_same_v<std::vector<char>, C>)
+    [[REMEMBER_CO_AWAIT]] auto read_until(C &buf, T end_flag)
+        -> zedio::async::Task<Result<std::size_t>> {
         Result<std::size_t> ret;
         while (true) {
             if (auto splice
                 = static_cast<B *>(this)->r_stream_.find_flag_and_return_splice(end_flag);
                 !splice.empty()) {
-                buf.append(splice.begin(), splice.end());
+                if constexpr (std::is_same_v<std::string, C>) {
+                    buf.append(splice.begin(), splice.end());
+                } else {
+                    buf.insert(buf.end(), splice.begin(), splice.end());
+                }
                 static_cast<B *>(this)->r_stream_.r_increase(splice.size_bytes());
                 break;
             } else {
-                buf.append(static_cast<B *>(this)->r_stream_.r_splice().begin(),
-                           static_cast<B *>(this)->r_stream_.r_splice().end());
+                if constexpr (std::is_same_v<std::string, C>) {
+                    buf.append(static_cast<B *>(this)->r_stream_.r_splice().begin(),
+                               static_cast<B *>(this)->r_stream_.r_splice().end());
+                } else {
+                    buf.insert(buf.end(),
+                               static_cast<B *>(this)->r_stream_.r_splice().begin(),
+                               static_cast<B *>(this)->r_stream_.r_splice().end());
+                }
                 static_cast<B *>(this)->r_stream_.reset_pos();
             }
 
@@ -86,8 +96,9 @@ public:
         co_return buf.size();
     }
 
+    template <class C>
     [[REMEMBER_CO_AWAIT]]
-    auto read_line(std::string &buf) {
+    auto read_line(C &buf) {
         return read_until(buf, '\n');
     }
 

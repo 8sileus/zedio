@@ -15,12 +15,12 @@ public:
         , r_stream_{r_size}
         , w_stream_{w_size} {}
 
-    BufStream(BufWriter &&other)
+    BufStream(BufWriter &&other) noexcept
         : io_{std::move(other.io_)}
         , r_stream_{std::move(other.r_stream_)}
         , w_stream_{std::move(other.w_stream)} {}
 
-    auto operator=(BufStream &&other) -> BufStream & {
+    auto operator=(BufStream &&other) noexcept -> BufStream & {
         io_ = std::move(other.io_);
         stream_ = std::move(other.stream_);
         return *this;

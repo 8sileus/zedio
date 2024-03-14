@@ -53,12 +53,12 @@ auto read_line() -> Task<void> {
         LOG_ERROR("{} {}", meta.error().value(), meta.error().message());
     }
     auto        reader = io::BufReader(std::move(ret.value()));
-    std::string line;
+    std::vector<char> line;
     while (true) {
         if (auto ret = co_await reader.read_line(line); !ret || ret.value() == 0) {
             break;
         } else {
-            LOG_DEBUG("{}", line);
+            LOG_DEBUG("{}", line.data());
             line.clear();
         }
     }
