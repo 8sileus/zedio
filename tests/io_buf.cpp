@@ -1,6 +1,7 @@
 #include "zedio/core.hpp"
 #include "zedio/fs/file.hpp"
 #include "zedio/io/buf_reader.hpp"
+#include "zedio/io/buf_stream.hpp"
 #include "zedio/io/buf_writer.hpp"
 #include "zedio/log.hpp"
 
@@ -139,12 +140,44 @@ auto read() -> Task<void> {
     co_return;
 }
 
+auto stream_write_read() -> Task<void> {
+    auto file = co_await File::options().read(true).write(true).open("read_line_test.txt");
+    auto stream = io::BufStream(std::move(file.value()));
+
+    std::string n1 = "\n";
+    std::string n2 = "\r\n";
+    for (int i = 0; i <= 100; i += 1) {
+        if (i & 1) {
+            co_await stream.write_all(std::to_string(i) + n1);
+        } else {
+            co_await stream.write_all(std::to_string(i) + n2);
+        }
+    }
+
+    std::string line;
+    if (auto ret = co_await stream.read_line(line); !ret) {
+        LOG_ERROR("{}", ret.error());
+    } else {
+        LOG_DEBUG("{}", line.data());
+    }
+
+    auto buf = std::array<char, 100>{};
+    if (auto ret = co_await stream.read_exact(buf); !ret) {
+        LOG_ERROR("{}", ret.error());
+    } else {
+        buf[99] = '\0';
+        LOG_DEBUG("{}", buf.data());
+    }
+    co_return;
+}
+
 auto test() -> Task<void> {
     co_await create_file();
     co_await read_line();
     co_await read_until();
     co_await read_exact();
     co_await read();
+    co_await stream_write_read();
 }
 
 auto main() -> int {

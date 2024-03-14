@@ -8,23 +8,17 @@ namespace zedio::io {
 template <typename IO>
 class BufStream : public detail::Reader<IO>, public detail::Writer<IO> {
 public:
-    BufStream(IO        &&io,
-              std::size_t r_size = detail::StreamBuffer::DEFAULT_BUF_SIZE,
-              std::size_t w_size = detail::StreamBuffer::DEFAULT_BUF_SIZE)
-        : detail::Reader<IO>(io_, r_stream_)
-        , detail::Writer<IO>{io_, w_stream_}
+    BufStream(IO &&io, std::size_t buf_size = detail::StreamBuffer::DEFAULT_BUF_SIZE)
+        : detail::Reader<IO>{io, stream_}
+        , detail::Writer<IO>{io, stream_}
         , io_{std::move(io)}
-        , r_stream_{r_size}
-        , w_stream_{w_size} {}
+        , stream_{buf_size} {}
 
-    BufStream(BufWriter &&other)
-        : detail::Reader<IO>(io_, r_stream_)
-        , detail::Writer<IO>(io_, w_stream_)
-        , io_{std::move(other.io_)}
-        , r_stream_{std::move(other.r_stream_)}
-        , w_stream_{std::move(other.w_stream)} {}
+    BufStream(BufStream &&other) noexcept
+        : io_{std::move(other.io_)}
+        , stream_{other.stream_} {}
 
-    auto operator=(BufStream &&other) -> BufStream & {
+    auto operator=(BufStream &&other) noexcept -> BufStream & {
         io_ = std::move(other.io_);
         stream_ = std::move(other.stream_);
         return *this;
@@ -32,8 +26,7 @@ public:
 
 private:
     IO                   io_;
-    detail::StreamBuffer r_stream_;
-    detail::StreamBuffer w_stream_;
+    detail::StreamBuffer stream_;
 };
 
 } // namespace zedio::io
