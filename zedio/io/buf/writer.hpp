@@ -17,11 +17,6 @@ public:
         return static_cast<const B *>(this)->w_stream_.capacity();
     }
 
-    [[nodiscard]]
-    auto inner() noexcept -> decltype(auto) {
-        return (static_cast<B *>(this)->io_);
-    }
-
     [[REMEMBER_CO_AWAIT]]
     auto flush() -> zedio::async::Task<Result<void>> {
         auto                splice = buffer();

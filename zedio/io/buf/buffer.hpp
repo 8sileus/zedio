@@ -24,6 +24,10 @@ public:
         w_pos_ = len;
     }
 
+    void disable() noexcept {
+        std::vector<char>().swap(buf_);
+    }
+
     void reset_pos() noexcept {
         r_pos_ = w_pos_ = 0;
     }

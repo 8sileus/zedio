@@ -7,6 +7,9 @@ namespace zedio::io {
 
 template <typename IO>
 class BufStream : public detail::Reader<BufStream<IO>>, public detail::Writer<BufStream<IO>> {
+    friend class detail::Reader<BufStream<IO>>;
+    friend class detail::Writer<BufStream<IO>>;
+
 public:
     BufStream(IO        &&io,
               std::size_t r_size = detail::StreamBuffer::DEFAULT_BUF_SIZE,
@@ -24,6 +27,19 @@ public:
         io_ = std::move(other.io_);
         stream_ = std::move(other.stream_);
         return *this;
+    }
+
+public:
+    [[nodiscard]]
+    auto inner() noexcept -> IO & {
+        return io_;
+    }
+
+    [[nodiscard]]
+    auto into_inner() noexcept -> IO {
+        r_stream_.disable();
+        w_stream_.disable();
+        return std::move(io_);
     }
 
 private:

@@ -27,6 +27,18 @@ public:
         return *this;
     }
 
+public:
+    [[nodiscard]]
+    auto inner() noexcept -> IO & {
+        return io_;
+    }
+
+    [[nodiscard]]
+    auto into_inner() noexcept -> IO {
+        r_stream_.disable();
+        return std::move(io_);
+    }
+
 private:
     IO                   io_;
     detail::StreamBuffer r_stream_;
