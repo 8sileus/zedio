@@ -3,12 +3,11 @@
 #include "zedio/net.hpp"
 
 using namespace zedio::async;
-using namespace zedio::net;
 using namespace zedio;
 using namespace zedio::log;
 
-auto client(const UnixSocketAddr &addr) -> Task<void> {
-    auto ret = co_await UnixStream::connect(addr);
+auto client(const unix_domian::SocketAddr &addr) -> Task<void> {
+    auto ret = co_await unix_domian::TcpStream::connect(addr);
     if (!ret) {
         console.error("{}", ret.error().message());
         co_return;
@@ -30,8 +29,8 @@ auto client(const UnixSocketAddr &addr) -> Task<void> {
     }
 }
 
-auto server(const UnixSocketAddr &addr) -> Task<void> {
-    auto ret = UnixListener::bind(addr);
+auto server(const unix_domian::SocketAddr &addr) -> Task<void> {
+    auto ret = unix_domian::TcpListener::bind(addr);
     if (!ret) {
         console.error("{}", ret.error().message());
         co_return;
@@ -58,7 +57,7 @@ auto server(const UnixSocketAddr &addr) -> Task<void> {
 }
 
 auto test() -> Task<void> {
-    auto addr = UnixSocketAddr::parse("tmp_test");
+    auto addr = unix_domian::SocketAddr::parse("tmp_test");
     if (!addr) {
         co_return;
     }

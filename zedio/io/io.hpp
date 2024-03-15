@@ -17,6 +17,7 @@
 #include "zedio/io/awaiter/read.hpp"
 #include "zedio/io/awaiter/readv.hpp"
 #include "zedio/io/awaiter/recv.hpp"
+#include "zedio/io/awaiter/recvfrom.hpp"
 #include "zedio/io/awaiter/rename.hpp"
 #include "zedio/io/awaiter/send.hpp"
 #include "zedio/io/awaiter/sendto.hpp"
@@ -30,14 +31,15 @@
 #include "zedio/io/awaiter/waitid.hpp"
 #include "zedio/io/awaiter/write.hpp"
 #include "zedio/io/awaiter/writev.hpp"
-// Linux
-#include <netdb.h>
 
 namespace zedio::io::detail {
 
-class IO {
-public:
-    ~IO() {
+class Fd {
+protected:
+    explicit Fd(int fd)
+        : fd_{fd} {}
+
+    ~Fd() {
         if (fd_ >= 0) {
             // TODO register closer
             if (async_close(fd_) == false) {
@@ -47,12 +49,12 @@ public:
         }
     }
 
-    IO(IO &&other) noexcept
+    Fd(Fd &&other) noexcept
         : fd_{other.fd_} {
         other.fd_ = -1;
     }
 
-    auto operator=(IO &&other) noexcept -> IO & {
+    auto operator=(Fd &&other) noexcept -> Fd & {
         if (fd_ >= 0) {
             sync_close(fd_);
         }
@@ -61,76 +63,12 @@ public:
         return *this;
     }
 
-protected:
-    explicit IO(int fd)
-        : fd_{fd} {}
-
 public:
     [[REMEMBER_CO_AWAIT]]
     auto close() noexcept {
         auto fd = fd_;
         fd_ = -1;
         return Close{fd};
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto read(std::span<char> buf) const noexcept {
-        return Read{fd_,
-                    buf.data(),
-                    static_cast<unsigned int>(buf.size_bytes()),
-                    static_cast<std::size_t>(-1)};
-    }
-
-    template <typename... Ts>
-    [[REMEMBER_CO_AWAIT]]
-    auto read_vectored(Ts &&...bufs) const noexcept {
-        return ReadVectored<Ts...>{fd_, std::forward<Ts>(bufs)...};
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto read_exact(std::span<char> buf) const noexcept -> zedio::async::Task<Result<void>> {
-        Result<std::size_t> ret;
-        while (!buf.empty()) {
-            ret = co_await this->read(buf);
-            if (!ret) [[unlikely]] {
-                co_return std::unexpected{ret.error()};
-            }
-            if (ret.value() == 0) {
-                co_return std::unexpected{make_zedio_error(Error::UnexpectedEOF)};
-            }
-            buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
-        }
-        co_return Result<void>{};
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto write(std::span<const char> buf) noexcept {
-        return Write{fd_,
-                     buf.data(),
-                     static_cast<unsigned int>(buf.size_bytes()),
-                     static_cast<std::size_t>(-1)};
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto write_all(std::span<const char> buf) noexcept -> zedio::async::Task<Result<void>> {
-        Result<std::size_t> ret;
-        while (!buf.empty()) {
-            ret = co_await this->write(buf);
-            if (!ret) [[unlikely]] {
-                co_return std::unexpected{ret.error()};
-            }
-            if (ret.value() == 0) [[unlikely]] {
-                co_return std::unexpected{make_zedio_error(Error::WriteZero)};
-            }
-            buf = buf.subspan(ret.value(), buf.size_bytes() - ret.value());
-        }
-        co_return Result<void>{};
-    }
-
-    template <typename... Ts>
-    [[REMEMBER_CO_AWAIT]]
-    auto write_vectored(Ts &&...bufs) noexcept {
-        return WriteVectored<Ts...>{fd_, std::forward<Ts>(bufs)...};
     }
 
     [[nodiscard]]
@@ -143,29 +81,6 @@ public:
         auto ret = fd_;
         fd_ = -1;
         return ret;
-    }
-
-    [[nodiscard]]
-    auto set_nodelay(bool on) noexcept -> Result<void> {
-        auto flags = ::fcntl(fd_, F_GETFL, 0);
-        if (on) {
-            flags |= O_NDELAY;
-        } else {
-            flags &= ~O_NDELAY;
-        }
-        if (::fcntl(fd_, F_SETFL, flags) == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return {};
-    }
-
-    [[nodiscard]]
-    auto nodelay() const noexcept -> Result<bool> {
-        auto flags = ::fcntl(fd_, F_GETFL, 0);
-        if (flags == -1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        return flags & O_NDELAY;
     }
 
     [[nodiscard]]

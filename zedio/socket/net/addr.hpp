@@ -1,20 +1,16 @@
 #pragma once
 
 #include "zedio/common/error.hpp"
-#include "zedio/net/io.hpp"
-// Linux
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/un.h>
 // C
-#include <cassert>
-#include <cstdint>
-#include <cstring>
+#include <cinttypes>
 // C++
 #include <format>
-#include <string_view>
+#include <string>
+// Linux
+#include <arpa/inet.h>
+#include <netdb.h>
 
-namespace zedio::net {
+namespace zedio::socket::net {
 
 class Ipv4Addr {
 public:
@@ -115,9 +111,7 @@ private:
 };
 
 class SocketAddr {
-    friend class detail::SocketIO;
-
-private:
+public:
     SocketAddr() = default;
 
 public:
@@ -235,70 +229,12 @@ private:
     } addr_;
 };
 
-class UnixSocketAddr {
-    friend class detail::SocketIO;
-
-    UnixSocketAddr() = default;
-
-    UnixSocketAddr(std::string_view path) {
-        addr_.sun_family = AF_UNIX;
-        std::memcpy(addr_.sun_path, path.data(), path.size());
-    }
-
-public:
-    UnixSocketAddr(const sockaddr *addr, std::size_t len) {
-        std::memcpy(&addr_, addr, len);
-    }
-
-    [[nodiscard]]
-    auto has_pathname() const noexcept -> bool {
-        return addr_.sun_path[0] == '\0';
-    }
-
-    [[nodiscard]]
-    auto family() const noexcept -> int {
-        return addr_.sun_family;
-    }
-
-    [[nodiscard]]
-    auto pathname() const noexcept -> std::string_view {
-        return addr_.sun_path;
-    }
-
-    [[nodiscard]]
-    auto sockaddr() const noexcept -> const struct sockaddr * {
-        return reinterpret_cast<const struct sockaddr *>(&addr_);
-    }
-
-    [[nodiscard]]
-    auto sockaddr() noexcept -> struct sockaddr * {
-        return reinterpret_cast<struct sockaddr *>(&addr_);
-    }
-
-    [[nodiscard]]
-    auto length() const noexcept -> socklen_t {
-        return strlen(addr_.sun_path) + sizeof(addr_.sun_family);
-    }
-
-public:
-    [[nodiscard]]
-    static auto parse(std::string_view path) -> std::optional<UnixSocketAddr> {
-        if (path.size() >= sizeof(addr_.sun_path) || path.empty()) {
-            return std::nullopt;
-        }
-        return UnixSocketAddr{path};
-    }
-
-private:
-    sockaddr_un addr_{};
-};
-
-} // namespace zedio::net
+} // namespace zedio::socket::net
 
 namespace std {
 
 template <>
-class formatter<zedio::net::Ipv4Addr> {
+class formatter<zedio::socket::net::Ipv4Addr> {
 public:
     constexpr auto parse(format_parse_context &context) {
         auto it{context.begin()};
@@ -313,13 +249,13 @@ public:
         return it;
     }
 
-    auto format(zedio::net::Ipv4Addr addr, auto &context) const noexcept {
+    auto format(zedio::socket::net::Ipv4Addr addr, auto &context) const noexcept {
         return format_to(context.out(), "{}", addr.to_string());
     }
 };
 
 template <>
-class formatter<zedio::net::Ipv6Addr> {
+class formatter<zedio::socket::net::Ipv6Addr> {
 public:
     constexpr auto parse(format_parse_context &context) {
         auto it{context.begin()};
@@ -334,13 +270,13 @@ public:
         return it;
     }
 
-    auto format(const zedio::net::Ipv6Addr &addr, auto &context) const noexcept {
+    auto format(const zedio::socket::net::Ipv6Addr &addr, auto &context) const noexcept {
         return format_to(context.out(), "{}", addr.to_string());
     }
 };
 
 template <>
-class formatter<zedio::net::SocketAddr> {
+class formatter<zedio::socket::net::SocketAddr> {
 public:
     constexpr auto parse(format_parse_context &context) {
         auto it{context.begin()};
@@ -355,29 +291,8 @@ public:
         return it;
     }
 
-    auto format(const zedio::net::SocketAddr &addr, auto &context) const noexcept {
+    auto format(const zedio::socket::net::SocketAddr &addr, auto &context) const noexcept {
         return format_to(context.out(), "{}", addr.to_string());
-    }
-};
-
-template <>
-class formatter<zedio::net::UnixSocketAddr> {
-public:
-    constexpr auto parse(format_parse_context &context) {
-        auto it{context.begin()};
-        auto end{context.end()};
-        if (it == end || *it == '}') {
-            return it;
-        }
-        ++it;
-        if (it != end && *it != '}') {
-            throw format_error("Invalid format specifier for UnixSocketAddr");
-        }
-        return it;
-    }
-
-    auto format(const zedio::net::UnixSocketAddr &addr, auto &context) const noexcept {
-        return format_to(context.out(), "{}", addr.pathname());
     }
 };
 

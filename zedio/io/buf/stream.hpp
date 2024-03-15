@@ -1,14 +1,20 @@
 #pragma once
 
-#include "zedio/io/buf/reader.hpp"
-#include "zedio/io/buf/writer.hpp"
+#include "zedio/io/impl/impl_buf_read.hpp"
+#include "zedio/io/impl/impl_buf_write.hpp"
 
 namespace zedio::io {
 
 template <typename IO>
-class BufStream : public detail::Reader<BufStream<IO>>, public detail::Writer<BufStream<IO>> {
-    friend class detail::Reader<BufStream<IO>>;
-    friend class detail::Writer<BufStream<IO>>;
+    requires requires(IO io, std::span<char> buf) {
+        { io.read(buf) };
+        { io.write(buf) };
+        { io.write_vectored(buf) };
+    }
+class BufStream : public detail::ImplBufRead<BufStream<IO>>,
+                  public detail::ImplBufWrite<BufStream<IO>> {
+    friend class detail::ImplBufRead<BufStream<IO>>;
+    friend class detail::ImplBufWrite<BufStream<IO>>;
 
 public:
     BufStream(IO        &&io,
@@ -18,14 +24,15 @@ public:
         , r_stream_{r_size}
         , w_stream_{w_size} {}
 
-    BufStream(BufWriter &&other) noexcept
+    BufStream(BufStream &&other) noexcept
         : io_{std::move(other.io_)}
         , r_stream_{std::move(other.r_stream_)}
         , w_stream_{std::move(other.w_stream)} {}
 
     auto operator=(BufStream &&other) noexcept -> BufStream & {
         io_ = std::move(other.io_);
-        stream_ = std::move(other.stream_);
+        r_stream_ = std::move(other.r_stream_);
+        w_stream_ = std::move(other.w_stream_);
         return *this;
     }
 

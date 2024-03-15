@@ -31,7 +31,7 @@ auto test_file_create() -> Task<void> {
     ret.value().seek(0, SEEK_SET);
     {
         std::string buf = "hahah\n";
-        co_await ret.value().read_to_string(buf);
+        co_await ret.value().read_to_end(buf);
         console.info("{} {}", buf, buf.size());
     }
     if (auto fsync_ret = co_await ret.value().fsync_data(); !fsync_ret) {
@@ -51,7 +51,7 @@ auto test_file_open() -> Task<void> {
         console.error("{} {}", meta.error().value(), meta.error().message());
     }
     std::string buf = "nono\n";
-    co_await ret.value().read_to_string(buf);
+    co_await ret.value().read_to_end(buf);
     console.info("{}", buf);
     co_return;
 }

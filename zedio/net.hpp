@@ -1,6 +1,21 @@
 #pragma once
 
-#include "zedio/net/tcp/socket.hpp"
-#include "zedio/net/udp/datagram.hpp"
-#include "zedio/net/unix/datagram.hpp"
-#include "zedio/net/unix/socket.hpp"
+// net
+#include "zedio/socket/net/datagram.hpp"
+#include "zedio/socket/net/listener.hpp"
+#include "zedio/socket/net/socket.hpp"
+#include "zedio/socket/net/stream.hpp"
+
+// unix domain
+#include "zedio/socket/unix_domain/datagram.hpp"
+#include "zedio/socket/unix_domain/listener.hpp"
+#include "zedio/socket/unix_domain/socket.hpp"
+#include "zedio/socket/unix_domain/stream.hpp"
+
+namespace zedio::net {
+using namespace zedio::socket::net;
+}
+
+namespace zedio::unix_domian {
+using namespace zedio::socket::unix_domain;
+}

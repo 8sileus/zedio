@@ -3,7 +3,6 @@
 // C++
 #include <concepts>
 #include <coroutine>
-#include <ranges>
 #include <span>
 // Linux
 #include <sys/socket.h>
@@ -24,6 +23,6 @@ concept is_awaiter = requires(IOAwaiter awaiter) {
 };
 
 template <typename C>
-concept constructible_to_char_splice = requires(C c) { std::span<char>{c}; };
+concept constructible_to_char_splice = requires(C c) { std::span<const char>{c}; };
 
 } // namespace zedio

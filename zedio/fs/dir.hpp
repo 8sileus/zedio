@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zedio/fs/io.hpp"
+#include "zedio/io/io.hpp"
 
 namespace zedio::fs {
 

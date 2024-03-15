@@ -1,97 +1,81 @@
 #pragma once
 
+#include "zedio/common/concepts.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/fs/builder.hpp"
-#include "zedio/fs/io.hpp"
+#include "zedio/fs/impl/impl_async_fsync.hpp"
+#include "zedio/fs/impl/impl_async_metadata.hpp"
+#include "zedio/io/impl/impl_async_read.hpp"
+#include "zedio/io/impl/impl_async_write.hpp"
+#include "zedio/io/io.hpp"
 // Linux
 #include <fcntl.h>
 
 namespace zedio::fs {
 
-class File {
-    friend detail::FileIO;
+class File : public io::detail::Fd,
+             public io::detail::ImplAsyncRead<File>,
+             public io::detail::ImplAsyncWrite<File>,
+             public detail::ImplAsyncFsync<File>,
+             public detail::ImplAsyncMetadata<File> {
+private:
+    friend class detail::Builder<File>;
 
 private:
-    File(detail::FileIO &&io)
-        : io_{std::move(io)} {}
+    explicit File(const int fd)
+        : Fd{fd} {}
 
 public:
+    template <class T>
+        requires constructible_to_char_splice<T>
     [[REMEMBER_CO_AWAIT]]
-    auto write_all(std::span<const char> buf) noexcept {
-        return io_.write_all(buf);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto write(std::span<const char> buf) noexcept {
-        return io_.write(buf);
-    }
-
-    template <typename... Ts>
-    [[REMEMBER_CO_AWAIT]]
-    auto write_vectored(Ts &...bufs) noexcept {
-        return io_.write_vectored(bufs...);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto read(std::span<char> buf) const noexcept {
-        return io_.read(buf);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto read_to_string(std::string &buf) {
-        return io_.read_to_end(buf);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto read_to_end(std::vector<char> &buf) {
-        return io_.read_to_end(buf);
+    auto read_to_end(T &buf) const noexcept -> zedio::async::Task<Result<void>> {
+        auto old_len = buf.size();
+        {
+            auto ret = co_await this->metadata();
+            if (!ret) {
+                co_return std::unexpected{ret.error()};
+            }
+            buf.resize(old_len + ret.value().stx_size - lseek64(fd_, 0, SEEK_CUR));
+        }
+        auto span = std::span<char>{buf}.subspan(old_len);
+        auto ret = Result<std::size_t>{};
+        while (true) {
+            ret = co_await this->read(span);
+            if (!ret) [[unlikely]] {
+                co_return std::unexpected{ret.error()};
+            }
+            if (ret.value() == 0) {
+                break;
+            }
+            span = span.subspan(ret.value());
+            if (span.empty()) {
+                break;
+            }
+        }
+        co_return Result<void>{};
     }
 
     [[nodiscard]]
     auto seek(off64_t offset, int whence) noexcept {
-        ::lseek64(io_.fd(), offset, whence);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto metadata() const noexcept {
-        return io_.metadata();
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto fsync_all() noexcept {
-        return io_.fsync(0);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto fsync_data() noexcept {
-        return io_.fsync(IORING_FSYNC_DATASYNC);
-    }
-
-    [[REMEMBER_CO_AWAIT]]
-    auto close() noexcept {
-        return io_.close();
-    }
-
-    [[nodiscard]]
-    auto fd() const noexcept {
-        return io_.fd();
+        ::lseek64(fd_, offset, whence);
     }
 
 public:
-    [[REMEMBER_CO_AWAIT]] auto static open(std::string_view path) {
+    [[REMEMBER_CO_AWAIT]]
+    static auto open(std::string_view path) {
         return options().read(true).open(path);
     }
 
-    [[REMEMBER_CO_AWAIT]] auto static create(std::string_view path, mode_t permission = 0666) {
+    [[REMEMBER_CO_AWAIT]]
+    static auto create(std::string_view path, mode_t permission = 0666) {
         return options().write(true).create(true).truncate(true).permission(permission).open(path);
     }
 
-    [[nodiscard]] auto static options() -> detail::Builder<File> {
+    [[nodiscard]]
+    static auto options() -> detail::Builder<File> {
         return detail::Builder<File>{};
     }
-
-private:
-    detail::FileIO io_;
 };
 
 [[REMEMBER_CO_AWAIT]]
@@ -108,13 +92,13 @@ static inline auto read(std::string path) -> async::Task<Result<std::vector<char
 }
 
 [[REMEMBER_CO_AWAIT]]
-static inline auto read_to_string(std::string path) -> async::Task<Result<std::string>> {
+static inline auto read_to_end(std::string_view path) -> async::Task<Result<std::string>> {
     auto file = co_await File::open(path);
     if (!file) [[unlikely]] {
         co_return std::unexpected{file.error()};
     }
     std::string res;
-    if (auto ret = co_await file.value().read_to_string(res); !ret) [[unlikely]] {
+    if (auto ret = co_await file.value().read_to_end(res); !ret) [[unlikely]] {
         co_return std::unexpected{ret.error()};
     }
     co_return res;
@@ -138,6 +122,11 @@ static inline auto hard_link(std::string_view src_path, std::string_view dst_pat
 [[REMEMBER_CO_AWAIT]]
 static inline auto sym_link(std::string_view src_path, std::string_view dst_path) {
     return io::symlink(src_path.data(), dst_path.data());
+}
+
+[[REMEMBER_CO_AWAIT]]
+static inline auto metadata(std::string_view dir_path) {
+    return detail::Metadata(dir_path);
 }
 
 } // namespace zedio::fs

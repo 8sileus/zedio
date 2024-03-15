@@ -1,12 +1,12 @@
 #define BOOST_TEST_MODULE socket_test
 
-#include "zedio/net/tcp/socket.hpp"
+#include "zedio/socket/net/socket.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 
 BOOST_AUTO_TEST_SUITE(tcp_socket_test)
 
-using namespace zedio::net;
+using namespace zedio::socket::net;
 using namespace std::chrono_literals;
 
 #define X_HAS_VAL(F)                                     \

@@ -21,6 +21,7 @@ public:
         WriteZero,
         TooLongTime,
         PassedTime,
+        InvalidSocketType,
     };
 
 public:
@@ -50,6 +51,8 @@ public:
             return "Time is too long";
         case PassedTime:
             return "Time has passed";
+        case InvalidSocketType:
+            return "Invalid socket type";
         default:
             return strerror(err_code_);
         }

@@ -1,10 +1,10 @@
 #define BOOST_TEST_MODULE address_test
 
-#include "zedio/net/addr.hpp"
+#include "zedio/socket/net/addr.hpp"
 
 #include <boost/test/included/unit_test.hpp>
 
-using namespace zedio::net;
+using namespace zedio::socket::net;
 
 BOOST_AUTO_TEST_SUITE(address_test)
 

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "zedio/fs/io.hpp"
+#include "zedio/io/base/registrator.hpp"
 
 namespace zedio::fs::detail {
 
-template <class FileType>
+template <class F>
 class Builder {
 public:
     auto read(bool on) noexcept -> Builder & {
@@ -44,7 +44,30 @@ public:
     [[REMEMBER_CO_AWAIT]]
     auto open(std::string_view path) {
         adjust_flags();
-        return FileIO::open<FileType>(path, flags_, permission_);
+
+        class Open : public io::detail::IORegistrator<Open> {
+        private:
+            using Super = io::detail::IORegistrator<Open>;
+
+        public:
+            Open(std::string_view path, int flags, mode_t mode)
+                : Super{io_uring_prep_openat, AT_FDCWD, nullptr, flags, mode}
+                , path_{path} {
+                this->sqe_->addr = (unsigned long)path.data();
+            }
+
+            auto await_resume() const noexcept -> Result<F> {
+                if (this->cb_.result_ >= 0) [[likely]] {
+                    return F{this->cb_.result_};
+                } else {
+                    return std::unexpected{make_sys_error(-this->cb_.result_)};
+                }
+            }
+
+        private:
+            std::string path_;
+        };
+        return Open(path, flags_, permission_);
     }
 
 private:

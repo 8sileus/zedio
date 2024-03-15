@@ -1,7 +1,8 @@
 #include "zedio/core.hpp"
 #include "zedio/fs/file.hpp"
-#include "zedio/io/buf_reader.hpp"
-#include "zedio/io/buf_writer.hpp"
+#include "zedio/io/buf/reader.hpp"
+#include "zedio/io/buf/stream.hpp"
+#include "zedio/io/buf/writer.hpp"
 #include "zedio/log.hpp"
 
 using namespace zedio::async;
@@ -19,9 +20,10 @@ auto create_file() -> Task<void> {
                    .open("read_line_test.txt");
     std::string n1 = "\n";
     std::string n2 = "\r\n";
-    auto        writer_test_move = io::BufWriter(std::move(ret.value()));
-    LOG_DEBUG("{}", writer_test_move.capacity());
-    auto writer = std::move(writer_test_move);
+    // auto        writer_test_move = io::BufWriter(std::move(ret.value()));
+    // LOG_DEBUG("{}", writer_test_move.capacity());
+    // auto writer = std::move(writer_test_move);
+    auto writer = io::BufStream(std::move(ret.value()));
     for (int i = 0; i <= 10000; i += 1) {
         if (i & 1) {
             co_await writer.write_all(std::to_string(i) + n1);
@@ -52,7 +54,7 @@ auto read_line() -> Task<void> {
     } else {
         LOG_ERROR("{} {}", meta.error().value(), meta.error().message());
     }
-    auto        reader = io::BufReader(std::move(ret.value()));
+    auto              reader = io::BufReader(std::move(ret.value()));
     std::vector<char> line;
     while (true) {
         if (auto ret = co_await reader.read_line(line); !ret || ret.value() == 0) {
