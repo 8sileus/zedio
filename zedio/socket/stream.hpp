@@ -1,9 +1,9 @@
 #pragma once
 
 #include "zedio/io/io.hpp"
-#include "zedio/socket/impl/impl_sockopt.hpp"
-#include "zedio/socket/impl/impl_stream_read.hpp"
-#include "zedio/socket/impl/impl_stream_write.hpp"
+#include "zedio/socket/split.hpp"
+// C++
+#include <utility>
 
 namespace zedio::socket::detail {
 
@@ -13,6 +13,12 @@ class BaseStream : public io::detail::Fd,
                    public ImplStreamWrite<BaseStream<Stream, Addr>>,
                    public ImplLocalAddr<BaseStream<Stream, Addr>, Addr>,
                    public ImplPeerAddr<BaseStream<Stream, Addr>, Addr> {
+public:
+    using Reader = ReadHalf<Addr>;
+    using Writer = WriteHalf<Addr>;
+    using OwnedReader = OwnedReadHalf<Stream, Addr>;
+    using OwnedWriter = OwnedWriteHalf<Stream, Addr>;
+
 protected:
     explicit BaseStream(const int fd)
         : Fd{fd} {}
@@ -65,6 +71,17 @@ public:
             Addr addr_;
         };
         return Connect{addr};
+    }
+
+    [[nodiscard]]
+    auto split() const noexcept -> std::pair<Reader, Writer> {
+        return std::make_pair(Reader{fd_}, Writer{fd_});
+    }
+
+    [[nodiscard]]
+    auto into_split() noexcept -> std::pair<Reader, Writer> {
+        auto stream = std::make_shared<Stream>(this->take_fd());
+        return std::make_pair(OwnedReader{stream}, OwnedWriter{stream});
     }
 };
 

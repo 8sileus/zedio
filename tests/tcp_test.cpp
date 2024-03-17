@@ -17,13 +17,14 @@ auto client(const SocketAddr &addr) -> Task<void> {
     std::string_view str = "tcp_test ping";
     char             buf[1024];
     auto             stream = std::move(ret.value());
+    auto [reader, writer] = stream.split();
     while (true) {
-        auto ret = co_await stream.write(str);
+        auto ret = co_await writer.write(str);
         if (!ret) {
             console.error("{}", ret.error().message());
             break;
         }
-        ret = co_await stream.read(buf);
+        ret = co_await reader.read(buf);
         if (!ret || ret.value() == 0) {
             break;
         }

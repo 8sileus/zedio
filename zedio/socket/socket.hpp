@@ -23,7 +23,7 @@ public:
     // Converts the socket into TcpListener
     [[nodiscard]]
     auto listen(int n) -> Result<Listener> {
-        if (socket_type().value() != SOCK_STREAM) {
+        if (type().value() != SOCK_STREAM) {
             return std::unexpected{make_zedio_error(Error::InvalidSocketType)};
         }
         if (::listen(fd_, n) == -1) [[unlikely]] {
@@ -62,14 +62,14 @@ public:
     // Converts the socket into DdpDatagram
     [[nodiscard]]
     auto datagram() -> Result<Datagram> {
-        if (socket_type().value() != SOCK_DGRAM) {
+        if (type().value() != SOCK_DGRAM) {
             return std::unexpected{make_zedio_error(Error::InvalidSocketType)};
         }
         return Datagram{this->take_fd()};
     }
 
     [[nodiscard]]
-    auto socket_type() -> Result<int> {
+    auto type() -> Result<int> {
         int optval{0};
         if (auto ret = get_sock_opt(this->fd(), SOL_SOCKET, SO_TYPE, &optval, sizeof(optval)); !ret)
             [[unlikely]] {
