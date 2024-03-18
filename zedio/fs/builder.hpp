@@ -51,10 +51,7 @@ public:
 
         public:
             Open(std::string_view path, int flags, mode_t mode)
-                : Super{io_uring_prep_openat, AT_FDCWD, nullptr, flags, mode}
-                , path_{path} {
-                this->sqe_->addr = (unsigned long)path.data();
-            }
+                : Super{io_uring_prep_openat, AT_FDCWD, path.data(), flags, mode} {}
 
             auto await_resume() const noexcept -> Result<F> {
                 if (this->cb_.result_ >= 0) [[likely]] {
@@ -63,9 +60,6 @@ public:
                     return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }
             }
-
-        private:
-            std::string path_;
         };
         return Open(path, flags_, permission_);
     }
