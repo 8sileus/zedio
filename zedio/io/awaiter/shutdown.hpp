@@ -5,9 +5,9 @@
 namespace zedio::io {
 
 enum class ShutdownBehavior {
-    READ = SHUT_RD,
-    WRITE = SHUT_WR,
-    RDWR = SHUT_RDWR,
+    Read = SHUT_RD,
+    Write = SHUT_WR,
+    ReadWrite = SHUT_RDWR,
 };
 
 namespace detail {

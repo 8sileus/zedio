@@ -79,7 +79,7 @@ public:
     }
 
     [[nodiscard]]
-    auto into_split() noexcept -> std::pair<Reader, Writer> {
+    auto into_split() noexcept -> std::pair<OwnedReader, OwnedWriter> {
         auto stream = std::make_shared<Stream>(this->take_fd());
         return std::make_pair(OwnedReader{stream}, OwnedWriter{stream});
     }

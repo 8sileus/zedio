@@ -22,6 +22,7 @@ public:
         TooLongTime,
         PassedTime,
         InvalidSocketType,
+        ReuniteFailed,
     };
 
 public:
@@ -53,6 +54,8 @@ public:
             return "Time has passed";
         case InvalidSocketType:
             return "Invalid socket type";
+        case ReuniteFailed:
+            return "Tried to reunite halves that are not from the same socket";
         default:
             return strerror(err_code_);
         }

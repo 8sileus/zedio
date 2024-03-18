@@ -1,14 +1,16 @@
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 #include "zedio/net.hpp"
+#include "zedio/sync.hpp"
 #include "zedio/time.hpp"
 
 using namespace zedio::async;
 using namespace zedio::net;
 using namespace zedio::log;
+using namespace zedio::sync;
 using namespace zedio;
 
-auto client(const SocketAddr &addr) -> Task<void> {
+auto client(const SocketAddr &addr, Latch &latch) -> Task<void> {
     auto ret = co_await TcpStream::connect(addr);
     if (!ret) {
         console.error("{}", ret.error().message());
@@ -17,8 +19,8 @@ auto client(const SocketAddr &addr) -> Task<void> {
     std::string_view str = "tcp_test ping";
     char             buf[1024];
     auto             stream = std::move(ret.value());
-    auto [reader, writer] = stream.split();
-    while (true) {
+    auto [reader, writer] = stream.into_split();
+    for (auto i{0uz}; i < 1000; i += 1) {
         auto ret = co_await writer.write(str);
         if (!ret) {
             console.error("{}", ret.error().message());
@@ -30,16 +32,18 @@ auto client(const SocketAddr &addr) -> Task<void> {
         }
         console.info("client read {}", buf);
     }
+    co_await reader.reunite(writer).value().close();
+    co_await latch.arrive_and_wait();
 }
 
-auto server(const SocketAddr &addr) -> Task<void> {
+auto server(const SocketAddr &addr, Latch &latch) -> Task<void> {
     auto ret = TcpListener::bind(addr);
     if (!ret) {
         console.error("{}", ret.error().message());
         co_return;
     }
     auto listener = std::move(ret.value());
-    spawn(client(addr));
+    spawn(client(addr, latch));
     auto [stream, peer_addr] = (co_await listener.accept()).value();
     console.info("{}", peer_addr.to_string());
     std::string_view str = "tcp_test pong";
@@ -56,6 +60,7 @@ auto server(const SocketAddr &addr) -> Task<void> {
             break;
         }
     }
+    co_await latch.arrive_and_wait();
 }
 
 auto test() -> Task<void> {
@@ -64,8 +69,9 @@ auto test() -> Task<void> {
         console.error("{}", addr.error().message());
         co_return;
     }
-    spawn(server(addr.value()));
-    co_await time::sleep(10s);
+    Latch latch{3};
+    spawn(server(addr.value(), latch));
+    co_await latch.arrive_and_wait();
 }
 
 auto main() -> int {
