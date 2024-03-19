@@ -8,12 +8,12 @@ namespace zedio::runtime::detail {
 
 /// Timer
 // Max wheel level
-static inline constexpr std::size_t MAX_LEVEL = 6;
+static inline constexpr std::size_t MAX_LEVEL{6uz};
 // size of slot per wheel
-static inline constexpr std::size_t SLOT_SIZE{64};
+static inline constexpr std::size_t SLOT_SIZE{64uz};
 
 /// Queue
-static inline constexpr std::size_t LOCAL_QUEUE_CAPACITY{256};
+static inline constexpr std::size_t LOCAL_QUEUE_CAPACITY{256uz};
 
 struct Config {
     // size of io_uring_queue entries

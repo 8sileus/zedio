@@ -92,11 +92,11 @@ public:
     OwnedWriteHalf(std::shared_ptr<T> stream)
         : OwnedBase<T>{std::move(stream)} {}
 
-    ~OwnedWriteHalf() {
-        // if (this->stream_) {
-        //     // TODO register shutdown read
-        // }
-    }
+    // ~OwnedWriteHalf() {
+    //     if (this->stream_) {
+    //         // TODO register shutdown read
+    //     }
+    // }
 };
 
 } // namespace zedio::socket::detail

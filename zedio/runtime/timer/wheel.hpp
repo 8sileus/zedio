@@ -12,12 +12,28 @@
 
 namespace zedio::runtime::detail {
 
-template <std::size_t MS_PER_SLOT>
-    requires(MS_PER_SLOT > 0)
+template <std::size_t level>
 class Wheel {
 private:
-    using ChildWheel = Wheel<MS_PER_SLOT / SLOT_SIZE>;
+    using FatherWheel = Wheel<level + 1>;
+    using FatherWheelPtr = std::unique_ptr<FatherWheel>;
+    using ChildWheel = Wheel<level - 1>;
     using ChildWheelPtr = std::unique_ptr<ChildWheel>;
+
+public:
+    Wheel() {
+        // LOG_DEBUG("build Wheel {}", level);
+    }
+
+    Wheel(ChildWheelPtr &&child)
+        : bitmap_{1uz}
+        , slots_{std::move(child)} {
+        // LOG_DEBUG("level up from {} to {}", level - 1, level);
+    }
+
+    ~Wheel() {
+        // LOG_DEBUG("desc Wheel {}", level);
+    }
 
 public:
     void add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
@@ -37,7 +53,7 @@ public:
         slots_[index]->remove_entry(std::move(entry), interval);
         if (slots_[index]->empty()) {
             bitmap_ &= ~(1uz << index);
-            slots_[index].release();
+            slots_[index] = nullptr;
         }
     }
 
@@ -60,7 +76,7 @@ public:
                                                   count,
                                                   remaining_ms - index * MS_PER_SLOT);
             if (slots_[index]->empty()) {
-                slots_[index].release();
+                slots_[index] = nullptr;
                 bitmap_ &= ~(1uz << index);
             } else {
                 break;
@@ -84,6 +100,26 @@ public:
         bitmap_ >>= start;
     }
 
+    [[nodiscard]]
+    constexpr auto ms_per_slot() const noexcept -> std::size_t {
+        return MS_PER_SLOT;
+    }
+
+    [[nodiscard]]
+    constexpr auto max_ms() const noexcept -> std::size_t {
+        return MS_PER_SLOT * SLOT_SIZE;
+    }
+
+    [[nodiscard]]
+    auto level_up(std::unique_ptr<Wheel> &&me) -> FatherWheelPtr {
+        return std::make_unique<FatherWheel>(std::move(me));
+    }
+
+    // TODO
+    // auto level_down() -> ChildWheelPtr {
+    // return std::move(slots_[0]);
+    // }
+
 private:
     [[nodiscard]]
     auto get_index(std::size_t interval) -> std::size_t {
@@ -91,8 +127,9 @@ private:
     }
 
 private:
-    static constexpr std::size_t SHIFT{util::static_log(MS_PER_SLOT, 64uz) * 6};
+    static constexpr std::size_t SHIFT{level * 6uz};
     static constexpr std::size_t MASK{(SLOT_SIZE - 1uz) << SHIFT};
+    static constexpr std::size_t MS_PER_SLOT{util::static_pow(SLOT_SIZE, level)};
 
 private:
     uint64_t                             bitmap_{0};
@@ -100,7 +137,20 @@ private:
 };
 
 template <>
-class Wheel<1> {
+class Wheel<0uz> {
+private:
+    using FatherWheel = Wheel<1>;
+    using FatherWheelPtr = std::unique_ptr<FatherWheel>;
+
+public:
+    Wheel() {
+        // LOG_DEBUG("build Wheel {}", 0);
+    }
+
+    ~Wheel() {
+        // LOG_DEBUG("desc Wheel {}", 0);
+    }
+
 public:
     void add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
         auto index = get_index(interval);
@@ -159,6 +209,30 @@ public:
         return bitmap_ == 0;
     }
 
+    [[nodiscard]]
+    constexpr auto ms_per_slot() const noexcept -> std::size_t {
+        return MS_PER_SLOT;
+    }
+
+    [[nodiscard]]
+    constexpr auto max_ms() const noexcept -> std::size_t {
+        return MS_PER_SLOT * SLOT_SIZE;
+    }
+
+    void rotate(std::size_t start) {
+        assert(start < slots_.size());
+        for (auto i = start; i < slots_.size(); i += 1) {
+            assert(slots_[i - start] == nullptr);
+            slots_[i - start] = std::move(slots_[i]);
+        }
+        bitmap_ >>= start;
+    }
+
+    [[nodiscard]]
+    auto level_up(std::unique_ptr<Wheel> &&me) -> FatherWheelPtr {
+        return std::make_unique<FatherWheel>(std::move(me));
+    }
+
 private:
     [[nodiscard]]
     auto get_index(std::size_t interval) -> std::size_t {
@@ -167,6 +241,7 @@ private:
 
 private:
     static constexpr std::size_t MASK{SLOT_SIZE - 1};
+    static constexpr std::size_t MS_PER_SLOT{1};
 
 private:
     uint64_t                                      bitmap_{0};

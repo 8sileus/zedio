@@ -20,12 +20,12 @@ public:
 
     [[nodiscard]]
     auto driver() -> DriverBuilder<R> {
-        return *static_cast<DriverBuilder<R> *>(this);
+        return DriverBuilder<R>{*this};
     }
 
     [[nodiscard]]
     auto scheduler() -> SchedulerBuilder<R> {
-        return *static_cast<SchedulerBuilder<R> *>(this);
+        return SchedulerBuilder<R>{*this};
     }
 
 protected:
