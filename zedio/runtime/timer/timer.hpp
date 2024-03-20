@@ -31,25 +31,28 @@ public:
 public:
     auto add_entry(std::chrono::steady_clock::time_point expiration_time,
                    std::coroutine_handle<>               handle) -> Result<std::weak_ptr<Entry>> {
-        if (expiration_time <= std::chrono::steady_clock::now()) [[unlikely]] {
+        auto now = std::chrono::steady_clock::now();
+        if (expiration_time <= now) [[unlikely]] {
             return std::unexpected{make_zedio_error(Error::PassedTime)};
         }
         if (expiration_time >= start_ + std::chrono::milliseconds{MAX_MS}) [[unlikely]] {
             return std::unexpected{make_zedio_error(Error::TooLongTime)};
         }
-        std::size_t interval
-            = std::chrono::duration_cast<std::chrono::milliseconds>(expiration_time - start_)
-                  .count();
 
         auto [entry, result] = Entry::make(expiration_time, handle);
 
         std::visit(
-            [this, interval, &entry]<typename T>(T &wheel) {
+            [this, now, &entry]<typename T>(T &wheel) {
                 if constexpr (std::is_same_v<T, std::monostate>) {
-                    auto wheel = std::make_unique<Wheel<0>>();
-                    this->level_up_and_add_entry(std::move(wheel), std::move(entry), interval);
+                    start_ = now;
+                    // build main wheel
+                    build_wheel_and_add_entry(std::move(entry),
+                                              time_since_start(entry->expiration_time_));
                 } else {
-                    this->level_up_and_add_entry(std::move(wheel), std::move(entry), interval);
+                    // level up
+                    level_up_and_add_entry(std::move(wheel),
+                                           std::move(entry),
+                                           time_since_start(entry->expiration_time_));
                 }
             },
             root_wheel_);
@@ -58,38 +61,37 @@ public:
     }
 
     void remove_entry(std::shared_ptr<Entry> &&entry) {
-        auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            entry->expiration_time_ - start_)
-                            .count();
         assert(root_wheel_.index() != 0 && num_entries_ != 0);
         std::visit(
-            [this, interval, &entry]<typename T>(T &wheel) {
+            [this, &entry]<typename T>(T &wheel) {
                 if constexpr (std::is_same_v<T, std::monostate>) {
                     std::unreachable();
                     LOG_ERROR("no entries");
                 } else {
-                    wheel->remove_entry(std::move(entry), interval);
+                    wheel->remove_entry(std::move(entry),
+                                        time_since_start(entry->expiration_time_));
+                    num_entries_ -= 1;
+                    if (num_entries_ == 0) {
+                        root_wheel_ = std::monostate{};
+                    }
+                    //  maybe optimize
+                    //  else {
+                    //  level_down_if_needed(std::move(wheel));
+                    //  }
                 }
             },
             root_wheel_);
-        num_entries_ -= 1;
-        if (num_entries_ == 0) {
-            root_wheel_ = std::monostate{};
-        }
-        // TODO consider level_downs
     }
 
     [[nodiscard]]
     auto next_expiration_time() -> std::optional<uint64_t> {
         return std::visit(
-            [this]<typename T>(T &ptr) -> std::optional<uint64_t> {
+            [this]<typename T>(T &wheel) -> std::optional<uint64_t> {
                 if constexpr (std::is_same_v<T, std::monostate>) {
                     return std::nullopt;
                 } else {
-                    return ptr->next_expiration_time()
-                           - std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::steady_clock::now() - start_)
-                                 .count();
+                    auto now = std::chrono::steady_clock::now();
+                    return wheel->next_expiration_time() - time_since_start(now);
                 }
             },
             root_wheel_);
@@ -120,7 +122,7 @@ public:
                                                   count,
                                                   static_cast<std::size_t>(interval));
                     num_entries_ -= count;
-                    change_state(wheel, interval);
+                    maintenance(wheel, interval);
                 }
             },
             root_wheel_);
@@ -128,28 +130,30 @@ public:
     }
 
 private:
-    template <typename T>
-    void change_state(T &wheel, std::size_t interval) {
+    template <std::size_t LEVEL>
+    void maintenance(std::unique_ptr<Wheel<LEVEL>> &wheel, std::size_t interval) {
         if (wheel->empty()) {
             assert(num_entries_ == 0);
             root_wheel_ = std::monostate{};
             return;
         }
-        // TODO consider level_down
-        auto n = interval / wheel->ms_per_slot();
+        auto n = interval / Wheel<LEVEL>::MS_PER_SLOT;
         if (n > 0) {
             wheel->rotate(n);
         }
-        start_ += std::chrono::milliseconds{wheel->ms_per_slot() * n};
+        start_ += std::chrono::milliseconds{Wheel<LEVEL>::MS_PER_SLOT * n};
+        level_down_if_needed(std::move(wheel));
     }
 
-    template <class T>
-    void level_up_and_add_entry(T &&wheel, std::shared_ptr<Entry> &&entry, std::size_t interval) {
-        if constexpr (std::is_same_v<T, std::unique_ptr<Wheel<MAX_LEVEL + 1uz>>>) {
+    template <std::size_t LEVEL>
+    void level_up_and_add_entry(std::unique_ptr<Wheel<LEVEL>> &&wheel,
+                                std::shared_ptr<Entry>        &&entry,
+                                std::size_t                     interval) {
+        if constexpr (LEVEL == MAX_LEVEL + 1) {
             assert(false);
             std::unreachable();
         } else {
-            if (interval >= wheel->max_ms()) {
+            if (interval >= Wheel<LEVEL>::MAX_MS) {
                 level_up_and_add_entry(wheel->level_up(std::move(wheel)),
                                        std::move(entry),
                                        interval);
@@ -160,9 +164,39 @@ private:
         }
     }
 
+    template <std::size_t LEVEL = MAX_LEVEL>
+    void build_wheel_and_add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
+        if constexpr (LEVEL > 0uz) {
+            if (!(Wheel<LEVEL>::MS_PER_SLOT <= interval && interval < Wheel<LEVEL>::MAX_MS)) {
+                build_wheel_and_add_entry<LEVEL - 1>(std::move(entry), interval);
+                return;
+            }
+        }
+        auto wheel = std::make_unique<Wheel<LEVEL>>();
+        wheel->add_entry(std::move(entry), interval);
+        root_wheel_ = std::move(wheel);
+    }
+
+    template <std::size_t LEVEL>
+    void level_down_if_needed(std::unique_ptr<Wheel<LEVEL>> &&wheel) {
+        if constexpr (LEVEL > 0) {
+            if (wheel->can_level_down()) {
+                level_down_if_needed(wheel->level_down());
+                return;
+            }
+        }
+        root_wheel_ = std::move(wheel);
+    }
+
+    [[nodiscard]]
+    auto time_since_start(std::chrono::steady_clock::time_point expiration_time) -> std::size_t {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(expiration_time - start_)
+            .count();
+    }
+
 private:
     //~ 139 years
-    static constexpr std::size_t MAX_MS{util::static_pow(SLOT_SIZE, MAX_LEVEL + 1)};
+    static constexpr std::size_t MAX_MS{util::static_pow(SLOT_SIZE, MAX_LEVEL + 1uz)};
 
 private:
     std::chrono::steady_clock::time_point      start_{std::chrono::steady_clock::now()};

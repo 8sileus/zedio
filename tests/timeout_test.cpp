@@ -31,7 +31,14 @@ auto test() -> Task<void> {
     LOG_INFO("co_await a passed time");
 }
 
+auto main_test() -> Task<void> {
+    co_await test();
+    co_await time::sleep(5s);
+    LOG_INFO("interval {}", 5s);
+    co_await test();
+}
+
 auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
-    return Runtime::options().scheduler().set_num_workers(1).build().block_on(test());
+    return Runtime::options().scheduler().set_num_workers(1).build().block_on(main_test());
 }

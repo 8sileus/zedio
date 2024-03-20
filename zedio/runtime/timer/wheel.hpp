@@ -12,32 +12,33 @@
 
 namespace zedio::runtime::detail {
 
-template <std::size_t level>
+template <std::size_t LEVEL>
 class Wheel {
-private:
-    using FatherWheel = Wheel<level + 1>;
+public:
+    using FatherWheel = Wheel<LEVEL + 1>;
     using FatherWheelPtr = std::unique_ptr<FatherWheel>;
-    using ChildWheel = Wheel<level - 1>;
+    using ChildWheel = Wheel<LEVEL - 1>;
     using ChildWheelPtr = std::unique_ptr<ChildWheel>;
 
 public:
     Wheel() {
-        // LOG_DEBUG("build Wheel {}", level);
+        // LOG_DEBUG("build Wheel {}", LEVEL);
     }
 
     Wheel(ChildWheelPtr &&child)
         : bitmap_{1uz}
         , slots_{std::move(child)} {
-        // LOG_DEBUG("level up from {} to {}", level - 1, level);
+        // LOG_DEBUG("level up from {} to {}", LEVEL - 1, LEVEL);
     }
 
     ~Wheel() {
-        // LOG_DEBUG("desc Wheel {}", level);
+        // LOG_DEBUG("desc Wheel {}", LEVEL);
     }
 
 public:
     void add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
         std::size_t index = get_index(interval);
+        // LOG_DEBUG("{} {}", index, interval);
         if (slots_[index] == nullptr) {
             bitmap_ |= 1uz << index;
             slots_[index] = std::make_unique<ChildWheel>();
@@ -55,11 +56,6 @@ public:
             bitmap_ &= ~(1uz << index);
             slots_[index] = nullptr;
         }
-    }
-
-    [[nodiscard]]
-    auto empty() const noexcept -> bool {
-        return bitmap_ == 0;
     }
 
     void handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
@@ -101,24 +97,24 @@ public:
     }
 
     [[nodiscard]]
-    constexpr auto ms_per_slot() const noexcept -> std::size_t {
-        return MS_PER_SLOT;
-    }
-
-    [[nodiscard]]
-    constexpr auto max_ms() const noexcept -> std::size_t {
-        return MS_PER_SLOT * SLOT_SIZE;
-    }
-
-    [[nodiscard]]
     auto level_up(std::unique_ptr<Wheel> &&me) -> FatherWheelPtr {
         return std::make_unique<FatherWheel>(std::move(me));
     }
 
-    // TODO
-    // auto level_down() -> ChildWheelPtr {
-    // return std::move(slots_[0]);
-    // }
+    [[nodiscard]]
+    auto level_down() -> ChildWheelPtr {
+        return std::move(slots_[0]);
+    }
+
+    [[nodiscard]]
+    auto can_level_down() const noexcept -> bool {
+        return bitmap_ == 1uz;
+    }
+
+    [[nodiscard]]
+    auto empty() const noexcept -> bool {
+        return bitmap_ == 0;
+    }
 
 private:
     [[nodiscard]]
@@ -126,10 +122,11 @@ private:
         return (interval & MASK) >> SHIFT;
     }
 
-private:
-    static constexpr std::size_t SHIFT{level * 6uz};
+public:
+    static constexpr std::size_t SHIFT{LEVEL * 6uz};
     static constexpr std::size_t MASK{(SLOT_SIZE - 1uz) << SHIFT};
-    static constexpr std::size_t MS_PER_SLOT{util::static_pow(SLOT_SIZE, level)};
+    static constexpr std::size_t MS_PER_SLOT{util::static_pow(SLOT_SIZE, LEVEL)};
+    static constexpr std::size_t MAX_MS{MS_PER_SLOT * SLOT_SIZE};
 
 private:
     uint64_t                             bitmap_{0};
@@ -138,7 +135,7 @@ private:
 
 template <>
 class Wheel<0uz> {
-private:
+public:
     using FatherWheel = Wheel<1>;
     using FatherWheelPtr = std::unique_ptr<FatherWheel>;
 
@@ -154,6 +151,7 @@ public:
 public:
     void add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
         auto index = get_index(interval);
+        // LOG_DEBUG("{} {}", index, interval);
         entry->next_ = std::move(slots_[index]);
         bitmap_ |= 1uz << index;
         slots_[index] = std::move(entry);
@@ -204,21 +202,6 @@ public:
         return std::countr_zero(bitmap_);
     }
 
-    [[nodiscard]]
-    auto empty() const noexcept -> bool {
-        return bitmap_ == 0;
-    }
-
-    [[nodiscard]]
-    constexpr auto ms_per_slot() const noexcept -> std::size_t {
-        return MS_PER_SLOT;
-    }
-
-    [[nodiscard]]
-    constexpr auto max_ms() const noexcept -> std::size_t {
-        return MS_PER_SLOT * SLOT_SIZE;
-    }
-
     void rotate(std::size_t start) {
         assert(start < slots_.size());
         for (auto i = start; i < slots_.size(); i += 1) {
@@ -233,15 +216,21 @@ public:
         return std::make_unique<FatherWheel>(std::move(me));
     }
 
+    [[nodiscard]]
+    auto empty() const noexcept -> bool {
+        return bitmap_ == 0;
+    }
+
 private:
     [[nodiscard]]
     auto get_index(std::size_t interval) -> std::size_t {
         return interval & MASK;
     }
 
-private:
-    static constexpr std::size_t MASK{SLOT_SIZE - 1};
-    static constexpr std::size_t MS_PER_SLOT{1};
+public:
+    static constexpr std::size_t MASK{SLOT_SIZE - 1uz};
+    static constexpr std::size_t MS_PER_SLOT{1uz};
+    static constexpr std::size_t MAX_MS{MS_PER_SLOT * SLOT_SIZE};
 
 private:
     uint64_t                                      bitmap_{0};
