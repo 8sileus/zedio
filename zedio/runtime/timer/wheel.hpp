@@ -36,7 +36,7 @@ public:
     }
 
 public:
-    void add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
+    void add_entry(std::unique_ptr<Entry> &&entry, std::size_t interval) {
         std::size_t index = get_index(interval);
         // LOG_DEBUG("{} {}", index, interval);
         if (slots_[index] == nullptr) {
@@ -46,7 +46,7 @@ public:
         slots_[index]->add_entry(std::move(entry), interval);
     };
 
-    void remove_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
+    void remove_entry(Entry *entry, std::size_t interval) {
         auto index = get_index(interval);
 
         assert(slots_[index] != nullptr);
@@ -149,7 +149,7 @@ public:
     }
 
 public:
-    void add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
+    void add_entry(std::unique_ptr<Entry> &&entry, std::size_t interval) {
         auto index = get_index(interval);
         // LOG_DEBUG("{} {}", index, interval);
         entry->next_ = std::move(slots_[index]);
@@ -157,16 +157,16 @@ public:
         slots_[index] = std::move(entry);
     }
 
-    void remove_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
+    void remove_entry(Entry *entry, std::size_t interval) {
         auto index = get_index(interval);
 
         auto head = slots_[index].get();
-        if (head == entry.get()) {
+        if (head == entry) {
             slots_[index] = std::move(head->next_);
         } else {
             auto cur = head->next_.get();
             // Do not need to check cur != nullptr
-            while (cur != entry.get()) {
+            while (cur != entry) {
                 head = cur;
                 cur = head->next_.get();
             }
@@ -234,7 +234,7 @@ public:
 
 private:
     uint64_t                                      bitmap_{0};
-    std::array<std::shared_ptr<Entry>, SLOT_SIZE> slots_{};
+    std::array<std::unique_ptr<Entry>, SLOT_SIZE> slots_{};
 };
 
 } // namespace zedio::runtime::detail

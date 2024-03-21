@@ -1,5 +1,6 @@
 #include "zedio/core.hpp"
 #include "zedio/net.hpp"
+#include "zedio/time.hpp"
 
 using namespace zedio;
 using namespace zedio::async;
@@ -8,7 +9,13 @@ using namespace zedio::net;
 auto process(TcpStream stream) -> Task<void> {
     char buf[1024]{};
     while (true) {
-        auto len = (co_await (stream.read(buf))).value();
+        auto ret = co_await stream.read(buf);
+        if (!ret) {
+            LOG_ERROR("{}", ret.error());
+            break;
+        } 
+        auto len = ret.value();
+        LOG_DEBUG("{}", std::string_view(buf, len));
         if (len == 0) {
             break;
         }

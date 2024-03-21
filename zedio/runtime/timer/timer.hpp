@@ -29,8 +29,12 @@ public:
     auto operator=(Timer &&) -> Timer & = delete;
 
 public:
-    auto add_entry(std::chrono::steady_clock::time_point expiration_time,
-                   std::coroutine_handle<>               handle) -> Result<std::weak_ptr<Entry>> {
+    template <class HandleType>
+        requires std::is_invocable_v<decltype(Entry::make<HandleType>),
+                                     std::chrono::steady_clock::time_point,
+                                     HandleType>
+    auto add_entry(std::chrono::steady_clock::time_point expiration_time, HandleType handle)
+        -> Result<Entry *> {
         auto now = std::chrono::steady_clock::now();
         if (expiration_time <= now) [[unlikely]] {
             return std::unexpected{make_zedio_error(Error::PassedTime)};
@@ -60,16 +64,15 @@ public:
         return result;
     }
 
-    void remove_entry(std::shared_ptr<Entry> &&entry) {
+    void remove_entry(Entry *entry) {
         assert(root_wheel_.index() != 0 && num_entries_ != 0);
         std::visit(
-            [this, &entry]<typename T>(T &wheel) {
+            [this, entry]<typename T>(T &wheel) {
                 if constexpr (std::is_same_v<T, std::monostate>) {
                     std::unreachable();
                     LOG_ERROR("no entries");
                 } else {
-                    wheel->remove_entry(std::move(entry),
-                                        time_since_start(entry->expiration_time_));
+                    wheel->remove_entry(entry, time_since_start(entry->expiration_time_));
                     num_entries_ -= 1;
                     if (num_entries_ == 0) {
                         root_wheel_ = std::monostate{};
@@ -147,7 +150,7 @@ private:
 
     template <std::size_t LEVEL>
     void level_up_and_add_entry(std::unique_ptr<Wheel<LEVEL>> &&wheel,
-                                std::shared_ptr<Entry>        &&entry,
+                                std::unique_ptr<Entry>        &&entry,
                                 std::size_t                     interval) {
         if constexpr (LEVEL == MAX_LEVEL + 1) {
             assert(false);
@@ -165,7 +168,7 @@ private:
     }
 
     template <std::size_t LEVEL = MAX_LEVEL>
-    void build_wheel_and_add_entry(std::shared_ptr<Entry> &&entry, std::size_t interval) {
+    void build_wheel_and_add_entry(std::unique_ptr<Entry> &&entry, std::size_t interval) {
         if constexpr (LEVEL > 0uz) {
             if (!(Wheel<LEVEL>::MS_PER_SLOT <= interval && interval < Wheel<LEVEL>::MAX_MS)) {
                 build_wheel_and_add_entry<LEVEL - 1>(std::move(entry), interval);

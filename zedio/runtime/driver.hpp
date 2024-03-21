@@ -54,6 +54,9 @@ public:
         for (auto i = 0uz; i < cnt; i += 1) {
             auto cb = reinterpret_cast<io::detail::Callback *>(cqes[i]->user_data);
             if (cb != nullptr) [[likely]] {
+                if (cb->entry_ != nullptr) {
+                    timer_.remove_entry(cb->entry_);
+                }
                 local_queue.push_back_or_overflow(cb->get_coro_handle_and_set_result(cqes[i]->res),
                                                   global_queue);
             }
@@ -61,13 +64,16 @@ public:
 
         ring_.consume(cnt);
 
-        cnt += timer_.handle_expired_entries(local_queue, global_queue);
+        auto timer_cnt = timer_.handle_expired_entries(local_queue, global_queue);
+
+        LOG_TRACE("poll {} io events, {} timer events", cnt, timer_cnt);
+
+        cnt += timer_cnt;
 
         waker_.turn_on();
 
         ring_.force_submit();
 
-        LOG_TRACE("poll {} events", cnt);
         return cnt > 0;
     }
 

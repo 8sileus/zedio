@@ -1,8 +1,14 @@
 #pragma once
 
-// #include "zedio/time/event.hpp"
 // C++
+#include <chrono>
 #include <coroutine>
+
+namespace zedio::runtime::detail {
+
+class Entry;
+
+} // namespace zedio::runtime::detail
 
 namespace zedio::io::detail {
 
@@ -19,11 +25,11 @@ struct Callback {
         std::coroutine_handle<> handle_{nullptr};
         int                     result_;
     };
-    // union {
-    //     uint64_t                                has_timeout_{0};
-    //     std::chrono::steady_clock::time_point   deadline_;
-    //     std::set<time::detail::Event>::iterator iter_;
-    // };
+
+    union {
+        runtime::detail::Entry               *entry_{nullptr};
+        std::chrono::steady_clock::time_point deadline_;
+    };
 };
 
 } // namespace zedio::io::detail

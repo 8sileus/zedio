@@ -173,7 +173,10 @@ public:
                 }
             }
         }
-        push_back_finish(std::move(task), tail);
+        std::size_t idx = tail & MASK;
+        buffer_[idx] = std::move(task);
+        std::atomic_ref atomic_tail{tail_};
+        atomic_tail.store(tail + 1, std::memory_order::release);
     }
 
     [[nodiscard]]
@@ -280,13 +283,6 @@ private:
                 return n;
             }
         }
-    }
-
-    void push_back_finish(std::coroutine_handle<> &&task, uint32_t tail) {
-        std::size_t idx = tail & MASK;
-        buffer_[idx] = std::move(task);
-        std::atomic_ref atomic_tail{tail_};
-        atomic_tail.store(tail + 1, std::memory_order::release);
     }
 
     auto push_overflow(std::coroutine_handle<>  &task,
