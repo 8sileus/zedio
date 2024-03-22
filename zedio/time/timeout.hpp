@@ -41,13 +41,15 @@ namespace detail {
 } // namespace detail
 
 template <class T>
-auto timeout(T &&io, std::chrono::steady_clock::time_point deadline) {
-    return io.set_timeout(deadline);
+    requires std::derived_from<T, io::detail::IORegistrator<T>>
+auto timeout_at(T &&io, std::chrono::steady_clock::time_point deadline) {
+    return io.set_timeout_at(deadline);
 }
 
 template <class T>
+    requires std::derived_from<T, io::detail::IORegistrator<T>>
 auto timeout(T &&io, std::chrono::milliseconds interval) {
-    return timeout(std::move(io), std::chrono::steady_clock::now() + interval);
+    return io.set_timeout(interval);
 }
 
 } // namespace zedio::time

@@ -58,14 +58,14 @@ public:
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto set_timeout(std::chrono::steady_clock::time_point deadline) noexcept {
+    auto set_timeout_at(std::chrono::steady_clock::time_point deadline) noexcept {
         cb_.deadline_ = deadline;
         return time::detail::Timeout{std::move(*static_cast<IO *>(this))};
     }
 
     [[REMEMBER_CO_AWAIT]]
     auto set_timeout(std::chrono::milliseconds interval) noexcept {
-        return set_timeout(std::chrono::steady_clock::now() + interval);
+        return set_timeout_at(std::chrono::steady_clock::now() + interval);
     }
 
 protected:
