@@ -49,6 +49,11 @@ public:
         return io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
     }
 
+    [[nodiscard]]
+    auto peek_cqe(io_uring_cqe **cqe) {
+        return io_uring_peek_cqe(&ring_, cqe);
+    }
+
     void wait(std::optional<time_t> timeout) {
         io_uring_cqe *cqe{nullptr};
         if (timeout) {
@@ -69,6 +74,10 @@ public:
 
     void consume(std::size_t cnt) {
         io_uring_cq_advance(&ring_, cnt);
+    }
+
+    void seen(io_uring_cqe *cqe) {
+        io_uring_cqe_seen(&ring_, cqe);
     }
 
     void submit() {

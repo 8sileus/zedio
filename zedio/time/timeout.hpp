@@ -1,12 +1,20 @@
 #pragma once
 
 #include "zedio/runtime/timer/timer.hpp"
+// C++
+#include <concepts>
+
+namespace zedio::io::detail {
+template <class T>
+class IORegistrator;
+}
 
 namespace zedio::time {
 
 namespace detail {
 
     template <class T>
+        requires std::derived_from<T, io::detail::IORegistrator<T>>
     class Timeout : public T {
     public:
         Timeout(T &&io)
