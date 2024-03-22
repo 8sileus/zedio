@@ -41,11 +41,7 @@ protected:
 
     ~Fd() {
         if (fd_ >= 0) {
-            // TODO register closer
-            if (async_close(fd_) == false) {
-                sync_close(fd_);
-            }
-            fd_ = -1;
+            do_close();
         }
     }
 
@@ -56,7 +52,7 @@ protected:
 
     auto operator=(Fd &&other) noexcept -> Fd & {
         if (fd_ >= 0) {
-            sync_close(fd_);
+            do_close();
         }
         fd_ = other.fd_;
         other.fd_ = -1;
@@ -107,26 +103,24 @@ public:
     }
 
 private:
-    static void sync_close(int fd) noexcept {
-        int ret = 0;
-        int cnt = 3;
-        do {
-            if (ret = ::close(fd); ret == 0) [[likely]] {
-                return;
-            }
-        } while (ret == EINTR && cnt--);
-        LOG_ERROR("sync close {} failed, error: {}", ret, strerror(errno));
-    }
-
-    static auto async_close(int fd) noexcept -> bool {
+    void do_close() noexcept {
         auto sqe = runtime::detail::t_ring->get_sqe();
-        if (sqe == nullptr) {
-            LOG_WARN("async close fd failed, sqe is nullptr");
-            return false;
+        if (sqe != nullptr) [[likely]] {
+            // async close
+            io_uring_prep_close(sqe, fd_);
+            io_uring_sqe_set_data(sqe, nullptr);
+        } else {
+            // sync close
+            for (auto i = 1; i <= 3; i += 1) {
+                auto ret = ::close(fd_);
+                if (ret == 0) [[likely]] {
+                    break;
+                } else {
+                    LOG_ERROR("close {} failed, error: {}, times: {}", fd_, strerror(errno), i);
+                }
+            }
         }
-        io_uring_prep_close(sqe, fd);
-        io_uring_sqe_set_data(sqe, nullptr);
-        return true;
+        fd_ = -1;
     }
 
 protected:
