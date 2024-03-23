@@ -3,7 +3,8 @@
 #include "zedio/io/io.hpp"
 #include "zedio/socket/impl/impl_datagram_recv.hpp"
 #include "zedio/socket/impl/impl_datagram_send.hpp"
-#include "zedio/socket/impl/impl_sockopt.hpp"
+#include "zedio/socket/impl/impl_local_addr.hpp"
+#include "zedio/socket/impl/impl_peer_addr.hpp"
 
 namespace zedio::socket::detail {
 

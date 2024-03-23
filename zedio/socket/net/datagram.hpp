@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/socket/datagram.hpp"
+#include "zedio/socket/impl/impl_sockopt.hpp"
 #include "zedio/socket/net/addr.hpp"
 
 namespace zedio::socket::net {

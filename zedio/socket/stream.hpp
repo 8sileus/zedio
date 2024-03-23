@@ -1,6 +1,8 @@
 #pragma once
 
 #include "zedio/io/io.hpp"
+#include "zedio/socket/impl/impl_local_addr.hpp"
+#include "zedio/socket/impl/impl_peer_addr.hpp"
 #include "zedio/socket/split.hpp"
 // C++
 #include <utility>
