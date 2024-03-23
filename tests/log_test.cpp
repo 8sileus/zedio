@@ -46,10 +46,12 @@ void test(int n, bool flag) {
 }
 
 int main(int argc, [[maybe_unused]] char **argv) {
-    log::console.set_level(log::LogLevel::TRACE);
+    log::console.set_level(log::LogLevel::Trace);
     size_t kOneGB = 1000 * 1024 * 1024;
     rlimit rl = {2 * kOneGB, 2 * kOneGB};
     setrlimit(RLIMIT_AS, &rl);
-    std::cout << util::spend_time(test, 3, argc > 1);
+    std::cout << std::chrono::duration_cast<std::chrono::seconds>(
+        util::spend_time(test, 3, argc > 1))
+              << "\n";
     return 0;
 }

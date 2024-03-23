@@ -34,7 +34,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: ping_client ip port num_connection\n";
         return -1;
     }
-    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto ip = argv[1];
     auto port = std::stoi(argv[2]);
     auto addr = SocketAddr::parse(ip, port).value();

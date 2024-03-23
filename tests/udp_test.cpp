@@ -37,7 +37,7 @@ auto server(std::string_view ip, uint16_t port) -> Task<void> {
 }
 
 auto main() -> int {
-    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto ip = "127.0.0.1";
     auto port = 9999;
     Runtime::create().block_on(server(ip, static_cast<uint16_t>(port)));

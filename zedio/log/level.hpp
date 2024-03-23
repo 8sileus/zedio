@@ -5,35 +5,37 @@
 
 // C++
 #include <format>
-#include <functional>
+#include <utility>
 
 namespace zedio::log::detail {
 
 enum class LogLevel {
-    TRACE,
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR,
-    FATAL,
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Fatal,
 };
 
 [[nodiscard]]
 consteval auto level_to_string(LogLevel level) noexcept -> std::string_view {
     switch (level) {
-    case LogLevel::TRACE:
+        using enum LogLevel;
+    case Trace:
         return "TRACE";
-    case LogLevel::DEBUG:
+    case Debug:
         return "DEBUG";
-    case LogLevel::INFO:
+    case Info:
         return "INFO ";
-    case LogLevel::WARN:
+    case Warn:
         return "WARN ";
-    case LogLevel::ERROR:
+    case Error:
         return "ERROR";
-    case LogLevel::FATAL:
+    case Fatal:
         return "FATAL";
     default:
+        std::unreachable();
         return "Remember implement for LogLevel";
     }
 }
@@ -41,19 +43,21 @@ consteval auto level_to_string(LogLevel level) noexcept -> std::string_view {
 [[nodiscard]]
 consteval auto level_to_color(LogLevel level) noexcept -> std::string_view {
     switch (level) {
-    case LogLevel::TRACE:
+        using enum LogLevel;
+    case Trace:
         return "\033[1;36m"; // cyan
-    case LogLevel::DEBUG:
+    case Debug:
         return "\033[1;34m"; // blue
-    case LogLevel::INFO:
+    case Info:
         return "\033[1;32m"; // green
-    case LogLevel::WARN:
+    case Warn:
         return "\033[1;33m"; // yellow
-    case LogLevel::ERROR:
+    case Error:
         return "\033[1;31m"; // red
-    case LogLevel::FATAL:
+    case Fatal:
         return "\033[1;35m"; // purple
     default:
+        std::unreachable();
         return "NOT DEFINE COLOR";
     }
 }

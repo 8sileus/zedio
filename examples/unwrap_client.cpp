@@ -54,7 +54,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: unwrap_client ip port num_threads num_connections\n";
         return -1;
     }
-    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto ip = argv[1];
     auto port = std::stoi(argv[2]);
     auto num_threads = std::stoi(argv[3]);

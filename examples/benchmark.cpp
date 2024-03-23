@@ -60,7 +60,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: benchmark num_threas\n";
         return -1;
     }
-    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto num_threads = std::stoi(argv[1]);
     Runtime::options()
         .scheduler()

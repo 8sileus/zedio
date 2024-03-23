@@ -55,41 +55,41 @@ public:
 
     template <typename... Args>
     void trace(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::TRACE>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Trace>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void debug(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::DEBUG>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Debug>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void info(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::INFO>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Info>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void warn(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::WARN>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Warn>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void error(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::ERROR>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Fatal>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void fatal(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::FATAL>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Fatal>(fmt, std::forward<Args>(args)...);
     }
 
 private:
-    template <LogLevel level, typename... Args>
+    template <LogLevel LEVEL, typename... Args>
     void format(const FmtWithSourceLocation &fwsl, Args &&...args) {
         static thread_local std::array<char, 64> buffer{};
         static thread_local time_t               last_second{0};
 
-        if (level < level_) {
+        if (LEVEL < level_) {
             return;
         }
 
@@ -105,11 +105,11 @@ private:
         }
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
-        static_cast<DeriverLogger *>(this)->template log<level>(
+        static_cast<DeriverLogger *>(this)->template log<LEVEL>(
             std::format("{}.{:03} {} {} {} {}:{} {}\n",
                         buffer.data(),
                         cur_millisecond,
-                        level_to_string(level),
+                        level_to_string(LEVEL),
                         current_thread::get_tid(),
                         current_thread::get_thread_name(),
                         sl.file_name(),
@@ -118,7 +118,7 @@ private:
     }
 
 private:
-    LogLevel level_{LogLevel::DEBUG};
+    LogLevel level_{LogLevel::Debug};
 };
 
 class ConsoleLogger : public BaseLogger<ConsoleLogger> {

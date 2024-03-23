@@ -68,7 +68,7 @@ auto main(int argc, char **argv) -> int {
         std::cerr << "usage: echo_server num_threas\n";
         return -1;
     }
-    SET_LOG_LEVEL(zedio::log::LogLevel::TRACE);
+    SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto num_threas = std::stoi(argv[1]);
     auto runtime = Runtime::options().scheduler().set_num_workers(num_threas).build();
     runtime.block_on(server());
