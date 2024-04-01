@@ -134,17 +134,4 @@ private:
     Awaiter               *fifo_awaiters_{nullptr};
 };
 
-class LockGuard {
-    LockGuard(Mutex &mutex)
-        : mutex_{mutex} {}
-
-public:
-    ~LockGuard() {
-        mutex_.unlock();
-    }
-
-private:
-    Mutex &mutex_;
-};
-
 } // namespace zedio::sync

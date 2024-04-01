@@ -5,3 +5,4 @@
 #include "zedio/sync/latch.hpp"
 #include "zedio/sync/mutex.hpp"
 #include "zedio/sync/semaphore.hpp"
+#include "zedio/sync/shared_mutex.hpp"
