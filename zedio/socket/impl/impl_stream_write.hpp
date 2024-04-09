@@ -59,7 +59,7 @@ struct ImplStreamWrite {
             std::array<struct iovec, N> iovecs_;
             struct msghdr               msg_;
         };
-        return WriteVectored{static_cast<T *>(this)->fd_, std::forward<Ts>(bufs)...};
+        return WriteVectored{static_cast<T *>(this)->fd(), std::forward<Ts>(bufs)...};
     }
 
     [[REMEMBER_CO_AWAIT]]

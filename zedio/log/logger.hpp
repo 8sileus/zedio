@@ -75,7 +75,7 @@ public:
 
     template <typename... Args>
     void error(FmtWithSourceLocation fmt, Args &&...args) {
-        format<LogLevel::Fatal>(fmt, std::forward<Args>(args)...);
+        format<LogLevel::Error>(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
