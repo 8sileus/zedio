@@ -8,6 +8,7 @@ namespace zedio::io {
 template <typename IO>
     requires requires(IO io, std::span<char> buf) {
         { io.read(buf) };
+        { io.read_vectored(buf) };
         { io.write(buf) };
         { io.write_vectored(buf) };
     }
