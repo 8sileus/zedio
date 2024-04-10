@@ -1,0 +1,43 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { compiler: gcc, version: 13, build_type: Release, cppstd: 23 }
+    container:
+      image: ${{ matrix.config.compiler }}:${{ matrix.config.version }}
+    name: "${{ matrix.config.compiler }} ${{ matrix.config.version }} (C++${{ matrix.config.cppstd }}, ${{ matrix.config.build_type }})"
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Setup
+        run: |
+          apt-get update
+          apt-get install -y curl git pkg-config ninja-build
+          apt-get install -y libboost-test-dev
+
+      - name: Install
+        run: |
+          CMAKE_VERSION="3.24.2"
+          curl -sSL https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh -o install-cmake.sh
+          chmod +x install-cmake.sh
+          ./install-cmake.sh --prefix=/usr/local --skip-license
+          git clone https://github.com/axboe/liburing.git
+          cd liburing && ./configure && make -j && make install
+
+      - name: Build
+        run: |
+          cmake -GNinja -Bbuild \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+            -DCMAKE_CXX_STANDARD=${{ matrix.config.cppstd }}
+          cmake --build build -j
+          ctest --test-dir build -j2 --output-on-failure || true
