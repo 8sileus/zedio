@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/runtime/builder.hpp"
+#include "zedio/runtime/shared.hpp"
 #include "zedio/runtime/worker.hpp"
 
 namespace zedio {
@@ -15,8 +16,8 @@ private:
 public:
     // Waiting for the task to close
     auto block_on(async::Task<void> &&first_coro) -> int {
-        auto main_coro = [](runtime::detail::Worker::Shared &shared,
-                            async::Task<void>              &&main_coro) -> async::Task<void> {
+        auto main_coro = [](runtime::detail::Shared &shared,
+                            async::Task<void>      &&main_coro) -> async::Task<void> {
             try {
                 co_await main_coro;
             } catch (const std::exception &ex) {
@@ -28,8 +29,7 @@ public:
             co_return;
         }(shared_, std::move(first_coro));
 
-        shared_.push_global_task(main_coro.take());
-        shared_.wake_up_one();
+        runtime::detail::schedule_remote(main_coro.take());
 
         wait_workers();
         return 0;
@@ -59,15 +59,14 @@ public:
     }
 
 private:
-    runtime::detail::Worker::Shared shared_;
+    runtime::detail::Shared shared_;
 };
 
 // template <typename... Ts>
 //     requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)
 static inline auto spawn(async::Task<void> &&task) {
-    using runtime::detail::t_worker;
     auto handle = task.take();
-    t_worker->schedule_task(handle);
+    runtime::detail::schedule_local(handle);
     return handle;
 }
 

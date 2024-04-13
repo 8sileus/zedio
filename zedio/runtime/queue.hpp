@@ -29,7 +29,7 @@ public:
         return num_ == 0;
     }
 
-    void push(std::coroutine_handle<> &&task) {
+    void push(std::coroutine_handle<> task) {
         std::lock_guard lock(mutex_);
         if (is_closed_) {
             return;
