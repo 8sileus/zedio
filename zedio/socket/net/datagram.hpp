@@ -9,29 +9,17 @@ namespace zedio::socket::net {
 class UdpDatagram : public detail::BaseDatagram<UdpDatagram, SocketAddr>,
                     public detail::ImplBoradcast<UdpDatagram>,
                     public detail::ImplTTL<UdpDatagram> {
+
 public:
-    explicit UdpDatagram(const int fd)
-        : BaseDatagram{fd} {}
+    explicit UdpDatagram(detail::Socket &&inner)
+        : BaseDatagram{std::move(inner)} {}
 
 public:
     [[nodiscard]]
-    static auto v4() -> Result<UdpDatagram> {
-        auto fd = ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-        if (fd >= 0) [[likely]] {
-            return UdpDatagram{fd};
-        } else {
-            return std::unexpected{make_sys_error(errno)};
-        }
-    }
-
-    [[nodiscard]]
-    static auto v6() -> Result<UdpDatagram> {
-        auto fd = ::socket(AF_INET6, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-        if (fd >= 0) [[likely]] {
-            return UdpDatagram{fd};
-        } else {
-            return std::unexpected{make_sys_error(errno)};
-        }
+    static auto unbound(bool is_ipv6 = false) -> Result<UdpDatagram> {
+        return detail::Socket::create<UdpDatagram>(is_ipv6 ? AF_INET6 : AF_INET,
+                                                   SOCK_DGRAM | SOCK_NONBLOCK,
+                                                   IPPROTO_UDP);
     }
 };
 

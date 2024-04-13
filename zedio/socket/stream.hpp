@@ -1,8 +1,8 @@
 #pragma once
 
-#include "zedio/io/io.hpp"
 #include "zedio/socket/impl/impl_local_addr.hpp"
 #include "zedio/socket/impl/impl_peer_addr.hpp"
+#include "zedio/socket/socket.hpp"
 #include "zedio/socket/split.hpp"
 // C++
 #include <utility>
@@ -10,8 +10,7 @@
 namespace zedio::socket::detail {
 
 template <class Stream, class Addr>
-class BaseStream : public io::detail::Fd,
-                   public ImplStreamRead<BaseStream<Stream, Addr>>,
+class BaseStream : public ImplStreamRead<BaseStream<Stream, Addr>>,
                    public ImplStreamWrite<BaseStream<Stream, Addr>>,
                    public ImplLocalAddr<BaseStream<Stream, Addr>, Addr>,
                    public ImplPeerAddr<BaseStream<Stream, Addr>, Addr> {
@@ -22,13 +21,23 @@ public:
     using OwnedWriter = OwnedWriteHalf<Stream, Addr>;
 
 protected:
-    explicit BaseStream(const int fd)
-        : Fd{fd} {}
+    explicit BaseStream(Socket &&inner)
+        : inner_{std::move(inner)} {}
 
 public:
     [[REMEMBER_CO_AWAIT]]
     auto shutdown(io::ShutdownBehavior how) noexcept {
-        return io::detail::Shutdown{fd_, how};
+        return inner_.shutdown(how);
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto close() noexcept {
+        return inner_.close();
+    }
+
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return inner_.fd();
     }
 
 public:
@@ -59,7 +68,7 @@ public:
 
             auto await_resume() noexcept -> Result<Stream> {
                 if (this->cb_.result_ >= 0) [[likely]] {
-                    return Stream{fd_};
+                    return Stream{Socket{fd_}};
                 } else {
                     if (fd_ >= 0) {
                         ::close(fd_);
@@ -77,14 +86,17 @@ public:
 
     [[nodiscard]]
     auto split() const noexcept -> std::pair<Reader, Writer> {
-        return std::make_pair(Reader{fd_}, Writer{fd_});
+        return std::make_pair(Reader{inner_}, Writer{inner_});
     }
 
     [[nodiscard]]
     auto into_split() noexcept -> std::pair<OwnedReader, OwnedWriter> {
-        auto stream = std::make_shared<Stream>(this->take_fd());
+        auto stream = std::make_shared<Stream>(std::move(inner_));
         return std::make_pair(OwnedReader{stream}, OwnedWriter{stream});
     }
+
+private:
+    Socket inner_;
 };
 
 } // namespace zedio::socket::detail

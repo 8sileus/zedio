@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/io/awaiter/send.hpp"
+#include "zedio/io/awaiter/sendto.hpp"
 
 namespace zedio::socket::detail {
 

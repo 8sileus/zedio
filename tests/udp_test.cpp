@@ -9,7 +9,7 @@ using namespace zedio::async;
 
 auto client(std::string_view ip, uint16_t port) -> Task<void> {
     auto             addr = SocketAddr::parse(ip, port).value();
-    auto             sock = net::UdpDatagram::v4().value();
+    auto             sock = net::UdpDatagram::unbound().value();
     std::string_view w_buf = "udp ping";
     char             r_buf[1024] = {};
     while (true) {

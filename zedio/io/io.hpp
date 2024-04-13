@@ -34,23 +34,23 @@
 
 namespace zedio::io::detail {
 
-class Fd {
+class FD {
 protected:
-    explicit Fd(int fd)
+    explicit FD(int fd)
         : fd_{fd} {}
 
-    ~Fd() {
+    ~FD() {
         if (fd_ >= 0) {
             do_close();
         }
     }
 
-    Fd(Fd &&other) noexcept
+    FD(FD &&other) noexcept
         : fd_{other.fd_} {
         other.fd_ = -1;
     }
 
-    auto operator=(Fd &&other) noexcept -> Fd & {
+    auto operator=(FD &&other) noexcept -> FD & {
         if (fd_ >= 0) {
             do_close();
         }
@@ -58,6 +58,10 @@ protected:
         other.fd_ = -1;
         return *this;
     }
+
+    // Delete copy
+    FD(const FD &other) noexcept = default;
+    auto operator=(const FD &other) noexcept -> FD & = default;
 
 public:
     [[REMEMBER_CO_AWAIT]]

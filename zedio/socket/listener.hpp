@@ -1,16 +1,16 @@
 #pragma once
 
-#include "zedio/io/io.hpp"
 #include "zedio/socket/impl/impl_local_addr.hpp"
+#include "zedio/socket/socket.hpp"
 
 namespace zedio::socket::detail {
 
 template <class Listener, class Stream, class Addr>
-class BaseListener : public io::detail::Fd,
-                     public ImplLocalAddr<BaseListener<Listener, Stream, Addr>, Addr> {
+class BaseListener : public ImplLocalAddr<BaseListener<Listener, Stream, Addr>, Addr> {
+
 protected:
-    explicit BaseListener(const int fd)
-        : Fd{fd} {}
+    explicit BaseListener(Socket &&inner)
+        : inner_{std::move(inner)} {}
 
 public:
     [[REMEMBER_CO_AWAIT]]
@@ -28,7 +28,7 @@ public:
 
             auto await_resume() const noexcept -> Result<std::pair<Stream, Addr>> {
                 if (this->cb_.result_ >= 0) [[likely]] {
-                    return std::make_pair(Stream{this->cb_.result_}, addr_);
+                    return std::make_pair(Stream{Socket{this->cb_.result_}}, addr_);
                 } else {
                     return std::unexpected{make_sys_error(-this->cb_.result_)};
                 }
@@ -38,25 +38,34 @@ public:
             Addr      addr_{};
             socklen_t length_{sizeof(Addr)};
         };
-        return Accept{fd_};
+        return Accept{fd()};
+    }
+
+    [[REMEMBER_CO_AWAIT]]
+    auto close() noexcept {
+        return inner_.close();
+    }
+
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return inner_.fd();
     }
 
 public:
     [[nodiscard]]
     static auto bind(const Addr &addr) -> Result<Listener> {
-        auto fd = ::socket(addr.family(), SOCK_STREAM | SOCK_NONBLOCK, 0);
-        if (fd < 0) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
+        auto ret = Socket::create(addr.family(), SOCK_STREAM | SOCK_NONBLOCK, 0);
+        if (!ret) [[unlikely]] {
+            return std::unexpected{ret.error()};
         }
-        if (::bind(fd, addr.sockaddr(), addr.length()) == -1) [[unlikely]] {
-            ::close(fd);
-            return std::unexpected{make_sys_error(errno)};
+        auto &inner = ret.value();
+        if (auto ret = inner.bind(addr); !ret) [[unlikely]] {
+            return std::unexpected{ret.error()};
         }
-        if (::listen(fd, SOMAXCONN) == -1) [[unlikely]] {
-            ::close(fd);
-            return std::unexpected{make_sys_error(errno)};
+        if (auto ret = inner.listen(); !ret) [[unlikely]] {
+            return std::unexpected{ret.error()};
         }
-        return Listener{fd};
+        return Listener{std::move(inner)};
     }
 
     [[nodiscard]]
@@ -70,6 +79,9 @@ public:
         }
         return std::unexpected{make_zedio_error(Error::InvalidAddresses)};
     }
+
+private:
+    Socket inner_;
 };
 
 } // namespace zedio::socket::detail

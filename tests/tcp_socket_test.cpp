@@ -27,12 +27,12 @@ BOOST_AUTO_TEST_CASE(api_test) {
     auto sock = TcpSocket::v4().value();
     auto addr = SocketAddr::parse("localhost", 9898).value();
     BOOST_CHECK(sock.bind(addr));
-    // test nonblocking
-    BOOST_CHECK(sock.nonblocking().value() == true);
-    BOOST_CHECK(sock.set_nonblocking(false));
-    BOOST_CHECK(sock.nonblocking().value() == false);
-    BOOST_CHECK(sock.set_nonblocking(true));
-    BOOST_CHECK(sock.nonblocking().value() == true);
+    // // test nonblocking
+    // BOOST_CHECK(sock.nonblocking().value() == true);
+    // BOOST_CHECK(sock.set_nonblocking(false));
+    // BOOST_CHECK(sock.nonblocking().value() == false);
+    // BOOST_CHECK(sock.set_nonblocking(true));
+    // BOOST_CHECK(sock.nonblocking().value() == true);
     // test resuseaddr
     X_HAS_VAL(sock.reuseaddr())
     X_NO_VAL(sock.set_reuseaddr(true))

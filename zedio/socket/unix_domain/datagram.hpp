@@ -9,18 +9,13 @@ class UdpDatagram : public detail::BaseDatagram<UdpDatagram, SocketAddr>,
                     public detail::ImplPasscred<UdpDatagram>,
                     public detail::ImplMark<UdpDatagram> {
 public:
-    UdpDatagram(const int fd)
-        : BaseDatagram{fd} {}
+    explicit UdpDatagram(detail::Socket &&inner)
+        : BaseDatagram{std::move(inner)} {}
 
 public:
     [[nodiscard]]
     static auto unbound() -> Result<UdpDatagram> {
-        int fd = ::socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0);
-        if (fd < 0) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        } else {
-            return UdpDatagram{fd};
-        }
+        return detail::Socket::create<UdpDatagram>(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     }
 };
 

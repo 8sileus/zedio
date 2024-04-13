@@ -8,10 +8,8 @@ namespace zedio::socket::unix_domain {
 
 class TcpStream : public detail::BaseStream<TcpStream, SocketAddr> {
 public:
-    explicit TcpStream(const int fd)
-        : BaseStream{fd} {
-        LOG_TRACE("Build a UnixStream{{fd: {}}}", fd);
-    }
+    explicit TcpStream(detail::Socket &&inner)
+        : BaseStream{std::move(inner)} {}
 };
 
 } // namespace zedio::socket::unix_domain

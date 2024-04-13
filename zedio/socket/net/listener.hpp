@@ -8,10 +8,8 @@ namespace zedio::socket::net {
 class TcpListener : public detail::BaseListener<TcpListener, TcpStream, SocketAddr>,
                     public detail::ImplTTL<TcpListener> {
 public:
-    explicit TcpListener(const int fd)
-        : BaseListener{fd} {
-        LOG_TRACE("Build a TcpListener {{fd: {}}}", fd);
-    }
+    explicit TcpListener(detail::Socket &&inner)
+        : BaseListener{std::move(inner)} {}
 };
 
 } // namespace zedio::socket::net

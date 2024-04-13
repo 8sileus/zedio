@@ -13,7 +13,7 @@
 
 namespace zedio::fs {
 
-class File : public io::detail::Fd,
+class File : public io::detail::FD,
              public io::detail::ImplAsyncRead<File>,
              public io::detail::ImplAsyncWrite<File>,
              public detail::ImplAsyncFsync<File>,
@@ -23,7 +23,7 @@ private:
 
 private:
     explicit File(const int fd)
-        : Fd{fd} {}
+        : FD{fd} {}
 
 public:
     template <class T>

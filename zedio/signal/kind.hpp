@@ -83,8 +83,8 @@ namespace detail {
         }
 
     private:
-        static void notify_all(int n) {
-            assert(n == static_cast<int>(Kind));
+        static void notify_all([[maybe_unused]] int code) {
+            assert(code == static_cast<int>(Kind));
 
             auto handles = std::list<std::coroutine_handle<>>{};
             {

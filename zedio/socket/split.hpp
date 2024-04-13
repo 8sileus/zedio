@@ -11,16 +11,17 @@ class ReadHalf : public ImplStreamRead<ReadHalf<Addr>>,
                  public ImplLocalAddr<ReadHalf<Addr>, Addr>,
                  public ImplPeerAddr<ReadHalf<Addr>, Addr> {
 public:
-    ReadHalf(const int &fd)
-        : fd_{fd} {}
+    ReadHalf(Socket &inner)
+        : inner_{inner} {}
 
 public:
-    int fd() const noexcept {
-        return fd_;
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return inner_.fd();
     }
 
 private:
-    const int &fd_;
+    Socket &inner_;
 };
 
 template <class Addr>
@@ -28,16 +29,17 @@ class WriteHalf : public ImplStreamWrite<WriteHalf<Addr>>,
                   public ImplLocalAddr<WriteHalf<Addr>, Addr>,
                   public ImplPeerAddr<WriteHalf<Addr>, Addr> {
 public:
-    WriteHalf(const int &fd)
-        : fd_{fd} {}
+    WriteHalf(Socket &inner)
+        : inner_{inner} {}
 
 public:
-    int fd() const noexcept {
-        return fd_;
+    [[nodiscard]]
+    auto fd() const noexcept {
+        return inner_.fd();
     }
 
 private:
-    const int &fd_;
+    Socket &inner_;
 };
 
 template <class T>
@@ -47,18 +49,19 @@ protected:
         : stream_{stream} {}
 
 public:
-    int fd() const noexcept {
+    [[nodiscard]]
+    auto fd() const noexcept {
         return stream_->fd();
     }
 
     auto reunite(OwnedBase &other) -> Result<T> {
-        if (stream_ == other.stream_) {
-            other.stream_.reset();
-            std::shared_ptr<T> temp{nullptr};
-            temp.swap(stream_);
-            return std::move(*temp);
+        if (this == std::addressof(other) || stream_ != other.stream_) {
+            return std::unexpected{make_zedio_error(Error::ReuniteFailed)};
         }
-        return std::unexpected{make_zedio_error(Error::ReuniteFailed)};
+        other.stream_.reset();
+        std::shared_ptr<T> temp{nullptr};
+        temp.swap(stream_);
+        return std::move(*temp);
     }
 
 protected:

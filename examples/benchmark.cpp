@@ -1,6 +1,7 @@
 #include "zedio/core.hpp"
 #include "zedio/log.hpp"
 #include "zedio/net.hpp"
+#include "zedio/signal.hpp"
 #include "zedio/time.hpp"
 
 #include <string_view>
@@ -55,6 +56,11 @@ auto server() -> Task<void> {
     }
 }
 
+auto main_loop() -> Task<void> {
+    spawn(server());
+    co_await signal::ctrl_c();
+}
+
 auto main(int argc, char **argv) -> int {
     if (argc != 2) {
         std::cerr << "usage: benchmark num_threas\n";
@@ -68,6 +74,6 @@ auto main(int argc, char **argv) -> int {
         .driver()
         .set_submit_interval(0)
         .build()
-        .block_on(server());
+        .block_on(main_loop());
     return 0;
 }

@@ -9,7 +9,6 @@
 // unix domain
 #include "zedio/socket/unix_domain/datagram.hpp"
 #include "zedio/socket/unix_domain/listener.hpp"
-#include "zedio/socket/unix_domain/socket.hpp"
 #include "zedio/socket/unix_domain/stream.hpp"
 
 namespace zedio::net {
