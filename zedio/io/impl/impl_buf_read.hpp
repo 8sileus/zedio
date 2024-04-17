@@ -18,7 +18,7 @@ public:
     }
 
     void consume(std::size_t n) noexcept {
-        n = std::min(n, static_cast<B *>(this).r_stream_.r_remaining());
+        n = std::min(n, static_cast<B *>(this)->r_stream_.r_remaining());
         static_cast<B *>(this)->r_stream_.r_increase(n);
     }
 
