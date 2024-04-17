@@ -146,7 +146,6 @@ public:
     }
 
 public:
-    [[REMEMBER_CO_AWAIT]]
     auto send_set_command(std::string_view key, std::string_view value) -> Task<void> {
         auto command = std::format("*3\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
                                    std::to_string(key.size()),
@@ -157,7 +156,6 @@ public:
         co_await codec_.encode(command, buffered_writer_);
     }
 
-    [[REMEMBER_CO_AWAIT]]
     auto send_get_command(std::string_view key) -> Task<void> {
         auto command
             = std::format("*2\r\n$3\r\nGET\r\n${}\r\n{}\r\n", std::to_string(key.size()), key);
@@ -165,14 +163,12 @@ public:
         co_await codec_.encode(command, buffered_writer_);
     }
 
-    [[REMEMBER_CO_AWAIT]]
     auto get_command_result() -> Task<std::string> {
         auto res = co_await codec_.decode(buffered_reader_);
         console.debug("Recv:\n{}", res);
         co_return res;
     }
 
-    [[REMEMBER_CO_AWAIT]]
     auto close() -> Task<void> {
         co_await buffered_reader_.inner().reunite(buffered_writer_.inner()).value().close();
     }
@@ -189,6 +185,7 @@ private:
         : proto_{std::move(stream)} {}
 
 public:
+    [[REMEMBER_CO_AWAIT]]
     static auto connect(std::string_view host, uint16_t port) -> Task<Result<RedisClient>> {
         auto addr = SocketAddr::parse(host, port).value();
         auto stream = co_await TcpStream::connect(addr);
@@ -199,6 +196,7 @@ public:
         co_return RedisClient{std::move(stream.value())};
     }
 
+    [[REMEMBER_CO_AWAIT]]
     auto set(std::string_view key, std::string_view value) -> Task<void> {
         co_await proto_.send_set_command(key, value);
         auto response = co_await proto_.get_command_result();
@@ -206,6 +204,8 @@ public:
             console.error("SET command failed: {}", response);
         }
     }
+
+    [[REMEMBER_CO_AWAIT]]
     auto get(std::string_view key) -> Task<std::string> {
         co_await proto_.send_get_command(key);
         auto response = co_await proto_.get_command_result();
@@ -222,6 +222,7 @@ public:
         }
     }
 
+    [[REMEMBER_CO_AWAIT]]
     auto close() -> Task<void> {
         co_await proto_.close();
     }
@@ -234,6 +235,7 @@ auto client() -> Task<void> {
     auto res = co_await RedisClient::connect("127.0.0.1", 6379);
     if (!res) {
         console.error("{}", res.error().message());
+        co_return;
     }
     auto client = std::move(res.value());
 
