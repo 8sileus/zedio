@@ -45,17 +45,17 @@ consteval auto level_to_color(LogLevel level) noexcept -> std::string_view {
     switch (level) {
         using enum LogLevel;
     case Trace:
-        return "\033[1;36m"; // cyan
+        return "\033[97;46m"; // cyan
     case Debug:
-        return "\033[1;34m"; // blue
+        return "\033[97;44m"; // blue
     case Info:
-        return "\033[1;32m"; // green
+        return "\033[97;42m"; // green
     case Warn:
-        return "\033[1;33m"; // yellow
+        return "\033[90;43m"; // yellow
     case Error:
-        return "\033[1;31m"; // red
+        return "\033[97;41m"; // red
     case Fatal:
-        return "\033[1;35m"; // purple
+        return "\033[97;45m"; // purple
     default:
         std::unreachable();
         return "NOT DEFINE COLOR";
