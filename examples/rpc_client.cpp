@@ -6,6 +6,7 @@
 #include <cstdint>
 
 // C++
+#include <sstream>
 #include <string_view>
 #include <utility>
 
@@ -35,12 +36,20 @@ public:
         co_return RpcClient{std::move(stream.value())};
     }
 
-    template <typename T>
-    auto call(std::string_view method_name) -> Task<RpcResult<T>> {
+    template <typename Ret, typename... Args>
+    auto call(std::string_view method_name, Args &&...args) -> Task<RpcResult<Ret>> {
         RpcFramed              rpc_framed{stream_};
         std::array<char, 1024> buf{};
 
-        RpcMessage req{method_name};
+        std::ostringstream oss;
+        oss << method_name << ' ';
+        ((oss << args << ' '), ...);
+        auto payload = oss.str();
+        if (!payload.empty()) {
+            payload.pop_back();
+        }
+
+        RpcMessage req{payload};
         auto       res = co_await rpc_framed.write_frame<RpcMessage>(req);
         if (!res) {
             console.error("{}", res.error().message());
@@ -54,7 +63,7 @@ public:
         }
 
         auto data = resp.value().payload;
-        co_return deserialize<T>(data);
+        co_return deserialize<Ret>(data);
     }
 
 private:
@@ -72,8 +81,11 @@ auto client() -> Task<void> {
     auto person = (co_await client.call<Person>("get_person")).value();
     console.info("get_person name={}, age={}", person.name, person.age);
 
-    auto int_result = (co_await client.call<int>("get_int")).value();
-    console.info("get_int result={}", int_result);
+    auto add_result = (co_await client.call<int>("add", 1, 2)).value();
+    console.info("add(1, 2) result={}", add_result);
+
+    auto mul_result = (co_await client.call<double>("mul", 64, 64)).value();
+    console.info("mul(64, 64) result={}", mul_result);
 
     // auto call_result = co_await client.call<float>("xxxx");
     // if (!call_result) {

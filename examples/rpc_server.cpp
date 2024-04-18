@@ -6,11 +6,13 @@
 #include <cstdint>
 
 // C++
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 
+#include "examples/rpc_examples/function_traits.hpp"
 #include "examples/rpc_examples/person.hpp"
 #include "examples/rpc_examples/rpc_util.hpp"
 
@@ -33,24 +35,41 @@ public:
 public:
     template <typename Func>
     void register_handler(std::string_view method, Func fn) {
-        map_invokers[{method.data(), method.size()}]
-            = [fn]([[maybe_unused]] std::string_view serialized_parameters, std::string &result) {
-                  // TODO: parse args
-                  auto res = fn();
-                  result = serialize(res);
-              };
+        map_invokers_[{method.data(), method.size()}] = [fn](std::string_view serialized_parameters,
+                                                             std::string     &result) {
+            // Get function args type
+            using args_tuple_type = typename function_traits<Func>::args_tuple_type;
+            args_tuple_type args;
+
+            std::istringstream iss({serialized_parameters.data(), serialized_parameters.size()});
+            std::apply([&iss](auto &...arg) { ((iss >> arg), ...); }, args);
+
+            auto res = std::apply(fn, args);
+            result = serialize(res);
+        };
     }
 
-    auto invoke(std::string_view method) -> RpcResult<std::string> {
+    // Payload format:
+    // +--------+--------+--------+--------+--------+
+    // | method |  arg1  |  arg2  |  arg3  | ...    |
+    // +--------+--------+--------+--------+--------+
+    // Spaces are used as delimiters
+    auto invoke(std::string_view payload) -> RpcResult<std::string> {
+        std::istringstream iss{
+            {payload.data(), payload.size()}
+        };
+        std::string method;
+        iss >> method;
         console.debug("invoke method={}", method);
-
-        auto it = map_invokers.find({method.data(), method.size()});
-        if (it == map_invokers.end()) {
+        auto it = map_invokers_.find({method.data(), method.size()});
+        if (it == map_invokers_.end()) {
             return std::unexpected{make_rpc_error(RpcError::UnregisteredMethod)};
         } else {
-            // TODO: args
+            std::string parameters;
             std::string result;
-            it->second("", result);
+            // FIXME
+            std::getline(iss, parameters);
+            it->second(parameters, result);
             return result;
         }
     }
@@ -76,7 +95,7 @@ public:
                 if (has_stream) {
                     auto &[stream, peer_addr] = has_stream.value();
                     console.info("Accept a connection from {}", peer_addr);
-                    spawn(process(std::move(stream), this));
+                    spawn(this->handle_rpc(std::move(stream)));
                 } else {
                     console.error(has_stream.error().message());
                     break;
@@ -86,56 +105,60 @@ public:
     }
 
 private:
+    auto handle_rpc(TcpStream stream) -> Task<void> {
+        RpcFramed rpc_framed{stream};
+
+        while (true) {
+            std::array<char, 1024> buf{};
+
+            auto req = co_await rpc_framed.read_frame<RpcMessage>(buf);
+            if (!req) {
+                console.info("client closed");
+                co_return;
+            }
+
+            auto payload = req.value().payload;
+            auto has_result = this->invoke(payload);
+            if (!has_result) {
+                console.error("{}: {}", has_result.error().message(), payload);
+                co_return;
+            }
+            RpcMessage resp{has_result.value()};
+
+            auto res = co_await rpc_framed.write_frame<RpcMessage>(resp);
+            if (!res) {
+                console.error("{}", res.error().message());
+                co_return;
+            }
+        }
+    }
+
+private:
     std::string host_;
     uint16_t    port_;
     std::unordered_map<std::string, std::function<void(std::string_view name, std::string &result)>>
-        map_invokers{};
+        map_invokers_;
 };
 
-auto process(TcpStream stream, RpcServer *server) -> Task<void> {
-    RpcFramed rpc_framed{stream};
+auto add(int a, int b) -> int {
+    return a + b;
+}
 
-    while (true) {
-        std::array<char, 1024> buf{};
+auto mul(double a, double b) -> double {
+    return a * b;
+}
 
-        auto req = co_await rpc_framed.read_frame<RpcMessage>(buf);
-        if (!req) {
-            console.info("client closed");
-            co_return;
-        }
-
-        auto method_name = req.value().payload;
-        auto has_result = server->invoke(method_name);
-        if (!has_result) {
-            console.error("{}: {}", has_result.error().message(), method_name);
-            co_return;
-        }
-        RpcMessage resp{has_result.value()};
-
-        auto res = co_await rpc_framed.write_frame<RpcMessage>(resp);
-        if (!res) {
-            console.error("{}", res.error().message());
-            co_return;
-        }
-    }
+auto get_person() -> Person {
+    return {"zhangsan", 18};
 }
 
 auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::Debug);
     RpcServer server{"127.0.0.1", 9000};
 
-    server.register_handler("get_int", []() -> int {
-        console.debug("get_int() called");
-        return 42;
-    });
-
-    server.register_handler("get_person", []() -> Person {
-        console.debug("get_person() called");
-        return {"zhangsan", 18};
-    });
-
-    // TODO
-    // server.register_handler("add", [](int a, int b) -> int { return a + b; });
+    server.register_handler("add", add);
+    server.register_handler("mul", mul);
+    server.register_handler("get_person", get_person);
 
     server.run();
 }
