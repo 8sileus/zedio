@@ -41,6 +41,16 @@ private:
     std::source_location sl_;
 };
 
+struct LogRecord {
+    const char      *datetime;
+    int64_t          millisecond;
+    int              thread_id;
+    std::string_view thread_name;
+    const char      *file_name;
+    size_t           line;
+    std::string      log;
+};
+
 template <class DeriverLogger>
 class BaseLogger : util::Noncopyable {
 public:
@@ -106,15 +116,13 @@ private:
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
         static_cast<DeriverLogger *>(this)->template log<LEVEL>(
-            std::format("{}.{:03} {} {} {} {}:{} {}\n",
-                        buffer.data(),
-                        cur_millisecond,
-                        level_to_string(LEVEL),
-                        current_thread::get_tid(),
-                        current_thread::get_thread_name(),
-                        sl.file_name(),
-                        sl.line(),
-                        std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))));
+            LogRecord{buffer.data(),
+                      cur_millisecond,
+                      current_thread::get_tid(),
+                      current_thread::get_thread_name(),
+                      sl.file_name(),
+                      sl.line(),
+                      std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))});
     }
 
 private:
@@ -124,8 +132,18 @@ private:
 class ConsoleLogger : public BaseLogger<ConsoleLogger> {
 public:
     template <LogLevel level>
-    void log(std::string &&msg) {
-        std::cout << std::format("{}{}{}", level_to_color(level), msg, reset_format());
+    void log(const LogRecord &record) {
+        std::cout << std::format("{}.{:03} [{}{}{}] {} {} {}:{} {}\n",
+                                 record.datetime,
+                                 record.millisecond,
+                                 level_to_color(level),
+                                 level_to_string(level),
+                                 reset_format(),
+                                 record.thread_id,
+                                 record.thread_name,
+                                 record.file_name,
+                                 record.line,
+                                 record.log);
     }
 };
 
@@ -147,10 +165,20 @@ public:
     }
 
     template <LogLevel level>
-    void log(std::string &&msg) {
+    void log(const LogRecord &record) {
         if (!running_) [[unlikely]] {
             return;
         }
+        std::string msg{std::format("{}.{:03} {} {} {} {}:{} {}\n",
+                                    record.datetime,
+                                    record.millisecond,
+                                    level_to_string(level),
+                                    record.thread_id,
+                                    record.thread_name,
+                                    record.file_name,
+                                    record.line,
+                                    record.log)};
+
         std::lock_guard<std::mutex> lock(mutex_);
         if (current_buffer_->writable_bytes() > msg.size()) {
             current_buffer_->write(msg);
