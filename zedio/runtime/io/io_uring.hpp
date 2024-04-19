@@ -19,8 +19,7 @@ class IORing {
 public:
     IORing(const Config &config)
         : submit_interval_{config.submit_interval_} {
-        if (auto ret = io_uring_queue_init(config.ring_entries_, &ring_, config.ring_flags_);
-            ret < 0) [[unlikely]] {
+        if (auto ret = io_uring_queue_init(config.num_events_, &ring_, 0); ret < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("Call io_uring_queue_init failed, error: {}.", strerror(-ret)));
         }

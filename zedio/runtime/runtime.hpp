@@ -1,66 +1,89 @@
 #pragma once
 
 #include "zedio/runtime/builder.hpp"
-#include "zedio/runtime/shared.hpp"
-#include "zedio/runtime/worker.hpp"
+#include "zedio/time/sleep.hpp"
 
-namespace zedio {
+namespace zedio::runtime {
 
-class Runtime : util::Noncopyable {
-    friend class runtime::detail::Builder<Runtime>;
-
-private:
-    Runtime(runtime::detail::Config config)
-        : shared_{config} {}
+template <typename Handle>
+class Runtime {
+public:
+    template <typename... Args>
+    Runtime(Args &&...args)
+        : handle_{std::forward<Args>(args)...} {}
 
 public:
     // Waiting for the task to close
-    auto block_on(async::Task<void> &&first_coro) -> int {
-        auto main_coro = [](runtime::detail::Shared &shared,
-                            async::Task<void>      &&main_coro) -> async::Task<void> {
+    void block_on(async::Task<void> &&task) {
+        auto main_coro = [](Handle &handle, async::Task<void> task) -> async::Task<void> {
             try {
-                co_await main_coro;
+                co_await task;
             } catch (const std::exception &ex) {
                 LOG_ERROR("{}", ex.what());
             } catch (...) {
                 LOG_ERROR("Catch a unknown exception");
             }
-            shared.close();
+            handle.close();
             co_return;
-        }(shared_, std::move(first_coro));
+        }(handle_, std::move(task));
 
-        runtime::detail::schedule_remote(main_coro.take());
+        handle_.schedule_task(main_coro.take());
 
-        wait_workers();
-        return 0;
+        handle_.wait();
+    }
+
+    void shutdown_timeout(std::chrono::nanoseconds delay) {
+        auto task = [](Handle &handle, std::chrono::nanoseconds delay) -> async::Task<void> {
+            co_await time::sleep(delay);
+            handle.clsoe();
+            co_return {};
+        }(handle_, delay);
+
+        handle_.schedule_task(task.take());
     }
 
 private:
-    void wait_workers() {
-        for (auto &thread : shared_.threads_) {
-            if (thread.joinable()) {
-                thread.join();
-            }
+    Handle handle_;
+};
+
+namespace detail {
+
+    static inline void schedule_local(std::coroutine_handle<> handle) {
+        if (current_thread::t_worker != nullptr) {
+            current_thread::schedule_local(handle);
+        } else if (multi_thread::t_worker != nullptr) {
+            multi_thread::schedule_local(handle);
+        } else [[unlikely]] {
+            std::unreachable();
         }
     }
 
-public:
-    /// @brief Create runtime with custom options
-    /// @example Runtime::options.set_num_worker(4).build();
-    [[nodiscard]]
-    static auto options() -> runtime::detail::Builder<Runtime> {
-        return runtime::detail::Builder<Runtime>{};
+    static inline void schedule_remote(std::coroutine_handle<> handle) {
+        if (current_thread::t_worker != nullptr) {
+            current_thread::schedule_remote(handle);
+        } else if (multi_thread::t_shared != nullptr) {
+            multi_thread::schedule_remote(handle);
+        } else [[unlikely]] {
+            std::unreachable();
+        }
     }
 
-    /// @brief Create runtime with default options
-    [[nodiscard]]
-    static auto create() -> Runtime {
-        return runtime::detail::Builder<Runtime>{}.build();
+    static inline void schedule_remote_batch(std::list<std::coroutine_handle<>> &&handles,
+                                             std::size_t                          n) {
+        if (current_thread::t_worker != nullptr) {
+            current_thread::schedule_remote_batch(std::move(handles), n);
+        } else if (multi_thread::t_shared != nullptr) {
+            multi_thread::schedule_remote_batch(std::move(handles), n);
+        } else [[unlikely]] {
+            std::unreachable();
+        }
     }
 
-private:
-    runtime::detail::Shared shared_;
-};
+} // namespace detail
+
+} // namespace zedio::runtime
+
+namespace zedio {
 
 // template <typename... Ts>
 //     requires std::conjunction_v<std::is_same<async::Task<void>, Ts>...> && (sizeof...(Ts) > 0)

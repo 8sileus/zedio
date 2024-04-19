@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/macros.hpp"
-#include "zedio/runtime/worker.hpp"
+#include "zedio/runtime/runtime.hpp"
 #include "zedio/sync/mutex.hpp"
 
 namespace zedio::sync {
@@ -68,7 +68,7 @@ public:
             update -= 1;
             auto awaiter = awaiters_.front();
             awaiters_.pop_front();
-            runtime::detail::t_worker->schedule_task(awaiter->handle_);
+            runtime::detail::schedule_local(awaiter->handle_);
         }
     }
 

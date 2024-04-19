@@ -1,9 +1,8 @@
-#pragma once 
+#pragma once
 
 #include "zedio/socket/impl/sockopt/async_sockopt.hpp"
 
-namespace zedio::socket::detail
-{
+namespace zedio::socket::detail {
 
 template <class T>
 struct ImplMark {

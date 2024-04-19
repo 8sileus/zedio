@@ -40,5 +40,6 @@ auto main_test() -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
-    return Runtime::options().scheduler().set_num_workers(1).build().block_on(main_test());
+    runtime::CurrentThreadBuilder::default_create().block_on(main_test());
+    return 0;
 }

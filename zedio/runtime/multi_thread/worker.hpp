@@ -4,9 +4,9 @@
 #include "zedio/common/util/rand.hpp"
 #include "zedio/common/util/thread.hpp"
 #include "zedio/runtime/driver.hpp"
-#include "zedio/runtime/shared.hpp"
+#include "zedio/runtime/multi_thread/shared.hpp"
 
-namespace zedio::runtime::detail {
+namespace zedio::runtime::multi_thread {
 
 class Worker;
 
@@ -20,14 +20,23 @@ public:
         : shared_{shared}
         , index_{index}
         , driver_{shared.config_} {
-        current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
-        LOG_TRACE("Build {}", current_thread::get_thread_name());
+        shared_.workers_.push_back(this);
+
+        assert(shared_.workers_.size() == index + 1);
+        assert(shared_.workers_.back() == this);
+
         assert(t_worker == nullptr);
         t_worker = this;
+        assert(t_shared == nullptr);
+        t_shared = std::addressof(shared);
+
+        LOG_TRACE("Build {}", util::get_current_thread_name());
     }
 
     ~Worker() {
         t_worker = nullptr;
+        t_shared = nullptr;
+        shared_.shutdown_.arrive_and_wait();
     }
 
     void run() {
@@ -64,7 +73,7 @@ public:
         driver_.wake_up();
     }
 
-    void schedule_task(std::coroutine_handle<> task) {
+    void schedule_local(std::coroutine_handle<> task) {
         if (run_next_.has_value()) {
             local_queue_.push_back_or_overflow(std::move(run_next_.value()), shared_.global_queue_);
             run_next_.emplace(std::move(task));
@@ -176,7 +185,7 @@ private:
 
     /// If need, nonblocking poll I/O events and check if the scheduler has been shutdown
     void maintenance() {
-        if (this->tick_ % shared_.config_.check_io_interval_ == 0) {
+        if (this->tick_ % shared_.config_.io_interval_ == 0) {
             // Poll happend I/O events, I don't care if I/O events happen
             // Just a regular checking
             [[maybe_unused]] auto _ = poll();
@@ -193,7 +202,7 @@ private:
 
     [[nodiscard]]
     auto get_next_task() -> std::optional<std::coroutine_handle<>> {
-        if (tick_ % shared_.config_.check_global_interval_ == 0) {
+        if (tick_ % shared_.config_.global_queue_interval_ == 0) {
             return shared_.next_global_task().or_else([this] { return next_local_task(); });
         } else {
             if (auto task = next_local_task(); task) {
@@ -273,42 +282,11 @@ private:
     util::FastRand                         rand_{};
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
-    Driver                                 driver_;
+    detail::Driver                         driver_;
     LocalQueue                             local_queue_{};
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};
 };
-
-void schedule_local(std::coroutine_handle<> handle) {
-    t_worker->schedule_task(handle);
-}
-
-/// implement Shared
-
-Shared::Shared(Config config)
-    : config_{config}
-    , idle_{config.num_workers_}
-    , shutdown_{static_cast<std::ptrdiff_t>(config.num_workers_)} {
-
-    t_shared = this;
-
-    LOG_TRACE("{}", config);
-    for (std::size_t i = 0; i < config_.num_workers_; ++i) {
-        // Make sure all threads have started
-        std::latch sync{2};
-        threads_.emplace_back([this, i, &sync]() {
-            Worker worker{*this, i};
-            workers_.emplace_back(&worker);
-            assert(workers_.size() == i + 1);
-            assert(workers_.back() == &worker);
-
-            sync.count_down();
-            worker.run();
-            shutdown_.arrive_and_wait();
-        });
-        sync.arrive_and_wait();
-    }
-}
 
 void Shared::wake_up_one() {
     if (auto index = idle_.worker_to_notify(); index) {
@@ -335,4 +313,4 @@ void Shared::wake_up_if_work_pending() {
     }
 }
 
-} // namespace zedio::runtime::detail
+} // namespace zedio::runtime::multi_thread

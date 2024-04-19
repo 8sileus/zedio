@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/common/debug.hpp"
+#include "zedio/runtime/runtime.hpp"
 
 #ifdef __linux__
 
@@ -91,7 +92,7 @@ namespace detail {
                 auto lock = std::lock_guard{s_mutex};
                 s_handles.swap(handles);
             }
-            runtime::detail::schedule_remote(std::move(handles), handles.size());
+            runtime::detail::schedule_remote_batch(std::move(handles), handles.size());
         }
 
     private:

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "zedio/runtime/queue.hpp"
 // C
 #include <cassert>
 // C++
@@ -22,8 +21,8 @@ public:
         , data_{data} {}
 
 public:
-    void execute(runtime::detail::LocalQueue  &local_queue,
-                 runtime::detail::GlobalQueue &global_queue) {
+    template <typename LocalQueue, typename GlobalQueue>
+    void execute(LocalQueue &local_queue, GlobalQueue &global_queue) {
         if (handle_ != nullptr) {
             assert(data_ == nullptr);
             local_queue.push_back_or_overflow(handle_, global_queue);

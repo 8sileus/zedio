@@ -43,7 +43,7 @@ namespace detail {
 
     private:
         struct iovec  iovec_;
-        struct msghdr msg_ ;
+        struct msghdr msg_;
         socklen_t    *addrlen_;
     };
 

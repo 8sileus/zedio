@@ -3,7 +3,6 @@
 #include "zedio/io/base/callback.hpp"
 #include "zedio/runtime/io/io_uring.hpp"
 #include "zedio/runtime/io/waker.hpp"
-#include "zedio/runtime/queue.hpp"
 #include "zedio/runtime/timer/timer.hpp"
 // C
 #include <cstring>
@@ -39,14 +38,14 @@ public:
 public:
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
-    void wait(runtime::detail::LocalQueue  &local_queue,
-              runtime::detail::GlobalQueue &global_queue) {
+    template <typename LocalQueue, typename GlobalQueue>
+    void wait(LocalQueue &local_queue, GlobalQueue &global_queue) {
         ring_.wait(timer_.next_expiration_time());
         poll(local_queue, global_queue);
     }
 
-    auto poll(runtime::detail::LocalQueue &local_queue, runtime::detail::GlobalQueue &global_queue)
-        -> bool {
+    template <typename LocalQueue, typename GlobalQueue>
+    auto poll(LocalQueue &local_queue, GlobalQueue &global_queue) -> bool {
         constexpr const auto             SIZE = LOCAL_QUEUE_CAPACITY;
         std::array<io_uring_cqe *, SIZE> cqes;
 
@@ -57,8 +56,8 @@ public:
                 if (cb->entry_ != nullptr) {
                     timer_.remove_entry(cb->entry_);
                 }
-                local_queue.push_back_or_overflow(cb->get_coro_handle_and_set_result(cqes[i]->res),
-                                                  global_queue);
+                cb->result_ = cqes[i]->res;
+                local_queue.push_back_or_overflow(cb->handle_, global_queue);
             }
         }
 

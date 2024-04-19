@@ -90,7 +90,7 @@ public:
 private:
     static void resume(Awaiter *awaiter) {
         while (awaiter != nullptr) {
-            runtime::detail::t_worker->schedule_task(awaiter->handle_);
+            runtime::detail::schedule_local(awaiter->handle_);
             awaiter = awaiter->next_;
         }
     }

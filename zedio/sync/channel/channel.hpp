@@ -2,7 +2,7 @@
 
 #include "zedio/async/coroutine/task.hpp"
 #include "zedio/common/util/ring_buffer.hpp"
-#include "zedio/runtime/worker.hpp"
+#include "zedio/runtime/runtime.hpp"
 #include "zedio/sync/mutex.hpp"
 
 namespace zedio::sync::detail {
@@ -25,7 +25,7 @@ class Channel {
                 auto receiver = channel_.waiting_receivers_.front();
                 channel_.waiting_receivers_.pop_front();
                 receiver->result_ = std::move(value_);
-                runtime::detail::t_worker->schedule_task(receiver->handle_);
+                runtime::detail::schedule_local(receiver->handle_);
                 result_.emplace();
                 return false;
             }
@@ -69,7 +69,7 @@ class Channel {
                 channel_.waiting_senders_.pop_front();
                 sender->result_.emplace();
                 result_.emplace(std::move(sender->value_));
-                runtime::detail::t_worker->schedule_task(sender->handle_);
+                runtime::detail::schedule_local(sender->handle_);
                 return false;
             }
             if (channel_.buf_.is_empty()) {
@@ -137,10 +137,10 @@ private:
     void destroy() {
         if (is_closed_.exchange(true, std::memory_order::acq_rel) == false) {
             for (auto sender : waiting_senders_) {
-                runtime::detail::t_worker->schedule_task(sender->handle_);
+                runtime::detail::schedule_local(sender->handle_);
             }
             for (auto receiver : waiting_receivers_) {
-                runtime::detail::t_worker->schedule_task(receiver->handle_);
+                runtime::detail::schedule_local(receiver->handle_);
             }
             waiting_senders_.clear();
             waiting_receivers_.clear();

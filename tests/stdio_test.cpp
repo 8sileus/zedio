@@ -27,6 +27,6 @@ auto test() -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::Debug);
-    auto runtime = Runtime::options().scheduler().set_num_workers(1).build();
+    auto runtime = zedio::runtime::CurrentThreadBuilder::default_create();
     runtime.block_on(test());
 }

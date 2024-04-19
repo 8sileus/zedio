@@ -39,6 +39,6 @@ auto main(int argc, char **argv) -> int {
     auto port = std::stoi(argv[2]);
     auto addr = SocketAddr::parse(ip, port).value();
     auto client_num = std::stoi(argv[3]);
-    Runtime::create().block_on(client(addr, client_num));
+    zedio::runtime::Builder<>::default_create().block_on(client(addr, client_num));
     return 0;
 }

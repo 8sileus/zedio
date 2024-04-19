@@ -68,12 +68,14 @@ auto main(int argc, char **argv) -> int {
     }
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto num_threads = std::stoi(argv[1]);
-    Runtime::options()
-        .scheduler()
-        .set_num_workers(num_threads)
-        .driver()
-        .set_submit_interval(0)
-        .build()
-        .block_on(main_loop());
+    if (num_threads > 1) {
+        runtime::MultiThreadBuilder::options()
+            .set_num_workers(num_threads)
+            .set_submit_interval(0)
+            .build()
+            .block_on(main_loop());
+    } else {
+        runtime::CurrentThreadBuilder::default_create().block_on(main_loop());
+    }
     return 0;
 }

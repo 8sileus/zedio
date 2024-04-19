@@ -118,8 +118,8 @@ private:
         static_cast<DeriverLogger *>(this)->template log<LEVEL>(
             LogRecord{buffer.data(),
                       cur_millisecond,
-                      current_thread::get_tid(),
-                      current_thread::get_thread_name(),
+                      util::get_tid(),
+                      util::get_current_thread_name(),
                       sl.file_name(),
                       sl.line(),
                       std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))});

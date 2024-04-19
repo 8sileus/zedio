@@ -15,7 +15,7 @@
 #include <memory>
 #include <utility>
 
-namespace zedio::runtime::detail {
+namespace zedio::runtime::multi_thread {
 
 class GlobalQueue {
 public:
@@ -31,16 +31,16 @@ public:
 
     void push(std::coroutine_handle<> task) {
         std::lock_guard lock(mutex_);
-        if (is_closed_) {
+        if (is_closed_) [[unlikely]] {
             return;
         }
         tasks_.push_back(task);
-        num_.fetch_add(1, std::memory_order::release);
+        num_.fetch_add(1, std::memory_order::seq_cst);
     }
 
-    void push(std::list<std::coroutine_handle<>> &&tasks, std::size_t n) {
+    void push_batch(std::list<std::coroutine_handle<>> &&tasks, std::size_t n) {
         std::lock_guard lock(mutex_);
-        if (is_closed_) {
+        if (is_closed_) [[unlikely]] {
             return;
         }
         tasks_.splice(tasks_.end(), tasks);
@@ -104,8 +104,8 @@ public:
         auto [steal, _] = unpack(head_.load(std::memory_order::acquire));
         std::atomic_ref<uint32_t> atoimc_tail{tail_};
         auto                      tail = atoimc_tail.load(std::memory_order::acquire);
-        assert(LOCAL_QUEUE_CAPACITY >= static_cast<std::size_t>(tail - steal));
-        return LOCAL_QUEUE_CAPACITY - static_cast<std::size_t>(tail - steal);
+        assert(detail::LOCAL_QUEUE_CAPACITY >= static_cast<std::size_t>(tail - steal));
+        return detail::LOCAL_QUEUE_CAPACITY - static_cast<std::size_t>(tail - steal);
     }
 
     [[nodiscard]]
@@ -158,7 +158,7 @@ public:
             auto head = head_.load(std::memory_order::acquire);
             auto [steal, real] = unpack(head);
             tail = tail_;
-            if (tail - steal < static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY)) {
+            if (tail - steal < static_cast<uint32_t>(detail::LOCAL_QUEUE_CAPACITY)) {
                 // There is capacity for the task
                 break;
             } else if (steal != real) {
@@ -173,7 +173,7 @@ public:
                 }
             }
         }
-        std::size_t idx = tail & MASK;
+        std::size_t idx = static_cast<std::size_t>(tail) & MASK;
         buffer_[idx] = std::move(task);
         std::atomic_ref atomic_tail{tail_};
         atomic_tail.store(tail + 1, std::memory_order::release);
@@ -212,7 +212,7 @@ public:
         auto dst_tail = dst.tail_;
 
         // less than half of local_queue_capacity just return
-        if (dst_tail - steal > static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY / 2)) {
+        if (dst_tail - steal > static_cast<uint32_t>(detail::LOCAL_QUEUE_CAPACITY / 2)) {
             return result;
         }
         auto n = steal_into2(dst, dst_tail);
@@ -289,9 +289,10 @@ private:
                        uint32_t                  head,
                        [[maybe_unused]] uint32_t tail,
                        GlobalQueue              &global_queue) -> bool {
-        static constexpr auto NUM_TASKS_TAKEN{static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY / 2)};
+        static constexpr auto NUM_TASKS_TAKEN{
+            static_cast<uint32_t>(detail::LOCAL_QUEUE_CAPACITY / 2)};
 
-        assert(tail - head == LOCAL_QUEUE_CAPACITY);
+        assert(tail - head == detail::LOCAL_QUEUE_CAPACITY);
 
         auto prev = pack(head, head);
 
@@ -308,12 +309,12 @@ private:
             tasks.push_back(std::move(buffer_[idx]));
         }
         tasks.push_back(std::move(task));
-        global_queue.push(std::move(tasks), NUM_TASKS_TAKEN + 1);
+        global_queue.push_batch(std::move(tasks), NUM_TASKS_TAKEN + 1);
         return true;
     }
 
 private:
-    static constexpr std::size_t MASK = LOCAL_QUEUE_CAPACITY - 1;
+    static constexpr std::size_t MASK = detail::LOCAL_QUEUE_CAPACITY - 1;
 
     // [[nodiscard]]
     // static auto wrapping_add(uint32_t a, uint32_t b) -> uint32_t {
@@ -339,7 +340,7 @@ private:
     std::atomic<uint64_t> head_{0};
     uint32_t              tail_{0};
     // std::atomic<uint32_t> tail_{0};
-    std::array<std::coroutine_handle<>, LOCAL_QUEUE_CAPACITY> buffer_;
+    std::array<std::coroutine_handle<>, detail::LOCAL_QUEUE_CAPACITY> buffer_;
 };
 
-} // namespace zedio::runtime::detail
+} // namespace zedio::runtime::multi_thread

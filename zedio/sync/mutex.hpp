@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/macros.hpp"
-#include "zedio/runtime/worker.hpp"
+#include "zedio/runtime/runtime.hpp"
 // C++
 #include <atomic>
 #include <coroutine>
@@ -111,7 +111,7 @@ public:
             } while (lifo_awaiters != nullptr);
         }
         assert(fifo_awaiters_ != nullptr);
-        runtime::detail::t_worker->schedule_task(fifo_awaiters_->handle_);
+        runtime::detail::schedule_local(fifo_awaiters_->handle_);
         fifo_awaiters_ = fifo_awaiters_->next_;
     }
 

@@ -2,7 +2,6 @@
 
 #include "zedio/common/static_math.hpp"
 #include "zedio/runtime/config.hpp"
-#include "zedio/runtime/queue.hpp"
 #include "zedio/runtime/timer/entry.hpp"
 // C
 #include <assert.h>
@@ -58,10 +57,11 @@ public:
         }
     }
 
-    void handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
-                                runtime::detail::GlobalQueue &global_queue,
-                                std::size_t                  &count,
-                                std::size_t                   remaining_ms) {
+    template <typename LocalQueue, typename GlobalQueue>
+    void handle_expired_entries(LocalQueue  &local_queue,
+                                GlobalQueue &global_queue,
+                                std::size_t &count,
+                                std::size_t  remaining_ms) {
         while (bitmap_) {
             std::size_t index = std::countr_zero(bitmap_);
             if (index * MS_PER_SLOT > remaining_ms) {
@@ -178,10 +178,11 @@ public:
         }
     }
 
-    void handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
-                                runtime::detail::GlobalQueue &global_queue,
-                                std::size_t                  &count,
-                                std::size_t                   remaining_ms) {
+    template <typename LocalQueue, typename GlobalQueue>
+    void handle_expired_entries(LocalQueue  &local_queue,
+                                GlobalQueue &global_queue,
+                                std::size_t &count,
+                                std::size_t  remaining_ms) {
         while (bitmap_) {
             std::size_t index = std::countr_zero(bitmap_);
             if (index > remaining_ms) {

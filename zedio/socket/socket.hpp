@@ -10,8 +10,6 @@ public:
     explicit Socket(const int fd)
         : FD{fd} {}
 
-
-
 public:
     template <typename Addr>
         requires is_socket_address<Addr>

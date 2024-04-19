@@ -1,7 +1,7 @@
 #pragma once
 
 #include "zedio/common/macros.hpp"
-#include "zedio/runtime/worker.hpp"
+#include "zedio/runtime/runtime.hpp"
 
 namespace zedio::sync {
 
@@ -75,7 +75,7 @@ private:
     void notify_all() {
         auto head = head_.load(std::memory_order::acquire);
         while (head != nullptr) {
-            runtime::detail::t_worker->schedule_task(head->handle_);
+            runtime::detail::schedule_local(head->handle_);
             head = head->next_;
         }
     }

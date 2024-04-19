@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace zedio::runtime::detail {
+namespace zedio::runtime::multi_thread {
 
 class IdleState {
 public:
@@ -154,4 +154,4 @@ private:
     std::mutex                      mutex_;
 };
 
-} // namespace zedio::runtime::detail
+} // namespace zedio::runtime::multi_thread

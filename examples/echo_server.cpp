@@ -70,7 +70,7 @@ auto main(int argc, char **argv) -> int {
     }
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto num_threas = std::stoi(argv[1]);
-    auto runtime = Runtime::options().scheduler().set_num_workers(num_threas).build();
+    auto runtime = zedio::runtime::Builder<>::options().set_num_workers(num_threas).build();
     runtime.block_on(server());
     return 0;
 }

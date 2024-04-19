@@ -150,5 +150,6 @@ auto test() -> Task<void> {
 }
 
 auto main() -> int {
-    return Runtime::options().scheduler().set_num_workers(1).build().block_on(test());
+    zedio::runtime::Builder<>::default_create().block_on(test());
+    return 0;
 }

@@ -1,79 +1,101 @@
 #pragma once
 
 #include "zedio/runtime/config.hpp"
+#include "zedio/runtime/current_thread/handle.hpp"
+#include "zedio/runtime/multi_thread/handle.hpp"
+#include "zedio/runtime/runtime.hpp"
 
-namespace zedio::runtime::detail {
+// C++
+#include <string>
+#include <thread>
 
-template <class R>
-class DriverBuilder;
+namespace zedio::runtime {
 
-template <class R>
-class SchedulerBuilder;
+enum class Kind {
+    CurrentThread,
+    MultiThread,
+};
 
-template <class R>
+template <typename T>
+class Runtime;
+
+template <Kind KIND = Kind::MultiThread>
 class Builder {
+private:
+    Builder() {
+        auto _ = set_thread_basename("ZEDIO-WORKER");
+    }
+
 public:
     [[nodiscard]]
-    auto build() -> R {
-        return R{this->config_};
+    auto set_num_workers(std::size_t num_worker_threads) -> Builder & {
+        config_.num_workers_ = num_worker_threads;
+        return *this;
     }
 
     [[nodiscard]]
-    auto driver() -> DriverBuilder<R> {
-        return DriverBuilder<R>{*this};
+    auto set_global_queue_interval(uint32_t interval) -> Builder & {
+        config_.global_queue_interval_ = interval;
+        return *this;
     }
 
     [[nodiscard]]
-    auto scheduler() -> SchedulerBuilder<R> {
-        return SchedulerBuilder<R>{*this};
+    auto set_io_interval(uint32_t interval) -> Builder & {
+        config_.io_interval_ = interval;
+        return *this;
     }
 
-protected:
-    Config config_{};
-};
+    [[nodiscard]]
+    auto set_submit_interval(std::size_t interval) {
+        config_.submit_interval_ = interval;
+        return *this;
+    }
 
-template <class R>
-class DriverBuilder : public Builder<R> {
+    [[nodiscard]]
+    auto set_thread_name_fn(std::function<std::string(std::size_t)> &&func) -> Builder & {
+        build_thread_name_func_ = std::move(func);
+        return *this;
+    }
+
+    [[nodiscard]]
+    auto set_thread_basename(std::string_view basename) -> Builder & {
+        build_thread_name_func_ = [basename = basename](std::size_t index) -> std::string {
+            return std::format("{}-{}", basename, index);
+        };
+        return *this;
+    }
+
+    [[nodiscard]]
+    auto build() {
+        if constexpr (KIND == Kind::CurrentThread) {
+            return Runtime<current_thread::Handle>{std::move(config_),
+                                                   std::move(build_thread_name_func_)};
+        } else {
+            return Runtime<multi_thread::Handle>{
+                std::move(config_),
+                std::move(build_thread_name_func_),
+            };
+        }
+    }
+
 public:
     [[nodiscard]]
-    auto set_custom_flags(unsigned int flag) -> DriverBuilder & {
-        this->config_.ring_flags_ |= flag;
-        return *this;
+    static auto options() -> Builder {
+        return Builder{};
     }
 
     [[nodiscard]]
-    auto set_ring_entries(std::size_t ring_entries) -> DriverBuilder & {
-        this->config_.ring_entries_ = ring_entries;
-        return *this;
+    static auto default_create() {
+        return Builder{}.build();
     }
 
-    [[nodiscard]]
-    auto set_submit_interval(uint32_t interval) -> DriverBuilder & {
-        this->config_.submit_interval_ = interval;
-        return *this;
-    }
+private:
+    detail::Config                          config_{};
+    std::function<std::string(std::size_t)> build_thread_name_func_{};
 };
 
-template <class R>
-class SchedulerBuilder : public Builder<R> {
-public:
-    [[nodiscard]]
-    auto set_num_workers(std::size_t num) -> SchedulerBuilder & {
-        this->config_.num_workers_ = num;
-        return *this;
-    }
+using CurrentThreadBuilder = Builder<Kind::CurrentThread>;
 
-    [[nodiscard]]
-    auto set_check_io_interval(uint32_t interval) -> SchedulerBuilder & {
-        this->config_.check_io_interval_ = interval;
-        return *this;
-    }
+using MultiThreadBuilder = Builder<Kind::MultiThread>;
 
-    [[nodiscard]]
-    auto set_check_gloabal_interval(uint32_t interval) -> SchedulerBuilder & {
-        this->config_.check_global_interval_ = interval;
-        return *this;
-    }
-};
-
-} // namespace zedio::runtime::detail
+} // namespace zedio::runtime

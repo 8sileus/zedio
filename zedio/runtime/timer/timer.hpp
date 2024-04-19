@@ -100,9 +100,9 @@ public:
             root_wheel_);
     }
 
+    template <typename LocalQueue, typename GlobalQueue>
     [[nodiscard]]
-    auto handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
-                                runtime::detail::GlobalQueue &global_queue) -> std::size_t {
+    auto handle_expired_entries(LocalQueue &local_queue, GlobalQueue &global_queue) -> std::size_t {
         if (num_entries_ == 0 || root_wheel_.index() == 0) {
             return 0uz;
         }

@@ -13,12 +13,21 @@ auto client(std::string_view ip, uint16_t port) -> Task<void> {
     std::string_view w_buf = "udp ping";
     char             r_buf[1024] = {};
     while (true) {
-        co_await sock.send_to(w_buf, addr);
-        auto [len, addr] = (co_await sock.recv_from(r_buf)).value();
+        if(auto ret=co_await sock.send_to(w_buf, addr);!ret){
+            LOG_ERROR("{}", ret.error());
+            break;
+        }
+        auto ret = co_await sock.recv_from(r_buf);
+        if (!ret) {
+            LOG_ERROR("{}", ret.error());
+            break;
+        }
+        auto [len, addr] = ret.value();
         if (len == 0) {
             break;
         }
-        LOG_INFO("read: {} from {}", len, addr);
+        r_buf[len] = 0;
+        LOG_INFO("client read: {} from {}", r_buf, addr);
     }
 }
 
@@ -31,7 +40,8 @@ auto server(std::string_view ip, uint16_t port) -> Task<void> {
     char buf[1024] = {};
     for (int i = 0; i < 100; i += 1) {
         auto [len, addr] = (co_await sock.recv_from(buf)).value();
-        LOG_INFO("read: {} from {}", len, addr);
+        buf[len] = 0;
+        LOG_INFO("server read: {} from {}", buf, addr);
         co_await sock.send_to({buf, len}, addr);
     }
 }
@@ -40,6 +50,7 @@ auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto ip = "127.0.0.1";
     auto port = 9999;
-    Runtime::create().block_on(server(ip, static_cast<uint16_t>(port)));
+    runtime::CurrentThreadBuilder::default_create().block_on(
+        server(ip, static_cast<uint16_t>(port)));
     return 0;
 }

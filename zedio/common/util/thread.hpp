@@ -7,7 +7,7 @@
 // C++
 #include <thread>
 
-namespace zedio::current_thread {
+namespace zedio::util {
 
 static inline auto get_tid() noexcept -> pid_t {
     static thread_local pid_t t_id = ::gettid();
@@ -16,35 +16,13 @@ static inline auto get_tid() noexcept -> pid_t {
 
 static thread_local std::string t_name;
 
-static inline auto set_thread_name(std::string_view name) {
+static inline auto set_current_thread_name(std::string_view name) {
+    pthread_setname_np(pthread_self(), name.data());
     t_name = name;
 }
 
-static inline auto get_thread_name() -> std::string_view {
+static inline auto get_current_thread_name() -> std::string_view {
     return t_name;
 }
-
-} // namespace zedio::current_thread
-
-namespace zedio::util {
-class SpinMutex : Noncopyable {
-public:
-    explicit SpinMutex(int pshared = 0) noexcept {
-        pthread_spin_init(&mutex_, pshared);
-    }
-    ~SpinMutex() noexcept {
-        pthread_spin_destroy(&mutex_);
-    }
-
-    void lock() noexcept {
-        pthread_spin_lock(&mutex_);
-    }
-    void unlock() noexcept {
-        pthread_spin_unlock(&mutex_);
-    }
-
-private:
-    pthread_spinlock_t mutex_;
-};
 
 } // namespace zedio::util

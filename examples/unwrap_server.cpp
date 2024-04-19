@@ -67,8 +67,7 @@ auto main(int argc, char **argv) -> int {
     auto ip = argv[1];
     auto port = std::stoi(argv[2]);
     auto num_threads = std::stoi(argv[3]);
-    Runtime::options()
-        .scheduler()
+    zedio::runtime::Builder<>::options()
         .set_num_workers(num_threads)
         .build()
         .block_on(server(ip, static_cast<uint16_t>(port)));

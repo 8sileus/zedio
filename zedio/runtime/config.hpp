@@ -17,17 +17,17 @@ static inline constexpr std::size_t LOCAL_QUEUE_CAPACITY{256uz};
 
 struct Config {
     // size of io_uring_queue entries
-    std::size_t ring_entries_{1024};
-    // io_uring flags
-    uint32_t ring_flags_{0};
-    // 0: Merge all submission
+    std::size_t num_events_{1024};
+
+    // TODO if linux
+    //  io_uring flags
     uint32_t submit_interval_{4};
     // num of worker
     std::size_t num_workers_{std::thread::hardware_concurrency()};
     // How many ticks worker to poll finished I/O operation
-    uint32_t check_io_interval_{61};
+    uint32_t io_interval_{61};
     // How many ticks worker to pop global queue
-    uint32_t check_global_interval_{61};
+    uint32_t global_queue_interval_{61};
 };
 
 } // namespace zedio::runtime::detail
@@ -52,14 +52,16 @@ public:
 
     auto format(const zedio::runtime::detail::Config &config, auto &context) const noexcept {
         return format_to(context.out(),
-                         "I/ODriver [ entries: {}, flags: {}, submit_interval: {} ], Worker [ num: "
-                         "{}, check_io_interval: {}, check_global_interval: {} ]",
-                         config.ring_entries_,
-                         config.ring_flags_,
-                         config.submit_interval_,
+                         R"(num_events: {},
+                         num_workers: {},
+                         io_interval: {},
+                         global_queue_interval: {},
+                         submit_interval: {})",
+                         config.num_events_,
                          config.num_workers_,
-                         config.check_io_interval_,
-                         config.check_global_interval_);
+                         config.io_interval_,
+                         config.global_queue_interval_,
+                         config.submit_interval_);
     }
 };
 
