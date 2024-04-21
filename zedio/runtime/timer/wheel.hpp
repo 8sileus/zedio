@@ -58,19 +58,17 @@ public:
         }
     }
 
-    void handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
-                                runtime::detail::GlobalQueue &global_queue,
-                                std::size_t                  &count,
-                                std::size_t                   remaining_ms) {
+    template <typename Q>
+        requires requires(Q q, std::coroutine_handle<> h) {
+            { q.push(h) };
+        }
+    void handle_expired_entries(Q &queue, std::size_t &count, std::size_t remaining_ms) {
         while (bitmap_) {
             std::size_t index = std::countr_zero(bitmap_);
             if (index * MS_PER_SLOT > remaining_ms) {
                 break;
             }
-            slots_[index]->handle_expired_entries(local_queue,
-                                                  global_queue,
-                                                  count,
-                                                  remaining_ms - index * MS_PER_SLOT);
+            slots_[index]->handle_expired_entries(queue, count, remaining_ms - index * MS_PER_SLOT);
             if (slots_[index]->empty()) {
                 slots_[index] = nullptr;
                 bitmap_ &= ~(1uz << index);
@@ -178,17 +176,18 @@ public:
         }
     }
 
-    void handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
-                                runtime::detail::GlobalQueue &global_queue,
-                                std::size_t                  &count,
-                                std::size_t                   remaining_ms) {
+    template <typename Q>
+        requires requires(Q q, std::coroutine_handle<> h) {
+            { q.push(h) };
+        }
+    void handle_expired_entries(Q &queue, std::size_t &count, std::size_t remaining_ms) {
         while (bitmap_) {
             std::size_t index = std::countr_zero(bitmap_);
             if (index > remaining_ms) {
                 break;
             }
             while (slots_[index] != nullptr) {
-                slots_[index]->execute(local_queue, global_queue);
+                slots_[index]->execute(queue);
                 slots_[index] = std::move(slots_[index]->next_);
                 count += 1;
             }

@@ -40,6 +40,6 @@ auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto ip = "127.0.0.1";
     auto port = 9999;
-    Runtime::create().block_on(server(ip, static_cast<uint16_t>(port)));
+    Runtime<>::create().block_on(server(ip, static_cast<uint16_t>(port)));
     return 0;
 }

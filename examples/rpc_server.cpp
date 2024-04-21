@@ -75,7 +75,7 @@ public:
     }
 
     void run() {
-        auto runtime = Runtime::create();
+        auto runtime = Runtime<>::create();
         runtime.block_on([this]() -> Task<void> {
             auto has_addr = SocketAddr::parse(host_, port_);
             if (!has_addr) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zedio/async/coroutine/task.hpp"
+#include "zedio/runtime/runtime.hpp"
 #include "zedio/sync/mutex.hpp"
 
 // C++
@@ -90,7 +91,8 @@ public:
 private:
     static void resume(Awaiter *awaiter) {
         while (awaiter != nullptr) {
-            runtime::detail::t_worker->schedule_task(awaiter->handle_);
+            // runtime::detail::t_worker->schedule_task(awaiter->handle_);
+            schedule(awaiter->handle_);
             awaiter = awaiter->next_;
         }
     }

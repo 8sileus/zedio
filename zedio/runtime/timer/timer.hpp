@@ -100,9 +100,12 @@ public:
             root_wheel_);
     }
 
+    template <typename Q>
+        requires requires(Q q, std::coroutine_handle<> h) {
+            { q.push(h) };
+        }
     [[nodiscard]]
-    auto handle_expired_entries(runtime::detail::LocalQueue  &local_queue,
-                                runtime::detail::GlobalQueue &global_queue) -> std::size_t {
+    auto handle_expired_entries(Q &queue) -> std::size_t {
         if (num_entries_ == 0 || root_wheel_.index() == 0) {
             return 0uz;
         }
@@ -116,14 +119,11 @@ public:
         std::size_t count{0};
 
         std::visit(
-            [this, &count, &local_queue, &global_queue, interval]<typename T>(T &wheel) {
+            [this, &count, &queue, interval]<typename T>(T &wheel) {
                 if constexpr (std::is_same_v<T, std::monostate>) {
                     std::unreachable();
                 } else {
-                    wheel->handle_expired_entries(local_queue,
-                                                  global_queue,
-                                                  count,
-                                                  static_cast<std::size_t>(interval));
+                    wheel->handle_expired_entries(queue, count, static_cast<std::size_t>(interval));
                     num_entries_ -= count;
                     maintenance(wheel, interval);
                 }

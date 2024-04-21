@@ -64,6 +64,6 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    Runtime::create().block_on(server());
+    Runtime<>::create().block_on(server());
 }
 ```

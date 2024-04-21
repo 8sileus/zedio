@@ -68,7 +68,7 @@ auto main(int argc, char **argv) -> int {
     }
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
     auto num_threads = std::stoi(argv[1]);
-    Runtime::options()
+    Runtime<>::options()
         .scheduler()
         .set_num_workers(num_threads)
         .driver()

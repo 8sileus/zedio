@@ -22,11 +22,14 @@ public:
         , data_{data} {}
 
 public:
-    void execute(runtime::detail::LocalQueue  &local_queue,
-                 runtime::detail::GlobalQueue &global_queue) {
+    template <typename Q>
+        requires requires(Q q, std::coroutine_handle<> h) {
+            { q.push(h) };
+        }
+    void execute(Q &queue) {
         if (handle_ != nullptr) {
             assert(data_ == nullptr);
-            local_queue.push_back_or_overflow(handle_, global_queue);
+            queue.push(handle_);
         } else {
             assert(handle_ == nullptr);
             auto sqe = runtime::detail::t_ring->get_sqe();

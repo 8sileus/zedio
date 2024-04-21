@@ -39,14 +39,20 @@ public:
 public:
     // Current worker thread will be blocked on io_uring_wait_cqe
     // until other worker wakes up it or a I/O event completes
-    void wait(runtime::detail::LocalQueue  &local_queue,
-              runtime::detail::GlobalQueue &global_queue) {
+    template <typename Q>
+        requires requires(Q q, std::coroutine_handle<> h) {
+            { q.push(h) };
+        }
+    void wait(Q &queue) {
         ring_.wait(timer_.next_expiration_time());
-        poll(local_queue, global_queue);
+        poll(queue);
     }
 
-    auto poll(runtime::detail::LocalQueue &local_queue, runtime::detail::GlobalQueue &global_queue)
-        -> bool {
+    template <typename Q>
+        requires requires(Q q, std::coroutine_handle<> h) {
+            { q.push(h) };
+        }
+    auto poll(Q &queue) -> bool {
         constexpr const auto             SIZE = LOCAL_QUEUE_CAPACITY;
         std::array<io_uring_cqe *, SIZE> cqes;
 
@@ -57,14 +63,13 @@ public:
                 if (cb->entry_ != nullptr) {
                     timer_.remove_entry(cb->entry_);
                 }
-                local_queue.push_back_or_overflow(cb->get_coro_handle_and_set_result(cqes[i]->res),
-                                                  global_queue);
+                queue.push(cb->get_coro_handle_and_set_result(cqes[i]->res));
             }
         }
 
         ring_.consume(cnt);
 
-        auto timer_cnt = timer_.handle_expired_entries(local_queue, global_queue);
+        auto timer_cnt = timer_.handle_expired_entries(queue);
 
         LOG_TRACE("poll {} io events, {} timer events", cnt, timer_cnt);
 

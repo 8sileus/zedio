@@ -67,7 +67,7 @@ auto main(int argc, char **argv) -> int {
     auto ip = argv[1];
     auto port = std::stoi(argv[2]);
     auto num_threads = std::stoi(argv[3]);
-    Runtime::options()
+    Runtime<>::options()
         .scheduler()
         .set_num_workers(num_threads)
         .build()

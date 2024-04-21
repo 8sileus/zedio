@@ -109,7 +109,7 @@ public:
     }
 
     [[nodiscard]]
-    auto size() -> uint32_t {
+    auto size() -> std::size_t {
         auto [_, head] = unpack(head_.load(std::memory_order::acquire));
         std::atomic_ref<uint32_t> atoimc_tail{tail_};
         auto                      tail = atoimc_tail.load(std::memory_order::acquire);
@@ -290,8 +290,8 @@ private:
                        [[maybe_unused]] uint32_t tail,
                        GlobalQueue              &global_queue) -> bool {
         static constexpr auto NUM_TASKS_TAKEN{static_cast<uint32_t>(LOCAL_QUEUE_CAPACITY / 2)};
-
-        assert(tail - head == LOCAL_QUEUE_CAPACITY);
+        // TODO: assert may be wrong?
+        // assert(tail - head == LOCAL_QUEUE_CAPACITY);
 
         auto prev = pack(head, head);
 

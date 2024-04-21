@@ -19,5 +19,5 @@ auto signal_test() -> async::Task<void> {
 
 int main() {
     SET_LOG_LEVEL(zedio::log::LogLevel::Trace);
-    return Runtime::create().block_on(signal_test());
+    return Runtime<>::create().block_on(signal_test());
 }

@@ -12,6 +12,50 @@ class Worker;
 
 static inline thread_local Worker *t_worker{nullptr};
 
+class WrappedQueue {
+public:
+    explicit WrappedQueue(runtime::detail::GlobalQueue &global_queue)
+        : global_queue_{global_queue} {}
+
+public:
+    void push(std::coroutine_handle<> handle) {
+        local_queue_.push_back_or_overflow(handle, global_queue_);
+    }
+
+    auto pop() -> std::optional<std::coroutine_handle<>> {
+        return local_queue_.pop();
+    }
+
+    auto empty() -> bool {
+        return local_queue_.empty();
+    }
+
+    auto size() -> std::size_t {
+        return local_queue_.size();
+    }
+
+    auto remaining_slots() -> std::size_t {
+        return local_queue_.remaining_slots();
+    }
+
+    auto capacity() -> std::size_t {
+        return local_queue_.capacity();
+    }
+
+    auto steal_into(WrappedQueue &another) -> std::optional<std::coroutine_handle<>> {
+        return local_queue_.steal_into(another.local_queue_);
+    }
+
+    template <class C>
+    void push_batch(const C &tasks, std::size_t len) {
+        return local_queue_.push_batch(tasks, len);
+    }
+
+private:
+    GlobalQueue &global_queue_;
+    LocalQueue   local_queue_;
+};
+
 class Worker : util::Noncopyable {
     friend class Shared;
 
@@ -19,7 +63,8 @@ public:
     Worker(Shared &shared, std::size_t index)
         : shared_{shared}
         , index_{index}
-        , driver_{shared.config_} {
+        , driver_{shared.config_}
+        , queue_{shared.global_queue_} {
         current_thread::set_thread_name("ZEDIO_WORKER_" + std::to_string(index));
         LOG_TRACE("Build {}", current_thread::get_thread_name());
         assert(t_worker == nullptr);
@@ -66,7 +111,7 @@ public:
 
     void schedule_task(std::coroutine_handle<> task) {
         if (run_next_.has_value()) {
-            local_queue_.push_back_or_overflow(std::move(run_next_.value()), shared_.global_queue_);
+            queue_.push(run_next_.value());
             run_next_.emplace(std::move(task));
             shared_.wake_up_one();
         } else {
@@ -136,7 +181,7 @@ private:
     }
 
     auto has_tasks() -> bool {
-        return run_next_.has_value() || !local_queue_.empty();
+        return run_next_.has_value() || !queue_.empty();
     }
 
     auto should_notify_others() -> bool {
@@ -144,7 +189,7 @@ private:
             return false;
         }
         // return (static_cast<std::size_t>(run_next_.has_value()) + local_queue_.size()) > 1;
-        return local_queue_.size() > 1;
+        return queue_.size() > 1;
     }
 
     void tick() {
@@ -165,8 +210,7 @@ private:
             if (idx == index_) {
                 continue;
             }
-            if (auto result = shared_.workers_[idx]->local_queue_.steal_into(local_queue_);
-                result) {
+            if (auto result = shared_.workers_[idx]->queue_.steal_into(queue_); result) {
                 return result;
             }
         }
@@ -204,7 +248,7 @@ private:
                 return std::nullopt;
             }
 
-            auto n = std::min(local_queue_.remaining_slots(), local_queue_.capacity() / 2);
+            auto n = std::min(queue_.remaining_slots(), queue_.capacity() / 2);
             if (n == 0) [[unlikely]] {
                 // All tasks of current worker are being stolen
                 return shared_.next_global_task();
@@ -220,7 +264,7 @@ private:
             tasks.pop_front();
             n -= 1;
             if (n > 0) {
-                local_queue_.push_batch(tasks, n);
+                queue_.push_batch(tasks, n);
             }
             return result;
         }
@@ -236,13 +280,13 @@ private:
             return result;
         }
         // LOG_DEBUG("get a task from local_queue");
-        return local_queue_.pop();
+        return queue_.pop();
     }
 
     // poll I/O events
     [[nodiscard]]
     auto poll() -> bool {
-        if (!driver_.poll(local_queue_, shared_.global_queue_)) {
+        if (!driver_.poll(queue_)) {
             return false;
         }
         if (should_notify_others()) {
@@ -256,7 +300,7 @@ private:
         check_shutdown();
         if (transition_to_sleeping()) {
             while (!is_shutdown_) {
-                driver_.wait(local_queue_, shared_.global_queue_);
+                driver_.wait(queue_);
                 LOG_TRACE("sleep, tick {}", tick_);
                 check_shutdown();
                 if (transition_from_sleeping()) {
@@ -274,7 +318,7 @@ private:
     uint32_t                               tick_{0};
     std::optional<std::coroutine_handle<>> run_next_{std::nullopt};
     Driver                                 driver_;
-    LocalQueue                             local_queue_{};
+    WrappedQueue                           queue_;
     bool                                   is_shutdown_{false};
     bool                                   is_searching_{false};
 };
@@ -325,7 +369,7 @@ void Shared::wake_up_all() {
 
 void Shared::wake_up_if_work_pending() {
     for (auto &worker : workers_) {
-        if (!worker->local_queue_.empty()) {
+        if (!worker->queue_.empty()) {
             wake_up_one();
             return;
         }

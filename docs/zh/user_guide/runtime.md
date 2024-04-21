@@ -5,14 +5,14 @@
 - 使用静态方法create将创建一个默认配置的运行时
 ``` C++
 auto main() -> int{
-    return Runtime::create()
+    return Runtime<>::create()
         .block_on(first_coro());
 }
 ```
 - 使用options方法可以创建一个Builder，在Builder里面可以配置运行时的相关环境，默认如下：
 ``` C++
 auto main() -> int{
-    return Runtime::options()
+    return Runtime<>::options()
                 .scheduler()
                     //指定工作线程数量
                     .set_num_workers((std::thread::hardware_concurrency()))

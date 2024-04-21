@@ -13,7 +13,7 @@ auto process(TcpStream stream) -> Task<void> {
         if (!ret) {
             LOG_ERROR("{}", ret.error());
             break;
-        } 
+        }
         auto len = ret.value();
         LOG_DEBUG("{}", std::string_view(buf, len));
         if (len == 0) {
@@ -34,5 +34,5 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    Runtime::create().block_on(server());
+    Runtime<>::create().block_on(server());
 }

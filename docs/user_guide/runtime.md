@@ -4,16 +4,16 @@
 - Use the default configuration
 ``` C++
 auto main() -> int{
-    Runtime::create()
+    Runtime<>::create()
         .block_on(first_coro());
     return 0;
 }
 ```
 - Use the specified configuration
 ``` C++
-    // use Runtime::create() like this
+    // use Runtime<>::create() like this
 auto main() -> int{
-    Runtime::options()  
+    Runtime<>::options()
         // number of worker threads 
         .set_num_workers(std::thread::hardware_concurrency())  
         // The maximum number of submissions can be delayed

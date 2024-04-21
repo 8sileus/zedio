@@ -69,5 +69,5 @@ auto test() -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::Trace);
-    return Runtime::options().scheduler().set_num_workers(4).build().block_on(test());
+    return Runtime<>::options().scheduler().set_num_workers(4).build().block_on(test());
 }
