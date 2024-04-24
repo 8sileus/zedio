@@ -10,20 +10,17 @@ using namespace zedio::log;
 using namespace zedio;
 
 auto test() -> Task<void> {
-    auto &stdin = io::stdin();
-    auto &stdout = io::stdout();
-    auto &stderr = io::stderr();
-
     for (auto i = 0; i < 3; i++) {
         std::vector<char> buf(64);
-        auto              res = co_await stdin.read(buf);
+
+        auto res = co_await io::input(buf);
         if (!res) {
             console.info("EOF");
             co_return;
         }
         console.info("read from stdin: {}", std::string_view{buf.data(), buf.size()});
-        co_await stdout.write("████████████████████\n");
-        co_await stderr.write("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
+        co_await io::print("████████████████████\n");
+        co_await io::eprint("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
     }
     co_return;
 }

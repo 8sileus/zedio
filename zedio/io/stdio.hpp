@@ -37,7 +37,7 @@ namespace detail {
     class AsyncRead {
     public:
         [[REMEMBER_CO_AWAIT]]
-        auto read(std::span<char> buf) const noexcept -> zedio::async::Task<Result<void>> {
+        auto read(std::span<char> buf) const noexcept -> async::Task<Result<void>> {
             auto ret = co_await io::read(static_cast<const Derived *>(this)->fd(),
                                          buf.data(),
                                          static_cast<unsigned int>(buf.size_bytes()),
@@ -56,7 +56,7 @@ namespace detail {
     class AsyncWrite {
     public:
         [[REMEMBER_CO_AWAIT]]
-        auto write(std::span<const char> buf) noexcept -> zedio::async::Task<Result<void>> {
+        auto write(std::span<const char> buf) noexcept -> async::Task<Result<void>> {
             Result<std::size_t> ret{0uz};
             while (!buf.empty()) {
                 ret = co_await io::write(static_cast<Derived *>(this)->fd(),
@@ -94,16 +94,23 @@ namespace detail {
     };
 } // namespace detail
 
-static inline auto stdin() -> detail::Stdin & {
-    return util::Singleton<detail::Stdin>::instance();
+[[REMEMBER_CO_AWAIT]]
+static inline auto input(std::span<char> buf) -> async::Task<Result<void>> {
+    co_return co_await util::Singleton<detail::Stdin>::instance().read(buf);
 }
 
-static inline auto stdout() -> detail::Stdout & {
-    return util::Singleton<detail::Stdout>::instance();
+template <typename... Args>
+[[REMEMBER_CO_AWAIT]]
+static inline auto print(std::string_view fmt, Args &&...args) -> async::Task<Result<void>> {
+    co_return co_await util::Singleton<detail::Stdout>::instance().write(
+        std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...)));
 }
 
-static inline auto stderr() -> detail::Stderr & {
-    return util::Singleton<detail::Stderr>::instance();
+template <typename... Args>
+[[REMEMBER_CO_AWAIT]]
+static inline auto eprint(std::string_view fmt, Args &&...args) -> async::Task<Result<void>> {
+    co_return co_await util::Singleton<detail::Stderr>::instance().write(
+        std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...)));
 }
 
 } // namespace zedio::io
