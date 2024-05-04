@@ -95,7 +95,7 @@ public:
 
 private:
     template <LogLevel LEVEL, typename... Args>
-    void format(const FmtWithSourceLocation &fwsl, Args &&...args) {
+    void format(const FmtWithSourceLocation &fwsl, const Args &...args) {
         static thread_local std::array<char, 64> buffer{};
         static thread_local time_t               last_second{0};
 
@@ -122,7 +122,7 @@ private:
                       util::get_current_thread_name(),
                       sl.file_name(),
                       sl.line(),
-                      std::vformat(fmt, std::make_format_args(std::forward<Args>(args)...))});
+                      std::vformat(fmt, std::make_format_args(args...))});
     }
 
 private:
