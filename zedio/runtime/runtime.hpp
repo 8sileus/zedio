@@ -48,34 +48,32 @@ private:
 
 namespace detail {
 
+    static inline auto is_current_thread() -> bool {
+        return current_thread::t_worker != nullptr;
+    }
+
     static inline void schedule_local(std::coroutine_handle<> handle) {
-        if (current_thread::t_worker != nullptr) {
+        if (is_current_thread()) {
             current_thread::schedule_local(handle);
-        } else if (multi_thread::t_worker != nullptr) {
+        } else {
             multi_thread::schedule_local(handle);
-        } else [[unlikely]] {
-            std::unreachable();
         }
     }
 
     static inline void schedule_remote(std::coroutine_handle<> handle) {
-        if (current_thread::t_worker != nullptr) {
+        if (is_current_thread()) {
             current_thread::schedule_remote(handle);
-        } else if (multi_thread::t_shared != nullptr) {
+        } else {
             multi_thread::schedule_remote(handle);
-        } else [[unlikely]] {
-            std::unreachable();
         }
     }
 
     static inline void schedule_remote_batch(std::list<std::coroutine_handle<>> &&handles,
                                              std::size_t                          n) {
-        if (current_thread::t_worker != nullptr) {
+        if (is_current_thread()) {
             current_thread::schedule_remote_batch(std::move(handles), n);
-        } else if (multi_thread::t_shared != nullptr) {
+        } else {
             multi_thread::schedule_remote_batch(std::move(handles), n);
-        } else [[unlikely]] {
-            std::unreachable();
         }
     }
 

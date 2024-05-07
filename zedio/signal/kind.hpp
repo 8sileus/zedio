@@ -66,7 +66,14 @@ namespace detail {
     struct SignalHandler {
     public:
         SignalHandler() {
-            if (::signal(static_cast<int>(Kind), notify_all) != 0) [[unlikely]] {
+            struct sigaction act {};
+            ::sigemptyset(&act.sa_mask);
+            ::sigaddset(&act.sa_mask, static_cast<int>(Kind));
+            act.sa_handler = &notify_all;
+            act.sa_flags = 0;
+            act.sa_restorer = nullptr;
+
+            if (::sigaction(static_cast<int>(Kind), &act, nullptr) != 0) [[unlikely]] {
                 LOG_ERROR("register signal handle for {} failed", kind_to_string(Kind));
             }
         }
@@ -79,8 +86,28 @@ namespace detail {
 
     public:
         static void push_back(std::coroutine_handle<> handle) {
+            if (runtime::detail::is_current_thread()) {
+                sigset_t sigset;
+                sigemptyset(&sigset);
+                sigaddset(&sigset, static_cast<int>(Kind));
+                if (sigprocmask(SIG_BLOCK, &sigset, NULL) != 0) [[unlikely]] {
+                    LOG_ERROR("block signal {} failed", kind_to_string(Kind));
+                    return;
+                }
+            }
+
             auto lock = std::lock_guard{s_mutex};
             s_handles.push_back(handle);
+
+            if (runtime::detail::is_current_thread()) {
+                sigset_t sigset;
+                sigemptyset(&sigset);
+                sigaddset(&sigset, static_cast<int>(Kind));
+                if (sigprocmask(SIG_UNBLOCK, &sigset, NULL) != 0) [[unlikely]] {
+                    LOG_ERROR("unblock signal {} failed", kind_to_string(Kind));
+                    return;
+                }
+            }
         }
 
     private:
