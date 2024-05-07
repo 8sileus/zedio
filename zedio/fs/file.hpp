@@ -1,6 +1,5 @@
 #pragma once
 
-#include "zedio/common/concepts.hpp"
 #include "zedio/common/error.hpp"
 #include "zedio/fs/builder.hpp"
 #include "zedio/fs/impl/impl_async_fsync.hpp"
@@ -26,10 +25,10 @@ private:
         : FD{fd} {}
 
 public:
-    template <class T>
-        requires constructible_to_char_splice<T>
+    template <class C>
+        requires requires(C c) { c.resize(0uz); }
     [[REMEMBER_CO_AWAIT]]
-    auto read_to_end(T &buf) const noexcept -> zedio::async::Task<Result<void>> {
+    auto read_to_end(C &buf) const noexcept -> zedio::async::Task<Result<void>> {
         auto old_len = buf.size();
         {
             auto ret = co_await this->metadata();
@@ -78,21 +77,9 @@ public:
     }
 };
 
+template <typename T>
 [[REMEMBER_CO_AWAIT]]
-static inline auto read(std::string path) -> async::Task<Result<std::vector<char>>> {
-    auto file = co_await File::open(path);
-    if (!file) [[unlikely]] {
-        co_return std::unexpected{file.error()};
-    }
-    std::vector<char> res;
-    if (auto ret = co_await file.value().read_to_end(res); !ret) [[unlikely]] {
-        co_return std::unexpected{ret.error()};
-    }
-    co_return res;
-}
-
-[[REMEMBER_CO_AWAIT]]
-static inline auto read_to_end(std::string_view path) -> async::Task<Result<std::string>> {
+static inline auto read_to_end(std::string_view path) -> async::Task<Result<T>> {
     auto file = co_await File::open(path);
     if (!file) [[unlikely]] {
         co_return std::unexpected{file.error()};
@@ -122,11 +109,6 @@ static inline auto hard_link(std::string_view src_path, std::string_view dst_pat
 [[REMEMBER_CO_AWAIT]]
 static inline auto sym_link(std::string_view src_path, std::string_view dst_path) {
     return io::symlink(src_path.data(), dst_path.data());
-}
-
-[[REMEMBER_CO_AWAIT]]
-static inline auto metadata(std::string_view dir_path) {
-    return detail::Metadata(dir_path);
 }
 
 } // namespace zedio::fs

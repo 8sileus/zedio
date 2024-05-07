@@ -57,7 +57,7 @@ auto test_file_open() -> Task<void> {
 }
 
 auto test_read() -> Task<void> {
-    auto ret = co_await fs::read("123.txt");
+    auto ret = co_await fs::read_to_end<std::string>("123.txt");
     if (!ret) {
         LOG_ERROR("{}", ret.error().message());
     } else {
