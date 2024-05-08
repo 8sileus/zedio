@@ -98,6 +98,6 @@ auto client() -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(zedio::log::LogLevel::Debug);
-    auto runtime = zedio::runtime::Builder<>::options().set_num_workers(1).build();
+    auto runtime = zedio::runtime::CurrentThreadBuilder::default_create();
     runtime.block_on(client());
 }

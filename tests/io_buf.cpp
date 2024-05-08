@@ -150,6 +150,7 @@ auto test() -> Task<void> {
 }
 
 auto main() -> int {
-    zedio::runtime::Builder<>::default_create().block_on(test());
+    // zedio::runtime::CurrentThreadBuilder::default_create().block_on(test());
+    zedio::runtime::MultiThreadBuilder::default_create().block_on(test());
     return 0;
 }

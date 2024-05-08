@@ -75,7 +75,7 @@ public:
     }
 
     void run() {
-        auto runtime = zedio::runtime::Builder<>::default_create();
+        auto runtime = zedio::runtime::MultiThreadBuilder::default_create();
         runtime.block_on([this]() -> Task<void> {
             auto has_addr = SocketAddr::parse(host_, port_);
             if (!has_addr) {

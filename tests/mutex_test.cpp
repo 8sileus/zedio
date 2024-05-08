@@ -30,6 +30,6 @@ auto test(std::size_t n) -> Task<void> {
 
 auto main() -> int {
     SET_LOG_LEVEL(LogLevel::Trace);
-    zedio::runtime::Builder<>::default_create().block_on(test(100000));
+    zedio::runtime::MultiThreadBuilder::default_create().block_on(test(100000));
     return 0;
 }

@@ -3,7 +3,7 @@
 #include "zedio/runtime/builder.hpp"
 #include "zedio/time/sleep.hpp"
 
-namespace zedio::runtime {
+namespace zedio::runtime::detail {
 
 template <typename Handle>
 class Runtime {
@@ -46,40 +46,36 @@ private:
     Handle handle_;
 };
 
-namespace detail {
+static inline auto is_current_thread() -> bool {
+    return current_thread::t_worker != nullptr;
+}
 
-    static inline auto is_current_thread() -> bool {
-        return current_thread::t_worker != nullptr;
+static inline void schedule_local(std::coroutine_handle<> handle) {
+    if (is_current_thread()) {
+        current_thread::schedule_local(handle);
+    } else {
+        multi_thread::schedule_local(handle);
     }
+}
 
-    static inline void schedule_local(std::coroutine_handle<> handle) {
-        if (is_current_thread()) {
-            current_thread::schedule_local(handle);
-        } else {
-            multi_thread::schedule_local(handle);
-        }
+static inline void schedule_remote(std::coroutine_handle<> handle) {
+    if (is_current_thread()) {
+        current_thread::schedule_remote(handle);
+    } else {
+        multi_thread::schedule_remote(handle);
     }
+}
 
-    static inline void schedule_remote(std::coroutine_handle<> handle) {
-        if (is_current_thread()) {
-            current_thread::schedule_remote(handle);
-        } else {
-            multi_thread::schedule_remote(handle);
-        }
+static inline void schedule_remote_batch(std::list<std::coroutine_handle<>> &&handles,
+                                         std::size_t                          n) {
+    if (is_current_thread()) {
+        current_thread::schedule_remote_batch(std::move(handles), n);
+    } else {
+        multi_thread::schedule_remote_batch(std::move(handles), n);
     }
+}
 
-    static inline void schedule_remote_batch(std::list<std::coroutine_handle<>> &&handles,
-                                             std::size_t                          n) {
-        if (is_current_thread()) {
-            current_thread::schedule_remote_batch(std::move(handles), n);
-        } else {
-            multi_thread::schedule_remote_batch(std::move(handles), n);
-        }
-    }
-
-} // namespace detail
-
-} // namespace zedio::runtime
+} // namespace zedio::runtime::detail
 
 namespace zedio {
 

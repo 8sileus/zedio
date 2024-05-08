@@ -117,8 +117,6 @@ auto test() -> Task<void> {
 }
 
 auto main() -> int {
-    // auto runtime = zedio::runtime::Builder<>::options().set_num_workers(1).build();
-    auto runtime = zedio::runtime::Builder<zedio::runtime::Kind::CurrentThread>::default_create();
-    runtime.block_on(test());
+    zedio::runtime::MultiThreadBuilder::default_create().block_on(test());
     return 0;
 }
