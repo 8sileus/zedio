@@ -64,6 +64,7 @@ auto server() -> Task<void> {
 }
 
 auto main() -> int {
-    Runtime::create().block_on(server());
+    // zedio::runtime::CurrentThreadBuilder::default_create().block_on(server());
+    zedio::runtime::MultiThreadBuilder::default_create().block_on(server());
 }
 ```
