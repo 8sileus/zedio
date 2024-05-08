@@ -96,8 +96,10 @@ namespace detail {
                 }
             }
 
-            auto lock = std::lock_guard{s_mutex};
-            s_handles.push_back(handle);
+            {
+                auto lock = std::lock_guard{s_mutex};
+                s_handles.push_back(handle);
+            }
 
             if (runtime::detail::is_current_thread()) {
                 sigset_t sigset;
