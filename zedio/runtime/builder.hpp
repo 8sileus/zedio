@@ -82,7 +82,7 @@ namespace detail {
 class CurrentThreadBuilder : public detail::Builder<CurrentThreadBuilder, current_thread::Handle> {
 };
 
-class MultiThreadBuilder : public detail::Builder<MultiThreadBuilder, current_thread::Handle> {
+class MultiThreadBuilder : public detail::Builder<MultiThreadBuilder, multi_thread::Handle> {
 public:
     [[nodiscard]]
     auto set_num_workers(std::size_t num_worker_threads) -> MultiThreadBuilder & {
