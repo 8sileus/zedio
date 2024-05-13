@@ -31,6 +31,7 @@ public:
         if (!ret) [[unlikely]] {
             co_return std::unexpected{ret.error()};
         }
+        static_cast<B *>(this)->r_stream_.w_increase(ret.value());
         co_return Result<void>{};
     }
 
@@ -103,21 +104,32 @@ private:
         if (static_cast<B *>(this)->r_stream_.capacity() < buf.size_bytes()) {
             auto len = static_cast<B *>(this)->r_stream_.write_to(buf);
             buf = buf.subspan(len, buf.size_bytes() - len);
-            co_return co_await static_cast<B *>(this)->io_.read(buf);
+            if constexpr (eof_is_error) {
+                auto ret = co_await static_cast<B *>(this)->io_.read_exact(buf);
+                if (ret) {
+                    co_return len + buf.size_bytes();
+                }
+            } else {
+                auto ret = co_await static_cast<B *>(this)->io_.read(buf);
+                if (ret) {
+                    ret.value() += len;
+                }
+                co_return ret;
+            }
         }
 
         if (pred()) {
             co_return static_cast<B *>(this)->r_stream_.write_to(buf);
         }
 
-        if (static_cast<B *>(this)->r_stream_.w_remaining() < buf.size_bytes()) {
-            static_cast<B *>(this)->r_stream_.reset_data();
-        }
-
-        assert(static_cast<B *>(this)->r_stream_.w_remaining() >= buf.size_bytes());
-
         Result<std::size_t> ret;
         while (true) {
+            if (static_cast<B *>(this)->r_stream_.r_remaining()
+                    + static_cast<B *>(this)->r_stream_.w_remaining()
+                < buf.size_bytes()) {
+                static_cast<B *>(this)->r_stream_.reset_data();
+            }
+
             ret = co_await static_cast<B *>(this)->io_.read(
                 static_cast<B *>(this)->r_stream_.w_slice());
             if (!ret) [[unlikely]] {
