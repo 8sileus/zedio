@@ -53,7 +53,7 @@ public:
     }
 
     [[nodiscard]]
-    auto r_splice() const noexcept -> std::span<const char> {
+    auto r_slice() const noexcept -> std::span<const char> {
         return {r_begin(), r_end()};
     }
 
@@ -78,7 +78,7 @@ public:
     }
 
     [[nodiscard]]
-    auto w_splice() noexcept -> std::span<char> {
+    auto w_slice() noexcept -> std::span<char> {
         return {w_begin(), w_end()};
     }
 
@@ -112,8 +112,8 @@ public:
     }
 
     [[nodiscard]]
-    auto find_flag_and_return_splice(std::string_view end_str) noexcept -> std::span<const char> {
-        auto pos = std::string_view{r_splice()}.find(end_str);
+    auto find_flag_and_return_slice(std::string_view end_str) noexcept -> std::span<const char> {
+        auto pos = std::string_view{r_slice()}.find(end_str);
         if (pos == std::string_view::npos) {
             return {};
         } else {
@@ -122,8 +122,8 @@ public:
     }
 
     [[nodiscard]]
-    auto find_flag_and_return_splice(char end_char) noexcept -> std::span<const char> {
-        auto pos = std::string_view{r_splice()}.find(end_char);
+    auto find_flag_and_return_slice(char end_char) noexcept -> std::span<const char> {
+        auto pos = std::string_view{r_slice()}.find(end_char);
         if (pos == std::string_view::npos) {
             return {};
         } else {

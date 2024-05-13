@@ -23,6 +23,6 @@ concept is_awaiter = requires(IOAwaiter awaiter) {
 };
 
 template <typename C>
-concept constructible_to_char_splice = requires(C c) { std::span<const char>{c}; };
+concept constructible_to_char_slice = requires(C c) { std::span<const char>{c}; };
 
 } // namespace zedio
