@@ -124,14 +124,13 @@ private:
 
         Result<std::size_t> ret;
         while (true) {
-            if (static_cast<B *>(this)->r_stream_.r_remaining()
-                    + static_cast<B *>(this)->r_stream_.w_remaining()
-                < buf.size_bytes()) {
+            if (static_cast<B *>(this)->r_stream_.w_remaining() < buf.size_bytes()) {
                 static_cast<B *>(this)->r_stream_.reset_data();
             }
 
             ret = co_await static_cast<B *>(this)->io_.read(
                 static_cast<B *>(this)->r_stream_.w_slice());
+                
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
