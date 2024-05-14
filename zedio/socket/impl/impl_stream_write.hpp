@@ -22,7 +22,7 @@ struct ImplStreamWrite {
     }
 
     template <typename... Ts>
-        requires(constructible_to_char_splice<Ts> && ...)
+        requires(constructible_to_char_slice<Ts> && ...)
     [[REMEMBER_CO_AWAIT]]
     auto write_vectored(Ts &&...bufs) noexcept {
         constexpr auto N = sizeof...(Ts);

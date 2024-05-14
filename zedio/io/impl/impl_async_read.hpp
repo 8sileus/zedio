@@ -15,7 +15,7 @@ struct ImplAsyncRead {
     }
 
     template <typename... Ts>
-        requires(constructible_to_char_splice<Ts> && ...)
+        requires(constructible_to_char_slice<Ts> && ...)
     [[REMEMBER_CO_AWAIT]]
     auto read_vectored(Ts &&...bufs) const noexcept {
         constexpr std::size_t N = sizeof...(Ts);

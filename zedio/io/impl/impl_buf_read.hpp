@@ -9,7 +9,7 @@ class ImplBufRead {
 public:
     [[nodiscard]]
     auto buffer() noexcept {
-        return static_cast<B *>(this)->r_stream_.r_splice();
+        return static_cast<B *>(this)->r_stream_.r_slice();
     }
 
     [[nodiscard]]
@@ -25,12 +25,13 @@ public:
     [[REMEMBER_CO_AWAIT]]
     auto fill_buf() -> zedio::async::Task<Result<void>> {
         auto ret = co_await io::read(static_cast<B *>(this)->io_.fd(),
-                                     static_cast<B *>(this)->r_stream_.w_splice().data(),
-                                     static_cast<B *>(this)->r_stream_.w_splice().size_bytes(),
+                                     static_cast<B *>(this)->r_stream_.w_slice().data(),
+                                     static_cast<B *>(this)->r_stream_.w_slice().size_bytes(),
                                      static_cast<uint64_t>(-1));
         if (!ret) [[unlikely]] {
             co_return std::unexpected{ret.error()};
         }
+        static_cast<B *>(this)->r_stream_.w_increase(ret.value());
         co_return Result<void>{};
     }
 
@@ -56,30 +57,29 @@ public:
         -> zedio::async::Task<Result<std::size_t>> {
         Result<std::size_t> ret;
         while (true) {
-            if (auto splice
-                = static_cast<B *>(this)->r_stream_.find_flag_and_return_splice(end_flag);
-                !splice.empty()) {
+            if (auto slice = static_cast<B *>(this)->r_stream_.find_flag_and_return_slice(end_flag);
+                !slice.empty()) {
                 if constexpr (std::is_same_v<std::string, C>) {
-                    buf.append(splice.begin(), splice.end());
+                    buf.append(slice.begin(), slice.end());
                 } else {
-                    buf.insert(buf.end(), splice.begin(), splice.end());
+                    buf.insert(buf.end(), slice.begin(), slice.end());
                 }
-                static_cast<B *>(this)->r_stream_.r_increase(splice.size_bytes());
+                static_cast<B *>(this)->r_stream_.r_increase(slice.size_bytes());
                 break;
             } else {
                 if constexpr (std::is_same_v<std::string, C>) {
-                    buf.append(static_cast<B *>(this)->r_stream_.r_splice().begin(),
-                               static_cast<B *>(this)->r_stream_.r_splice().end());
+                    buf.append(static_cast<B *>(this)->r_stream_.r_slice().begin(),
+                               static_cast<B *>(this)->r_stream_.r_slice().end());
                 } else {
                     buf.insert(buf.end(),
-                               static_cast<B *>(this)->r_stream_.r_splice().begin(),
-                               static_cast<B *>(this)->r_stream_.r_splice().end());
+                               static_cast<B *>(this)->r_stream_.r_slice().begin(),
+                               static_cast<B *>(this)->r_stream_.r_slice().end());
                 }
                 static_cast<B *>(this)->r_stream_.reset_pos();
             }
 
             ret = co_await static_cast<B *>(this)->io_.read(
-                static_cast<B *>(this)->r_stream_.w_splice());
+                static_cast<B *>(this)->r_stream_.w_slice());
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
@@ -104,23 +104,34 @@ private:
         if (static_cast<B *>(this)->r_stream_.capacity() < buf.size_bytes()) {
             auto len = static_cast<B *>(this)->r_stream_.write_to(buf);
             buf = buf.subspan(len, buf.size_bytes() - len);
-            co_return co_await static_cast<B *>(this)->io_.read(buf);
+            if constexpr (eof_is_error) {
+                auto ret = co_await static_cast<B *>(this)->io_.read_exact(buf);
+                if (ret) {
+                    co_return len + buf.size_bytes();
+                }
+            } else {
+                auto ret = co_await static_cast<B *>(this)->io_.read(buf);
+                if (ret) {
+                    ret.value() += len;
+                }
+                co_return ret;
+            }
         }
 
         if (pred()) {
             co_return static_cast<B *>(this)->r_stream_.write_to(buf);
         }
 
-        if (static_cast<B *>(this)->r_stream_.w_remaining() < buf.size_bytes()) {
-            static_cast<B *>(this)->r_stream_.reset_data();
-        }
-
-        assert(static_cast<B *>(this)->r_stream_.w_remaining() >= buf.size_bytes());
-
         Result<std::size_t> ret;
         while (true) {
+            if (static_cast<B *>(this)->r_stream_.r_remaining()
+                    + static_cast<B *>(this)->r_stream_.w_remaining()
+                < buf.size_bytes()) {
+                static_cast<B *>(this)->r_stream_.reset_data();
+            }
+
             ret = co_await static_cast<B *>(this)->io_.read(
-                static_cast<B *>(this)->r_stream_.w_splice());
+                static_cast<B *>(this)->r_stream_.w_slice());
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }

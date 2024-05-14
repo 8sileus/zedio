@@ -9,7 +9,7 @@ class ImplBufWrite {
 public:
     [[nodiscard]]
     auto buffer() noexcept {
-        return static_cast<B *>(this)->w_stream_.r_splice();
+        return static_cast<B *>(this)->w_stream_.r_slice();
     }
 
     [[nodiscard]]
@@ -19,10 +19,10 @@ public:
 
     [[REMEMBER_CO_AWAIT]]
     auto flush() -> zedio::async::Task<Result<void>> {
-        auto                splice = buffer();
+        auto                slice = buffer();
         Result<std::size_t> ret;
-        while (!splice.empty()) {
-            ret = co_await static_cast<B *>(this)->io_.write(splice);
+        while (!slice.empty()) {
+            ret = co_await static_cast<B *>(this)->io_.write(slice);
             if (!ret) [[unlikely]] {
                 co_return std::unexpected{ret.error()};
             }
@@ -30,7 +30,7 @@ public:
                 co_return std::unexpected{make_zedio_error(Error::WriteZero)};
             }
             static_cast<B *>(this)->w_stream_.r_increase(ret.value());
-            splice = splice.subspan(ret.value(), splice.size_bytes() - ret.value());
+            slice = slice.subspan(ret.value(), slice.size_bytes() - ret.value());
         }
         static_cast<B *>(this)->w_stream_.reset_pos();
         co_return Result<void>{};
@@ -56,7 +56,7 @@ private:
         Result<std::size_t> ret;
         do {
             ret = co_await static_cast<B *>(this)->io_.write_vectored(
-                static_cast<B *>(this)->w_stream_.r_splice(),
+                static_cast<B *>(this)->w_stream_.r_slice(),
                 buf);
             if (!ret) {
                 co_return std::unexpected{ret.error()};
