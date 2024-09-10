@@ -4,7 +4,7 @@
 #include "zedio/common/error.hpp"
 #include "zedio/common/macros.hpp"
 #include "zedio/common/util/noncopyable.hpp"
-#include "zedio/io/base/callback.hpp"
+#include "zedio/io/base/io_data.hpp"
 #include "zedio/runtime/driver.hpp"
 #include "zedio/time/timeout.hpp"
 
@@ -69,7 +69,7 @@ public:
     }
 
 protected:
-    Callback      cb_{};
+    IOData        cb_{};
     io_uring_sqe *sqe_;
 
     // private:

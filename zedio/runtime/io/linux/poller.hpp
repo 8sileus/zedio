@@ -2,6 +2,7 @@
 
 #include "zedio/common/debug.hpp"
 #include "zedio/runtime/config.hpp"
+#include "zedio/runtime/io/linux/completion.hpp"
 // C
 #include <cstring>
 // C++
@@ -11,13 +12,13 @@
 #include <liburing.h>
 
 namespace zedio::runtime::detail {
-class IORing;
+class Poller;
 
-inline thread_local IORing *t_ring{nullptr};
+inline thread_local Poller *t_ring{nullptr};
 
-class IORing {
+class Poller {
 public:
-    IORing(const Config &config)
+    Poller(const Config &config)
         : submit_interval_{config.submit_interval_} {
         if (auto ret = io_uring_queue_init(config.num_events_, &ring_, 0); ret < 0) [[unlikely]] {
             throw std::runtime_error(
@@ -27,30 +28,24 @@ public:
         t_ring = this;
     }
 
-    ~IORing() {
+    ~Poller() {
         io_uring_queue_exit(&ring_);
         t_ring = nullptr;
     }
 
 public:
-    [[nodiscard]]
-    auto ring() -> struct io_uring * {
+    [[nodiscard]] auto ring() -> struct io_uring * {
         return &ring_;
     }
 
-    [[nodiscard]]
-    auto get_sqe() -> struct io_uring_sqe * {
+    [[nodiscard]] auto get_sqe() -> struct io_uring_sqe * {
         return io_uring_get_sqe(&ring_);
     }
 
-    [[nodiscard]]
-    auto peek_batch(std::span<io_uring_cqe *> cqes) -> std::size_t {
-        return io_uring_peek_batch_cqe(&ring_, cqes.data(), cqes.size());
-    }
-
-    [[nodiscard]]
-    auto peek_cqe(io_uring_cqe **cqe) {
-        return io_uring_peek_cqe(&ring_, cqe);
+    [[nodiscard]] auto peek_batch(std::span<IOCompletion> results) -> std::size_t {
+        return io_uring_peek_batch_cqe(&ring_,
+                                       reinterpret_cast<io_uring_cqe **>(results.data()),
+                                       results.size());
     }
 
     void wait(std::optional<time_t> timeout) {

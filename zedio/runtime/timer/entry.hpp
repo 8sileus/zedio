@@ -16,7 +16,7 @@ public:
         : expiration_time_{expiration_time}
         , handle_{handle} {}
 
-    Entry(std::chrono::steady_clock::time_point expiration_time, io::detail::Callback *data)
+    Entry(std::chrono::steady_clock::time_point expiration_time, io::detail::IOData *data)
         : expiration_time_{expiration_time}
         , data_{data} {}
 
@@ -48,7 +48,7 @@ public:
 public:
     std::chrono::steady_clock::time_point expiration_time_;
     std::coroutine_handle<>               handle_{nullptr};
-    io::detail::Callback                 *data_{nullptr};
+    io::detail::IOData                   *data_{nullptr};
     std::unique_ptr<Entry>                next_{nullptr};
 };
 

@@ -12,7 +12,7 @@ class Entry;
 
 namespace zedio::io::detail {
 
-struct Callback {
+struct IOData {
     std::coroutine_handle<>               handle_{nullptr};
     int                                   result_;
     runtime::detail::Entry               *entry_{nullptr};
