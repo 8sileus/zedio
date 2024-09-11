@@ -9,8 +9,9 @@ namespace zedio::runtime::detail {
 
 class Waker {
 public:
-    Waker()
-        : fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
+    Waker(Poller &poller)
+        : poller{poller}
+        , fd_{::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)} {
         if (fd_ < 0) [[unlikely]] {
             throw std::runtime_error(
                 std::format("call eventfd failed, error: {} - {}", fd_, strerror(errno)));
@@ -32,7 +33,7 @@ public:
     void turn_on() {
         if (flag_ != 0) {
             flag_ = 0;
-            auto sqe = t_ring->get_sqe();
+            auto sqe = poller.get_sqe();
             assert(sqe != nullptr);
             io_uring_prep_read(sqe, fd_, &flag_, sizeof(flag_), 0);
             io_uring_sqe_set_data(sqe, nullptr);
@@ -41,6 +42,7 @@ public:
 
 private:
     uint64_t flag_{1};
+    Poller  &poller;
     int      fd_;
 };
 

@@ -27,7 +27,7 @@ auto test_count_semaphore() -> Task<void> {
     CountingSemaphore<N>     sem{N / 10};
     Latch                    latch{N + 1};
     std::atomic<std::size_t> sum = 0;
-    for (auto i = 0uz; i < N; i += 1) {
+    for (auto i = 0; i < N; i += 1) {
         spawn(count_sem_test<N>(sem, latch, i, sum));
     }
 
@@ -53,7 +53,7 @@ auto test_binary_semaphore() -> Task<void> {
     BinarySemaphore          bin_sem;
     Latch                    latch{N + 1};
     std::atomic<std::size_t> sum = 0;
-    for (auto i = 0uz; i < N; i += 1) {
+    for (auto i = 0; i < N; i += 1) {
         spawn(bin_sem_test(bin_sem, latch, i, sum));
     }
 

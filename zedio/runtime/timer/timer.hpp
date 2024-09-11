@@ -104,7 +104,7 @@ public:
     [[nodiscard]]
     auto handle_expired_entries(LocalQueue &local_queue, GlobalQueue &global_queue) -> std::size_t {
         if (num_entries_ == 0 || root_wheel_.index() == 0) {
-            return 0uz;
+            return 0;
         }
 
         auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -169,7 +169,7 @@ private:
 
     template <std::size_t LEVEL = MAX_LEVEL>
     void build_wheel_and_add_entry(std::unique_ptr<Entry> &&entry, std::size_t interval) {
-        if constexpr (LEVEL > 0uz) {
+        if constexpr (LEVEL > 0) {
             if (!(Wheel<LEVEL>::MS_PER_SLOT <= interval && interval < Wheel<LEVEL>::MAX_MS)) {
                 build_wheel_and_add_entry<LEVEL - 1>(std::move(entry), interval);
                 return;
@@ -199,12 +199,12 @@ private:
 
 private:
     //~ 139 years
-    static constexpr std::size_t MAX_MS{util::static_pow(SLOT_SIZE, MAX_LEVEL + 1uz)};
+    static constexpr std::size_t MAX_MS{util::static_pow(SLOT_SIZE, MAX_LEVEL + 1)};
 
 private:
     std::chrono::steady_clock::time_point      start_{std::chrono::steady_clock::now()};
     std::size_t                                num_entries_{0};
-    VariantWheelBuilder<MAX_LEVEL + 1uz>::Type root_wheel_{};
+    VariantWheelBuilder<MAX_LEVEL + 1>::Type root_wheel_{};
 
     // std::variant<std::monostate,
     //              std::unique_ptr<Wheel<0>>,

@@ -10,12 +10,12 @@ struct IOData;
 namespace zedio::runtime::detail {
 
 struct IOCompletion {
-    int get_result() {
-        return cqe->res;
+    auto get_result(this IOCompletion &self) -> int {
+        return self.cqe->res;
     }
 
-    io::detail::IOData *get_data() {
-        return reinterpret_cast<io::detail::IOData *>(cqe->user_data);
+    auto get_data(this IOCompletion &self) -> io::detail::IOData * {
+        return reinterpret_cast<io::detail::IOData *>(self.cqe->user_data);
     }
 
     io_uring_cqe *cqe;

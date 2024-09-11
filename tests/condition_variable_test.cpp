@@ -33,7 +33,7 @@ auto consumer(ConditionVariable &cv,
 
 auto producer(ConditionVariable &cv, Mutex &mutex, bool &run, std::queue<int> &q, std::size_t n)
     -> Task<void> {
-    for (auto i = 1uz; i <= n; i += 1) {
+    for (auto i = 1; i <= n; i += 1) {
         co_await mutex.lock();
         std::unique_lock lock(mutex, std::adopt_lock);
         q.push(i);

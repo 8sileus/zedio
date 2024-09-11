@@ -5,11 +5,20 @@ project (ZED LANGUAGES CXX VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED 23)
 
-add_compile_options("-Wall")
-add_compile_options("-Wextra")
-add_compile_options("-Werror")
-add_compile_options("-Wundef")
-add_compile_options("-Wsign-compare")
+# add_compile_options("-Wall")
+# add_compile_options("-Wextra")
+# add_compile_options("-Werror")
+# add_compile_options("-Wundef")
+# add_compile_options("-Wsign-compare")
+
+
+# if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+#     if(CMAKE_BUILD_BITS EQUAL 32)
+#         set(CMAKE_GENERATOR_PLATFORM Win32)
+#     else()
+#         set(CMAKE_GENERATOR_PLATFORM x64)
+#     endif()
+# endif()
 
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -22,6 +31,7 @@ message(STATUS "Version: " "${CMAKE_PROJECT_VERSION}")
 message(STATUS "C++ standard: " "${CMAKE_CXX_STANDARD}")
 message(STATUS "Compiler: " "${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Build type: " "${CMAKE_BUILD_TYPE}")
+message(STATUS "Target Architecture: " "${CMAKE_GENERATOR_PLATFORM}")
 
 set(DEPEND_LIBS 
 pthread

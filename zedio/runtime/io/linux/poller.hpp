@@ -8,8 +8,6 @@
 // C++
 #include <chrono>
 #include <format>
-// Linux
-#include <liburing.h>
 
 namespace zedio::runtime::detail {
 class Poller;
@@ -68,10 +66,6 @@ public:
 
     void consume(std::size_t cnt) {
         io_uring_cq_advance(&ring_, cnt);
-    }
-
-    void seen(io_uring_cqe *cqe) {
-        io_uring_cqe_seen(&ring_, cqe);
     }
 
     void submit() {

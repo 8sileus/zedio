@@ -24,7 +24,7 @@ using namespace zedio::async;
 using namespace zedio::net;
 using namespace zedio::log;
 
-static constexpr size_t FIXED_LEN{4uz};
+static constexpr size_t FIXED_LEN{4};
 
 auto read_u32(std::span<char> bytes) -> uint32_t {
     // or ntohl()

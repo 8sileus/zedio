@@ -26,7 +26,7 @@ private:
 
 public:
     template <class C>
-        requires requires(C c) { c.resize(0uz); }
+        requires requires(C c) { c.resize(0); }
     [[REMEMBER_CO_AWAIT]]
     auto read_to_end(C &buf) const noexcept -> zedio::async::Task<Result<void>> {
         auto old_len = buf.size();

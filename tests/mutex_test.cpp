@@ -20,7 +20,7 @@ auto test_mutex([[maybe_unused]] Mutex &mutex, std::size_t n, std::size_t &sum) 
 auto test(std::size_t n) -> Task<void> {
     Mutex       mutex_;
     std::size_t sum = 0;
-    for (auto i = 0uz; i < 10; i += 1) {
+    for (auto i = 0; i < 10; i += 1) {
         spawn(test_mutex(mutex_, n, sum));
     }
     co_await time::sleep(10s);

@@ -1,8 +1,5 @@
 #pragma once
 
-// Linux
-#include <sys/time.h>
-
 // C++
 #include <format>
 #include <utility>

@@ -3,6 +3,7 @@
 #include "zedio/common/static_math.hpp"
 #include "zedio/runtime/config.hpp"
 #include "zedio/runtime/timer/entry.hpp"
+
 // C
 #include <assert.h>
 // C++
@@ -25,7 +26,7 @@ public:
     }
 
     Wheel(ChildWheelPtr &&child)
-        : bitmap_{1uz}
+        : bitmap_{1}
         , slots_{std::move(child)} {
         // LOG_DEBUG("level up from {} to {}", LEVEL - 1, LEVEL);
     }
@@ -39,7 +40,7 @@ public:
         std::size_t index = get_index(interval);
         // LOG_DEBUG("{} {}", index, interval);
         if (slots_[index] == nullptr) {
-            bitmap_ |= 1uz << index;
+            bitmap_ |= 1 << index;
             slots_[index] = std::make_unique<ChildWheel>();
         }
         slots_[index]->add_entry(std::move(entry), interval);
@@ -52,7 +53,7 @@ public:
 
         slots_[index]->remove_entry(std::move(entry), interval);
         if (slots_[index]->empty()) {
-            bitmap_ &= ~(1uz << index);
+            bitmap_ &= ~(1 << index);
             slots_[index] = nullptr;
         }
     }
@@ -73,7 +74,7 @@ public:
                                                   remaining_ms - index * MS_PER_SLOT);
             if (slots_[index]->empty()) {
                 slots_[index] = nullptr;
-                bitmap_ &= ~(1uz << index);
+                bitmap_ &= ~(1 << index);
             } else {
                 break;
             }
@@ -108,7 +109,7 @@ public:
 
     [[nodiscard]]
     auto can_level_down() const noexcept -> bool {
-        return bitmap_ == 1uz;
+        return bitmap_ == static_cast<std::size_t>(1);
     }
 
     [[nodiscard]]
@@ -123,8 +124,8 @@ private:
     }
 
 public:
-    static constexpr std::size_t SHIFT{LEVEL * 6uz};
-    static constexpr std::size_t MASK{(SLOT_SIZE - 1uz) << SHIFT};
+    static constexpr std::size_t SHIFT{LEVEL * 6};
+    static constexpr std::size_t MASK{(SLOT_SIZE - 1) << SHIFT};
     static constexpr std::size_t MS_PER_SLOT{util::static_pow(SLOT_SIZE, LEVEL)};
     static constexpr std::size_t MAX_MS{MS_PER_SLOT * SLOT_SIZE};
 
@@ -134,7 +135,7 @@ private:
 };
 
 template <>
-class Wheel<0uz> {
+class Wheel<0> {
 public:
     using FatherWheel = Wheel<1>;
     using FatherWheelPtr = std::unique_ptr<FatherWheel>;
@@ -153,7 +154,7 @@ public:
         auto index = get_index(interval);
         // LOG_DEBUG("{} {}", index, interval);
         entry->next_ = std::move(slots_[index]);
-        bitmap_ |= 1uz << index;
+        bitmap_ |= static_cast<std::size_t>(1) << index;
         slots_[index] = std::move(entry);
     }
 
@@ -174,7 +175,7 @@ public:
             head->next_ = std::move(cur->next_);
         }
         if (slots_[index] == nullptr) {
-            bitmap_ &= ~(1uz << index);
+            bitmap_ &= ~(static_cast<std::size_t>(1) << index);
         }
     }
 
@@ -193,7 +194,7 @@ public:
                 slots_[index] = std::move(slots_[index]->next_);
                 count += 1;
             }
-            bitmap_ &= ~(1uz << index);
+            bitmap_ &= ~(static_cast<std::size_t>(1) << index);
         }
     }
 
@@ -229,8 +230,8 @@ private:
     }
 
 public:
-    static constexpr std::size_t MASK{SLOT_SIZE - 1uz};
-    static constexpr std::size_t MS_PER_SLOT{1uz};
+    static constexpr std::size_t MASK{SLOT_SIZE - 1};
+    static constexpr std::size_t MS_PER_SLOT{1};
     static constexpr std::size_t MAX_MS{MS_PER_SLOT * SLOT_SIZE};
 
 private:

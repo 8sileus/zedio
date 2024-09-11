@@ -50,7 +50,7 @@ struct ImplAsyncWrite {
 
     [[REMEMBER_CO_AWAIT]]
     auto write_all(std::span<const char> buf) noexcept -> zedio::async::Task<Result<void>> {
-        Result<std::size_t> ret{0uz};
+        Result<std::size_t> ret{0};
         while (!buf.empty()) {
             ret = co_await this->write(buf);
             if (!ret) [[unlikely]] {

@@ -16,7 +16,7 @@ BinPackArguments: false
 BinPackParameters: false
 BreakBeforeBinaryOperators: true
 BreakConstructorInitializers: BeforeComma
-# BreakAfterAttributes: Always 
+BreakAfterAttributes: Always 
 
 # DerivePointerAlignment: false
 # PointerAlignment: Left

@@ -21,7 +21,7 @@ auto test(std::size_t n) -> Task<void> {
     std::atomic<std::size_t> sum = 0;
     assert(n >= 1);
     assert(latch.try_wait() == false);
-    for (auto i = 0uz; i < n - 1; i += 1) {
+    for (auto i = 0; i < n - 1; i += 1) {
         spawn(latch_test(latch, i, sum));
     }
     sum.fetch_add(1, std::memory_order::relaxed);

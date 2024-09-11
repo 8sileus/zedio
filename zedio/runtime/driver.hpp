@@ -12,9 +12,6 @@
 #include <functional>
 #include <numeric>
 #include <queue>
-// Linux
-#include <liburing.h>
-#include <sys/eventfd.h>
 
 namespace zedio::runtime::detail {
 
@@ -25,7 +22,8 @@ inline thread_local Driver *t_driver{nullptr};
 class Driver {
 public:
     Driver(const Config &config)
-        : poller{config} {
+        : poller{config}
+        , waker{poller} {
         assert(t_driver == nullptr);
         t_driver = this;
     }
@@ -81,7 +79,7 @@ public:
 
 private:
     Poller poller;
-    Waker  waker{};
+    Waker  waker;
     Timer  timer{};
 };
 

@@ -15,7 +15,7 @@ auto test_channel(std::size_t n, std::ptrdiff_t num_p, std::ptrdiff_t num_c) -> 
     std::atomic<std::size_t> sum;
 
     auto p = [&](auto sender, auto &latch, std::size_t n) -> Task<void> {
-        for (auto i = 1uz; i <= n; i += 1) {
+        for (auto i = 1; i <= n; i += 1) {
             if (auto ret = co_await sender.send(i); !ret) {
                 LOG_ERROR("{}", ret.error());
                 break;

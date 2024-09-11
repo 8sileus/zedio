@@ -1,22 +1,24 @@
 #pragma once
 
-// Linux
-#include <liburing.h>
+// Win
+#include <winsock2.h>
 
 namespace zedio::io::detail {
-
 struct IOData;
+} // namespace zedio::io::detail
+
+namespace zedio::runtime::detail {
 
 struct IOCompletion {
-    int get_result() {
-        return cqe->res;
+    auto get_result(const this IOCompletion &self) -> int {
+        return self.entry.dwNumberOfBytesTransferred;
     }
 
-    IOData *get_data() {
-        return reinterpret_cast<IOData *>(cqe->user_data);
+    auto get_data(const this IOCompletion &self) -> io::detail::IOData * {
+        return reinterpret_cast<io::detail::IOData *>(self.entry.lpOverlapped);
     }
 
-    io_uring_cqe *cqe;
+    OVERLAPPED_ENTRY entry;
 };
 
-} // namespace zedio::io::detail
+} // namespace zedio::runtime::detail

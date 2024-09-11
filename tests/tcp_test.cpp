@@ -20,7 +20,7 @@ auto client(const SocketAddr &addr, Latch &latch) -> Task<void> {
     char             buf[1024];
     auto             stream = std::move(ret.value());
     auto [reader, writer] = stream.into_split();
-    for (auto i{0uz}; i < 1000; i += 1) {
+    for (auto i{0}; i < 1000; i += 1) {
         auto ret = co_await writer.write(str);
         if (!ret) {
             console.error("{}", ret.error().message());

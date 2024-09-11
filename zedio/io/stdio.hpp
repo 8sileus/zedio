@@ -30,7 +30,7 @@ namespace detail {
     template <int FD>
     [[REMEMBER_CO_AWAIT]]
     auto async_write(std::span<const char> buf) noexcept -> async::Task<Result<void>> {
-        Result<std::size_t> ret{0uz};
+        Result<std::size_t> ret{0};
         while (!buf.empty()) {
             ret = co_await io::write(FD,
                                      buf.data(),

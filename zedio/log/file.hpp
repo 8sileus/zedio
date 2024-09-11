@@ -1,6 +1,8 @@
 #pragma once
 
 #include "zedio/common/util/noncopyable.hpp"
+// C
+#include <ctime>
 // C++
 #include <array>
 #include <format>
@@ -40,10 +42,14 @@ public:
 
 private:
     void roll() {
-        time_t current_second = ::time(nullptr);
+        const time_t current_second = ::time(nullptr);
         if (current_second > last_roll_second_) {
             struct tm tm_time;
+#ifdef __linux__
             ::localtime_r(&current_second, &tm_time);
+#elif _WIN32
+            ::localtime_s(&tm_time, &current_second);
+#endif
 
             last_roll_day_ = current_second / SECONDS_PER_DAY;
             last_roll_second_ = current_second;
