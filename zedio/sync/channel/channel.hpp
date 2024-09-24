@@ -128,7 +128,7 @@ public:
     }
 
     void sub_receiver() {
-        if (num_senders_.fetch_sub(1, std::memory_order::acq_rel) == 1) {
+        if (num_receivers_.fetch_sub(1, std::memory_order::acq_rel) == 1) {
             destroy();
         }
     }
