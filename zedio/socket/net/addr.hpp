@@ -6,9 +6,15 @@
 // C++
 #include <format>
 #include <string>
+
+#ifdef __linux__
 // Linux
 #include <arpa/inet.h>
 #include <netdb.h>
+#elif _WIN32
+#include <in6addr.h>
+
+#endif
 
 namespace zedio::socket::net {
 
@@ -37,16 +43,15 @@ public:
     [[nodiscard]]
     static auto parse(std::string_view ip) -> Result<Ipv4Addr> {
         uint32_t addr;
-        if (::inet_pton(AF_INET, ip.data(), &addr) != 1) {
-            return std::unexpected{make_sys_error(errno)};
+        if (::inet_pton(AF_INET, ip.data(), &addr) != 1) [[unlikely]] {
+            return std::unexpected{make_system_error()};
         }
         return Ipv4Addr{addr};
     }
 
 public:
     [[nodiscard]]
-    friend auto
-    operator==(const Ipv4Addr &left, const Ipv4Addr &right) -> bool {
+    friend auto operator==(const Ipv4Addr &left, const Ipv4Addr &right) -> bool {
         return left.ip_ == right.ip_;
     }
 
@@ -64,6 +69,7 @@ public:
              uint16_t f,
              uint16_t g,
              uint16_t h) {
+#ifdef __linux__
         ip_.__in6_u.__u6_addr16[0] = ::htons(a);
         ip_.__in6_u.__u6_addr16[1] = ::htons(b);
         ip_.__in6_u.__u6_addr16[2] = ::htons(c);
@@ -72,6 +78,16 @@ public:
         ip_.__in6_u.__u6_addr16[5] = ::htons(f);
         ip_.__in6_u.__u6_addr16[6] = ::htons(g);
         ip_.__in6_u.__u6_addr16[7] = ::htons(h);
+#elif _WIN32
+        ip_.u.Word[0] = ::htons(a);
+        ip_.u.Word[1] = ::htons(b);
+        ip_.u.Word[2] = ::htons(c);
+        ip_.u.Word[3] = ::htons(d);
+        ip_.u.Word[4] = ::htons(e);
+        ip_.u.Word[5] = ::htons(f);
+        ip_.u.Word[6] = ::htons(g);
+        ip_.u.Word[7] = ::htons(h);
+#endif
     }
 
     Ipv6Addr(in6_addr ip)
@@ -94,15 +110,14 @@ public:
     static auto parse(std::string_view ip) -> Result<Ipv6Addr> {
         in6_addr addr;
         if (::inet_pton(AF_INET6, ip.data(), &addr) != 1) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
+            return std::unexpected{make_system_error()};
         }
         return Ipv6Addr{addr};
     }
 
 public:
     [[nodiscard]]
-    friend auto
-    operator==(const Ipv6Addr &left, const Ipv6Addr &right) -> bool {
+    friend auto operator==(const Ipv6Addr &left, const Ipv6Addr &right) -> bool {
         return ::memcmp(&left.ip_, &right.ip_, sizeof(left.ip_)) == 0;
     }
 
@@ -196,7 +211,7 @@ public:
     }
 
     [[nodiscard]]
-    auto length() const noexcept -> socklen_t {
+    auto length() const noexcept -> SocketLength {
         if (is_ipv4()) {
             return sizeof(sockaddr_in);
         } else {
@@ -210,12 +225,9 @@ public:
         addrinfo hints{};
         hints.ai_flags = AI_NUMERICSERV;
         addrinfo *result{nullptr};
-        if (::getaddrinfo(host_name.data(), std::to_string(port).data(), &hints, &result) != 0)
-            [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
-        }
-        if (result == nullptr) [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
+        if (::getaddrinfo(host_name.data(), std::to_string(port).data(), &hints, &result) != 0
+            || result == nullptr) [[unlikely]] {
+            return std::unexpected{make_system_error()};
         }
         SocketAddr sock{result->ai_addr, result->ai_addrlen};
         ::freeaddrinfo(result);

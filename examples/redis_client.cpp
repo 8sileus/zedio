@@ -191,7 +191,7 @@ public:
         auto stream = co_await TcpStream::connect(addr);
         if (!stream) {
             console.error("{}", stream.error().message());
-            co_return std::unexpected{make_sys_error(errno)};
+            co_return std::unexpected{make_system_error()};
         }
         co_return RedisClient{std::move(stream.value())};
     }

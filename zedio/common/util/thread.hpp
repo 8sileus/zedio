@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zedio/common/def.hpp"
 #include "zedio/common/util/noncopyable.hpp"
 
 // C++
@@ -10,15 +11,11 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#elif _WIN32
-
-#include <windows.h>
-
 #endif
 // C++
 namespace zedio::util {
 
-static inline auto get_tid() noexcept {
+static inline Tid get_tid() noexcept {
 #ifdef __linux__
     static thread_local auto thread_id = ::gettid();
 #elif _WIN32

@@ -47,14 +47,14 @@ public:
         std::array<IOCompletion, SIZE>         completions;
 
         std::size_t cnt = driver.poller.peek_batch(completions);
-        for (auto i = 0uz; i < cnt; i += 1) {
+        for (std::size_t i = 0; i < cnt; i += 1) {
             auto io_data = completions[i].get_data();
             if (io_data != nullptr) [[likely]] {
-                if (io_data->entry_ != nullptr) {
-                    driver.timer.remove_entry(io_data->entry_);
+                if (io_data->entry != nullptr) {
+                    driver.timer.remove_entry(io_data->entry);
                 }
-                io_data->result_ = completions[i].get_result();
-                local_queue.push_back_or_overflow(io_data->handle_, global_queue);
+                io_data->result = completions[i].get_result();
+                local_queue.push_back_or_overflow(io_data->coroutine_handle, global_queue);
             }
         }
 

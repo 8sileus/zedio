@@ -5,12 +5,11 @@ namespace zedio::socket::detail {
 template <class T, class Addr>
 struct ImplLocalAddr {
     [[nodiscard]]
-    auto local_addr() const noexcept -> Result<Addr> {
-        Addr      addr{};
-        socklen_t len{sizeof(addr)};
-        if (::getsockname(static_cast<const T *>(this)->fd(), addr.sockaddr(), &len) == -1)
-            [[unlikely]] {
-            return std::unexpected{make_sys_error(errno)};
+    auto local_addr(this const T &self) noexcept -> Result<Addr> {
+        Addr        addr{};
+        std::size_t len{sizeof(addr)};
+        if (::getsockname(self.handle(), addr.sockaddr(), &len) != 0) [[unlikely]] {
+            return std::unexpected{make_socket_error()};
         }
         return addr;
     }

@@ -6,9 +6,12 @@
 #include <format>
 #include <optional>
 #include <string_view>
+#ifdef __linux__
 // Linux
 #include <netdb.h>
 #include <sys/un.h>
+#elif _WIN32
+#endif
 
 namespace zedio::socket::unix_domain {
 

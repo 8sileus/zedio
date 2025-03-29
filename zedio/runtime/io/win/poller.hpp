@@ -9,6 +9,7 @@
 #include <chrono>
 #include <format>
 // Win
+#include <WinSock2.h>
 #include <windows.h>
 
 namespace zedio::runtime::detail {
@@ -22,7 +23,7 @@ public:
         iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
         if (iocp == nullptr) [[unlikely]] {
             throw std::runtime_error(
-                std::format("Initialize IOCP faield, error: {}.", strerror(-ret)));
+                std::format("Initialize IOCP faield, error: {}.", strerror(errno)));
         }
         assert(t_ring == nullptr);
         t_ring = this;
@@ -41,7 +42,7 @@ public:
 
     [[nodiscard]]
     auto peek_batch(this Poller &poller, std::span<IOCompletion> completions) -> std::size_t {
-        std::size_t result = 0;
+        ULONG result = 0;
         if (!GetQueuedCompletionStatusEx(poller.iocp,
                                          reinterpret_cast<LPOVERLAPPED_ENTRY>(completions.data()),
                                          completions.size(),

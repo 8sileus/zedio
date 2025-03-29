@@ -9,6 +9,11 @@
 #include <cstring>
 #include <format>
 
+#ifdef _WIN32
+// Win
+#include <WinSock2.h>
+#endif
+
 namespace zedio {
 
 class Error {
@@ -66,15 +71,27 @@ private:
 };
 
 [[nodiscard]]
-static inline auto make_zedio_error(int err) -> Error {
-    assert(err >= 8000);
+static inline auto make_error(int err) -> Error {
+    assert(err >= 0);
     return Error{err};
 }
 
 [[nodiscard]]
-static inline auto make_sys_error(int err) -> Error {
-    assert(err >= 0);
-    return Error{err};
+static inline auto make_system_error() -> Error {
+#ifdef __linux__
+    return Error{errno};
+#elif _WIN32
+    return Error{static_cast<int>(GetLastError())};
+#endif
+}
+
+[[nodiscard]]
+static inline auto make_socket_error() -> Error {
+#ifdef __linux__
+    return Error{errno};
+#elif _WIN32
+    return Error{static_cast<int>(WSAGetLastError())};
+#endif
 }
 
 template <typename T>

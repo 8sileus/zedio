@@ -1,5 +1,7 @@
 #pragma once
 
+#include "zedio/common/def.hpp"
+
 // C++
 #include <concepts>
 #include <coroutine>
@@ -8,7 +10,8 @@
 #ifdef __linux__
 #include <sys/socket.h>
 #elif _WIN32
-#include <winsock2.h>
+#include <WinSock2.h>
+#include <windows.h>
 #endif
 
 namespace zedio {
@@ -16,7 +19,7 @@ namespace zedio {
 template <typename Addr>
 concept is_socket_address = requires(Addr addr) {
     { addr.sockaddr() } noexcept -> std::same_as<struct sockaddr *>;
-    { addr.length() } noexcept -> std::same_as<socklen_t>;
+    { addr.length() } noexcept -> std::same_as<SocketLength>;
 };
 
 template <class IOAwaiter>

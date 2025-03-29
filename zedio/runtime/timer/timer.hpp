@@ -37,10 +37,10 @@ public:
         -> Result<Entry *> {
         auto now = std::chrono::steady_clock::now();
         if (expiration_time <= now) [[unlikely]] {
-            return std::unexpected{make_zedio_error(Error::PassedTime)};
+            return std::unexpected{make_error(Error::PassedTime)};
         }
         if (expiration_time >= start_ + std::chrono::milliseconds{MAX_MS}) [[unlikely]] {
-            return std::unexpected{make_zedio_error(Error::TooLongTime)};
+            return std::unexpected{make_error(Error::TooLongTime)};
         }
 
         auto [entry, result] = Entry::make(expiration_time, handle);

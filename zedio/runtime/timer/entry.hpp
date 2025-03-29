@@ -27,11 +27,15 @@ public:
             assert(data_ == nullptr);
             local_queue.push_back_or_overflow(handle_, global_queue);
         } else {
+#ifdef __linux__
             assert(handle_ == nullptr);
             auto sqe = runtime::detail::t_ring->get_sqe();
             io_uring_prep_cancel(sqe, data_, 0);
             io_uring_sqe_set_data(sqe, nullptr);
-            data_->entry_ = nullptr;
+            data_->entry = nullptr;
+#elif _WIN32
+            ::CancelIoEx(data_->handle, &data_->overlapped);
+#endif
         }
     }
 
@@ -39,8 +43,8 @@ public:
     template <class T>
         requires std::constructible_from<Entry, std::chrono::steady_clock::time_point, T>
     [[nodiscard]]
-    static auto make(std::chrono::steady_clock::time_point expiration_time, T handle)
-        -> std::pair<std::unique_ptr<Entry>, Entry *> {
+    static auto make(std::chrono::steady_clock::time_point expiration_time,
+                     T handle) -> std::pair<std::unique_ptr<Entry>, Entry *> {
         auto entry = std::make_unique<Entry>(expiration_time, handle);
         return std::make_pair(std::move(entry), entry.get());
     }

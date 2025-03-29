@@ -18,67 +18,63 @@ class TcpSocket : public detail::ImplKeepalive<TcpSocket>,
 
 public:
     explicit TcpSocket(Socket &&inner)
-        : inner_{std::move(inner)} {}
+        : inner{std::move(inner)} {}
 
 public:
     [[nodiscard]]
-    auto bind(const SocketAddr &addr) noexcept -> Result<void> {
-        return inner_.bind<SocketAddr>(addr);
+    auto bind(this TcpSocket &self, const SocketAddr &addr) noexcept -> Result<void> {
+        return self.inner.bind<SocketAddr>(addr);
     }
 
     [[nodiscard]]
-    auto listen(int n) -> Result<TcpListener> {
-        if (auto ret = inner_.listen(n); !ret) [[unlikely]] {
-            return std::unexpected{ret.error()};
+    auto listen(this TcpSocket &self, int n) noexcept -> Result<TcpListener> {
+        if (auto result = self.inner.listen(n); !result) [[unlikely]]
+        {
+            return std::unexpected{result.error()};
         }
-        return TcpListener{std::move(inner_)};
+        return TcpListener{std::move(self.inner)};
     }
 
     [[REMEMBER_CO_AWAIT]]
-    auto connect(const SocketAddr &addr) {
-        class Awaiter : public io::detail::IORegistrator<Awaiter> {
-            using Super = io::detail::IORegistrator<Awaiter>;
-
+    auto connect(this TcpSocket &self, const SocketAddr &addr) {
+        class Connect : public io::detail::Connect {
         public:
-            Awaiter(Socket &&inner, const SocketAddr &addr)
-                : Super{io_uring_prep_connect, inner.fd(), nullptr, addr.length()}
-                , inner_{std::move(inner)}
-                , addr_{addr} {
-                sqe_->addr = reinterpret_cast<unsigned long>(addr_.sockaddr());
-            }
+            Connect(Socket &&inner, const SocketAddr &addr)
+                : io::detail::Connect{inner.handle(), addr.sockaddr(), addr.length()}
+                , inner{std::move(inner)} {}
 
-            auto await_resume() noexcept -> Result<TcpStream> {
-                if (this->cb_.result_ < 0) [[unlikely]] {
-                    return std::unexpected{make_sys_error(-this->cb_.result_)};
+            auto await_resume(this Connect &self) noexcept -> Result<TcpStream> {
+                auto result = self.io::detail::Connect::await_resume();
+                if (!result) [[unlikely]] {
+                    return std::unexpected{result.error()};
                 }
-                return TcpStream{std::move(inner_)};
+                return TcpStream{std::move(self.inner)};
             }
 
         private:
-            Socket     inner_;
-            SocketAddr addr_;
+            Socket inner;
         };
-        return Awaiter{std::move(inner_), addr};
+        return Connect{std::move(self.inner), addr};
     }
 
     [[nodiscard]]
-    auto fd() const noexcept {
-        return inner_.fd();
+    auto handle(this const TcpSocket &self) noexcept {
+        return self.inner.handle();
     }
 
 public:
     [[nodiscard]]
     static auto v4() -> Result<TcpSocket> {
-        return Socket::create<TcpSocket>(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        return Socket::create<TcpSocket>(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     }
 
     [[nodiscard]]
     static auto v6() -> Result<TcpSocket> {
-        return Socket::create<TcpSocket>(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+        return Socket::create<TcpSocket>(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     }
 
 private:
-    Socket inner_;
+    Socket inner;
 };
 
 } // namespace zedio::socket::net

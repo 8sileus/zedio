@@ -22,11 +22,11 @@ namespace detail {
 
     public:
         auto await_suspend(std::coroutine_handle<> handle) -> bool {
-            assert(this->cb_.entry_ != nullptr);
+            assert(this->cb_.entry != nullptr);
 
             auto ret = runtime::detail::t_timer->add_entry(this->cb_.deadline_, &this->cb_);
             if (ret) [[likely]] {
-                this->cb_.entry_ = ret.value();
+                this->cb_.entry = ret.value();
                 T::await_suspend(handle);
                 return true;
             } else {

@@ -1,82 +1,82 @@
 #pragma once
 
+#include "zedio/io/impl/impl_stream_read.hpp"
+#include "zedio/io/impl/impl_stream_write.hpp"
 #include "zedio/socket/impl/impl_sockopt.hpp"
-#include "zedio/socket/impl/impl_stream_read.hpp"
-#include "zedio/socket/impl/impl_stream_write.hpp"
 
 namespace zedio::socket::detail {
 
 template <class Addr>
-class ReadHalf : public ImplStreamRead<ReadHalf<Addr>>,
+class ReadHalf : public io::detail::ImplStreamRead<ReadHalf<Addr>>,
                  public ImplLocalAddr<ReadHalf<Addr>, Addr>,
                  public ImplPeerAddr<ReadHalf<Addr>, Addr> {
 public:
     ReadHalf(Socket &inner)
-        : inner_{inner} {}
+        : inner{inner} {}
 
 public:
     [[nodiscard]]
-    auto fd() const noexcept {
-        return inner_.fd();
+    auto handle(this const ReadHalf &self) noexcept {
+        return self.inner.handle();
     }
 
 private:
-    Socket &inner_;
+    Socket &inner;
 };
 
 template <class Addr>
-class WriteHalf : public ImplStreamWrite<WriteHalf<Addr>>,
+class WriteHalf : public io::detail::ImplStreamWrite<WriteHalf<Addr>>,
                   public ImplLocalAddr<WriteHalf<Addr>, Addr>,
                   public ImplPeerAddr<WriteHalf<Addr>, Addr> {
 public:
     WriteHalf(Socket &inner)
-        : inner_{inner} {}
+        : inner{inner} {}
 
 public:
     [[nodiscard]]
-    auto fd() const noexcept {
-        return inner_.fd();
+    auto handle(this const WriteHalf &self) noexcept {
+        return self.inner.handle();
     }
 
 private:
-    Socket &inner_;
+    Socket &inner;
 };
 
 template <class T>
 class OwnedBase {
 protected:
     OwnedBase(std::shared_ptr<T> stream)
-        : stream_{stream} {}
+        : stream{stream} {}
 
 public:
     [[nodiscard]]
-    auto fd() const noexcept {
-        return stream_->fd();
+    auto handle(this const OwnedBase &self) noexcept {
+        return self.innter.handle();
     }
 
-    auto reunite(OwnedBase &other) -> Result<T> {
-        if (this == std::addressof(other) || stream_ != other.stream_) {
-            return std::unexpected{make_zedio_error(Error::ReuniteFailed)};
+    auto reunite(this OwnedBase &self, OwnedBase &other) -> Result<T> {
+        if (std::addressof(self) == std::addressof(other) || self.stream != other.stream) {
+            return std::unexpected{make_error(Error::ReuniteFailed)};
         }
-        other.stream_.reset();
-        std::shared_ptr<T> temp{nullptr};
-        temp.swap(stream_);
-        return std::move(*temp);
+        other.stream.reset();
+        std::shared_ptr<T> result{nullptr};
+        result.swap(stream);
+        return std::move(*result);
     }
 
 protected:
-    std::shared_ptr<T> stream_;
+    std::shared_ptr<T> stream;
 };
 
 template <class T, class Addr>
 class OwnedReadHalf : public OwnedBase<T>,
-                      public ImplStreamRead<OwnedReadHalf<T, Addr>>,
+                      public io::detail::ImplStreamRead<OwnedReadHalf<T, Addr>>,
                       public ImplLocalAddr<OwnedReadHalf<T, Addr>, Addr>,
                       public ImplPeerAddr<OwnedReadHalf<T, Addr>, Addr> {
 
 public:
-    OwnedReadHalf(std::shared_ptr<T> stream)
-        : OwnedBase<T>{std::move(stream)} {}
+    explicit OwnedReadHalf(std::shared_ptr<T> stream)
+        : OwnedBase<T>{stream} {}
 
     // ~OwnedReadHalf() {
     //     if (this->stream_) {
@@ -87,13 +87,13 @@ public:
 
 template <class T, class Addr>
 class OwnedWriteHalf : public OwnedBase<T>,
-                       public ImplStreamWrite<OwnedWriteHalf<T, Addr>>,
+                       public io::detail::ImplStreamWrite<OwnedWriteHalf<T, Addr>>,
                        public ImplLocalAddr<OwnedWriteHalf<T, Addr>, Addr>,
                        public ImplPeerAddr<OwnedWriteHalf<T, Addr>, Addr> {
 
 public:
-    OwnedWriteHalf(std::shared_ptr<T> stream)
-        : OwnedBase<T>{std::move(stream)} {}
+    explicit OwnedWriteHalf(std::shared_ptr<T> stream)
+        : OwnedBase<T>{stream} {}
 
     // ~OwnedWriteHalf() {
     //     if (this->stream_) {

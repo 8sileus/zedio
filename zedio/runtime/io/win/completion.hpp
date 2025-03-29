@@ -1,7 +1,8 @@
 #pragma once
 
 // Win
-#include <winsock2.h>
+#include <WinSock2.h>
+#include <windows.h>
 
 namespace zedio::io::detail {
 struct IOData;
@@ -10,11 +11,11 @@ struct IOData;
 namespace zedio::runtime::detail {
 
 struct IOCompletion {
-    auto get_result(const this IOCompletion &self) -> int {
+    int get_result(this IOCompletion &self) {
         return self.entry.dwNumberOfBytesTransferred;
     }
 
-    auto get_data(const this IOCompletion &self) -> io::detail::IOData * {
+    io::detail::IOData *get_data(this IOCompletion &self) {
         return reinterpret_cast<io::detail::IOData *>(self.entry.lpOverlapped);
     }
 

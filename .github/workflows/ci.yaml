@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { compiler: gcc, version: 13, build_type: Release, cppstd: 23 }
+          - { compiler: gcc, version: 14, build_type: Release, cppstd: 23 }
     container:
       image: ${{ matrix.config.compiler }}:${{ matrix.config.version }}
     name: "${{ matrix.config.compiler }} ${{ matrix.config.version }} (C++${{ matrix.config.cppstd }}, ${{ matrix.config.build_type }})"

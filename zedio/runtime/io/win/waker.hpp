@@ -2,8 +2,9 @@
 
 #include "zedio/runtime/io/win/poller.hpp"
 
-//WIN
-#include <winsock2.h>
+// WIN
+#include <WinSock2.h>
+#include <windows.h>
 
 namespace zedio::runtime::detail {
 
@@ -14,7 +15,7 @@ public:
 
 public:
     void wake_up() {
-        ::PostPostQueuedCompletionStatus(poller.get_iocp(), 0, 0, nullptr);
+        PostQueuedCompletionStatus(poller.get_iocp(), 0, 0, nullptr);
     }
 
     void turn_on() {}

@@ -44,7 +44,7 @@ private:
 struct LogRecord {
     const char      *datetime;
     int64_t          millisecond;
-    int              thread_id;
+    Tid              thread_id;
     std::string_view thread_name;
     const char      *file_name;
     size_t           line;
@@ -103,21 +103,24 @@ private:
             return;
         }
 
-        timeval tv_time;
-        ::gettimeofday(&tv_time, nullptr);
-        auto cur_second = tv_time.tv_sec;
-        auto cur_millisecond = tv_time.tv_usec / 1000;
-        if (cur_second != last_second) {
-            struct tm tm_time;
-            ::localtime_r(&cur_second, &tm_time);
+        const auto now_time_point = std::chrono::system_clock::now();
+        const auto current_second = std::chrono::system_clock::to_time_t(now_time_point);
+        const auto current_millisecond = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                             now_time_point.time_since_epoch())
+                                             .count()
+                                         % 1000;
+
+        if (current_second != last_second) {
             constexpr auto format = "%Y-%m-%d %H:%M:%S";
-            ::strftime(buffer.data(), buffer.size(), format, &tm_time);
+            const auto     now_tm = std::localtime(&current_second);
+            std::strftime(buffer.data(), buffer.size(), format, now_tm);
         }
+
         const auto &fmt = fwsl.fmt();
         const auto &sl = fwsl.source_location();
         static_cast<DeriverLogger *>(this)->template log<LEVEL>(
             LogRecord{buffer.data(),
-                      cur_millisecond,
+                      current_millisecond,
                       util::get_tid(),
                       util::get_current_thread_name(),
                       sl.file_name(),
